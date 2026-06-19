@@ -1,151 +1,73 @@
 package com.trendfit.api.modules.product.service;
 
-import com.trendfit.api.modules.product.dto.ProductSaveDTO;
-import com.trendfit.api.modules.product.entity.*;
-import com.trendfit.api.modules.product.repository.*;
+import com.trendfit.api.modules.product.entity.SanPham;
+import com.trendfit.api.modules.product.entity.DanhMuc;
+import com.trendfit.api.modules.product.entity.ThuongHieu;
+import com.trendfit.api.modules.product.repository.SanPhamRepository;
+import com.trendfit.api.modules.product.repository.DanhMucRepository;
+import com.trendfit.api.modules.product.repository.ThuongHieuRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 public class SanPhamService {
 
-    private final SanPhamRepository sanPhamRepository;
-    private final BienTheSanPhamRepository bienTheSanPhamRepository;
-    private final AnhSanPhamRepository anhSanPhamRepository;
-    private final DanhMucRepository danhMucRepository;
-    private final ThuongHieuRepository thuongHieuRepository;
+    @Autowired
+    private SanPhamRepository sanPhamRepository;
 
-    public SanPhamService(
-            SanPhamRepository sanPhamRepository,
-            BienTheSanPhamRepository bienTheSanPhamRepository,
-            AnhSanPhamRepository anhSanPhamRepository,
-            DanhMucRepository danhMucRepository,
-            ThuongHieuRepository thuongHieuRepository) {
-        this.sanPhamRepository = sanPhamRepository;
-        this.bienTheSanPhamRepository = bienTheSanPhamRepository;
-        this.anhSanPhamRepository = anhSanPhamRepository;
-        this.danhMucRepository = danhMucRepository;
-        this.thuongHieuRepository = thuongHieuRepository;
-    }
+    @Autowired
+    private DanhMucRepository danhMucRepository;
 
-    public List<SanPham> getAll() {
-        return sanPhamRepository.findAll();
-    }
+    @Autowired
+    private ThuongHieuRepository thuongHieuRepository;
 
-    public List<SanPham> searchByTen(String keyword) {
-        return sanPhamRepository.findByTenContainingIgnoreCase(keyword.trim());
-    }
-
-    public ProductSaveDTO getFullProduct(Integer id) {
-        SanPham sp = sanPhamRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy sản phẩm với ID: " + id));
-
-        ProductSaveDTO dto = new ProductSaveDTO();
-        dto.setSanPham(sp);
-        dto.setBienThes(bienTheSanPhamRepository.findBySanPham_Id(id));
-        dto.setAnhs(anhSanPhamRepository.findBySanPham_IdOrderByThuTuAsc(id));
-        return dto;
+    public List<SanPham> timKiemSanPhamAdmin(String search, Long danhMucId, Long thuongHieuId) {
+        // Tận dụng Spring Data JPA custom query hoặc native query tương ứng trong Repository của bạn
+        if (danhMucId != null && thuongHieuId != null) {
+            return sanPhamRepository.findByTenContainingAndDanhMucIdAndThuongHieuId(search, danhMucId, thuongHieuId);
+        } else if (danhMucId != null) {
+            return sanPhamRepository.findByTenContainingAndDanhMucId(search, danhMucId);
+        } else if (thuongHieuId != null) {
+            return sanPhamRepository.findByTenContainingAndThuongHieuId(search, thuongHieuId);
+        }
+        return sanPhamRepository.findByTenContaining(search);
     }
 
     @Transactional
-    public SanPham saveFullProduct(ProductSaveDTO dto) {
-        SanPham sp = prepareSanPham(dto.getSanPham());
-        SanPham spSaved = sanPhamRepository.save(sp);
-        saveVariantsAndImages(spSaved, dto);
-        return spSaved;
+    public SanPham themMoiSanPhm(SanPham sanPham) {
+        if (sanPham.getSlug() == null || sanPham.getSlug().trim().isEmpty()) {
+            sanPham.setSlug("trendfit-" + UUID.randomUUID().toString().substring(0, 8));
+        }
+        return sanPhamRepository.save(sanPham);
     }
 
     @Transactional
-    public SanPham updateFullProduct(Integer id, ProductSaveDTO dto) {
-        SanPham existing = sanPhamRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy sản phẩm với ID: " + id));
+    public SanPham capNhatSanPham(Long id, SanPham updateData) {
+        SanPham target = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
 
-        SanPham incoming = dto.getSanPham();
-        existing.setTen(incoming.getTen());
-        existing.setSlug(incoming.getSlug());
-        existing.setGioiTinh(incoming.getGioiTinh());
-        existing.setChatLieu(incoming.getChatLieu());
-        existing.setXuatXu(incoming.getXuatXu());
-        existing.setNamRaMat(incoming.getNamRaMat());
-        existing.setMoTa(incoming.getMoTa());
-        existing.setThanhPhanChatLieu(incoming.getThanhPhanChatLieu());
-        existing.setDangBan(incoming.getDangBan() != null ? incoming.getDangBan() : true);
-        applyRelations(existing, incoming);
+        target.setTen(updateData.getTen());
+        target.setMoTa(updateData.getMoTa());
+        target.setGiaCoBan(updateData.getGiaCoBan());
+        target.setAnhChinh(updateData.getAnhChinh());
+        target.setTrangThaiKinhDoanh(updateData.getTrangThaiKinhDoanh());
 
-        SanPham updated = sanPhamRepository.save(existing);
+        if (updateData.getSlug() != null && !updateData.getSlug().trim().isEmpty()) {
+            target.setSlug(updateData.getSlug());
+        }
 
-        bienTheSanPhamRepository.deleteBySanPham_Id(id);
-        anhSanPhamRepository.deleteBySanPham_Id(id);
-        saveVariantsAndImages(updated, dto);
-
-        return updated;
+        return sanPhamRepository.save(target);
     }
 
     @Transactional
-    public void delete(Integer id) {
+    public void xoaSanPham(Long id) {
         if (!sanPhamRepository.existsById(id)) {
-            throw new NoSuchElementException("Không tìm thấy sản phẩm với ID: " + id);
+            throw new RuntimeException("Sản phẩm không tồn tại!");
         }
-        bienTheSanPhamRepository.deleteBySanPham_Id(id);
-        anhSanPhamRepository.deleteBySanPham_Id(id);
         sanPhamRepository.deleteById(id);
-    }
-
-    public List<SanPham> layTatCaSanPhamChoTrangChu() {
-        return sanPhamRepository.findAll();
-    }
-
-    public SanPham layChiTietSanPham(Integer id) {
-        return sanPhamRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy sản phẩm với ID: " + id));
-    }
-
-    public List<BienTheSanPham> layBienTheCuaSanPham(Integer sanPhamId) {
-        return bienTheSanPhamRepository.findBySanPham_Id(sanPhamId);
-    }
-
-    private SanPham prepareSanPham(SanPham sp) {
-        SanPham prepared = new SanPham();
-        prepared.setTen(sp.getTen());
-        prepared.setSlug(sp.getSlug());
-        prepared.setGioiTinh(sp.getGioiTinh());
-        prepared.setChatLieu(sp.getChatLieu());
-        prepared.setXuatXu(sp.getXuatXu());
-        prepared.setNamRaMat(sp.getNamRaMat());
-        prepared.setMoTa(sp.getMoTa());
-        prepared.setThanhPhanChatLieu(sp.getThanhPhanChatLieu());
-        prepared.setDangBan(sp.getDangBan() != null ? sp.getDangBan() : true);
-        applyRelations(prepared, sp);
-        return prepared;
-    }
-
-    private void applyRelations(SanPham target, SanPham source) {
-        if (source.getDanhMuc() != null && source.getDanhMuc().getId() != null) {
-            target.setDanhMuc(danhMucRepository.getReferenceById(source.getDanhMuc().getId()));
-        }
-        if (source.getThuongHieu() != null && source.getThuongHieu().getId() != null) {
-            target.setThuongHieu(thuongHieuRepository.getReferenceById(source.getThuongHieu().getId()));
-        }
-    }
-
-    private void saveVariantsAndImages(SanPham spSaved, ProductSaveDTO dto) {
-        if (dto.getBienThes() != null && !dto.getBienThes().isEmpty()) {
-            for (BienTheSanPham bt : dto.getBienThes()) {
-                bt.setId(null);
-                bt.setSanPham(spSaved);
-            }
-            bienTheSanPhamRepository.saveAll(dto.getBienThes());
-        }
-
-        if (dto.getAnhs() != null && !dto.getAnhs().isEmpty()) {
-            for (AnhSanPham anh : dto.getAnhs()) {
-                anh.setId(null);
-                anh.setSanPham(spSaved);
-            }
-            anhSanPhamRepository.saveAll(dto.getAnhs());
-        }
     }
 }
