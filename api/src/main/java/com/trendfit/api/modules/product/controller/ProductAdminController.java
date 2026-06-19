@@ -19,8 +19,8 @@ public class ProductAdminController {
     @GetMapping
     public ResponseEntity<List<SanPham>> getAllProducts(
             @RequestParam(value = "search", required = false, defaultValue = "") String search,
-            @RequestParam(value = "danhMucId", required = false) Long danhMucId,
-            @RequestParam(value = "thuongHieuId", required = false) Long thuongHieuId) {
+            @RequestParam(value = "danhMucId", required = false) Integer danhMucId,
+            @RequestParam(value = "thuongHieuId", required = false) Integer thuongHieuId) {
         
         List<SanPham> products = sanPhamService.timKiemSanPhamAdmin(search, danhMucId, thuongHieuId);
         return ResponseEntity.ok(products);
@@ -28,19 +28,19 @@ public class ProductAdminController {
 
     @PostMapping
     public ResponseEntity<SanPham> createProduct(@RequestBody SanPham sanPham) {
-        SanPham savedProduct = sanPhamService.themMoiSanPhm(sanPham);
+        SanPham savedProduct = sanPhamService.themMoiSanPham(sanPham);
         return ResponseEntity.ok(savedProduct);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SanPham> updateProduct(@PathVariable Long id, @RequestBody SanPham updateData) {
+    public ResponseEntity<SanPham> updateProduct(@PathVariable Integer id, @RequestBody SanPham updateData) {
         SanPham updatedProduct = sanPhamService.capNhatSanPham(id, updateData);
         return ResponseEntity.ok(updatedProduct);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<String> deleteProduct(@PathVariable Integer id) {
         sanPhamService.xoaSanPham(id);
-        return ResponseEntity.ok("Xóa sản phẩm thành công khỏi hệ thống TrendFit");
+        return ResponseEntity.ok("Xóa sản phẩm TrendFit thành công!");
     }
 }
