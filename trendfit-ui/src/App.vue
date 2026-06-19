@@ -1,11 +1,22 @@
-<script setup></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <!-- KHU VỰC CHUYỂN TRANG ĐỘNG CỦA VUE -->
+  <!-- Mọi giao diện Header, Banner, Ruột sản phẩm, Footer của từng trang sẽ tự động lốt vào đây -->
+  <main class="mt-0 overflow-hidden">
+    <router-view />
+  </main>
 </template>
 
-<style scoped></style>
+<style>
+/* Reset nhẹ hệ thống hiển thị toàn trang cho mượt mà */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #ffffff;
+}
+
+/* Hiệu ứng trỏ chuột cho các icon hệ thống */
+.cursor-pointer {
+  cursor: pointer;
+}
+</style>
