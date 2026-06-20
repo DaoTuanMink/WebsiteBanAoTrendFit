@@ -1,233 +1,145 @@
-<script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import axios from 'axios'
-
-// Nhúng 2 thành phần dùng chung vào trang chi tiết khách hàng
-import LayoutHeader from '@/components/LayoutHeader.vue'
-import LayoutFooter from '@/components/LayoutFooter.vue'
-
-const route = useRoute()
-const productId = route.params.id
-
-// Trạng thái dữ liệu động từ Backend public
-const sanPham = ref(null)
-const bienTheList = ref([])
-const loading = ref(true)
-
-// Trạng thái người dùng chọn mua
-const mauDuocChon = ref('')
-const sizeDuocChon = ref('')
-const soLuongMua = ref(1)
-
-const layAnhMacDinh = (slugDanhMuc) => {
-  if (slugDanhMuc === 'ao-thun') {
-    return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=600'
-  }
-  return 'https://images.unsplash.com/photo-1624222247344-550fb8ef5521?w=600'
-}
-
-const taiChiTietSanPham = async () => {
-  try {
-    loading.value = true
-    // Gọi cổng api public không cần quyền đăng nhập của khách hàng
-    const spResponse = await axios.get(`http://localhost:8080/api/public/products/${productId}`)
-    sanPham.value = spResponse.data
-
-    const vtResponse = await axios.get(
-      `http://localhost:8080/api/public/products/${productId}/variants`,
-    )
-    bienTheList.value = vtResponse.data
-
-    if (bienTheList.value.length > 0) {
-      mauDuocChon.value = bienTheList.value[0].mauSac
-      sizeDuocChon.value = bienTheList.value[0].kichCoSize
-    }
-  } catch (error) {
-    console.error('Lỗi khi tải chi tiết sản phẩm:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const danhSachMauUnique = computed(() => {
-  return Array.from(new Set(bienTheList.value.map((item) => item.mauSac)))
-})
-
-const danhSachSizeUnique = computed(() => {
-  return Array.from(new Set(bienTheList.value.map((item) => item.kichCoSize)))
-})
-
-const bienTheHienTai = computed(() => {
-  return bienTheList.value.find(
-    (item) => item.mauSac === mauDuocChon.value && item.kichCoSize === sizeDuocChon.value,
-  )
-})
-
-const themVaoGioHang = () => {
-  if (!bienTheHienTai.value) {
-    alert('Vui lòng chọn đầy đủ Màu sắc và Kích cỡ!')
-    return
-  }
-  alert(`Đã thêm ${soLuongMua.value} chiếc ${sanPham.value.ten} vào giỏ hàng thành công!`)
-}
-</script>
-
 <template>
-  <div class="product-detail-layout bg-white min-vh-100">
-    <LayoutHeader />
-
-    <div class="container py-5">
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-dark" role="status"></div>
-        <p class="mt-2 text-muted small text-uppercase tracking-widest">
-          Đang kết nối kho dữ liệu...
-        </p>
+  <div class="container py-5 text-start" v-if="product">
+    <div class="row g-5">
+      <div class="col-12 col-md-6">
+        <img
+          src="https://via.placeholder.com/500x600?text=TrendFit+Premium+Shirt"
+          class="img-fluid border border-dark rounded-0 w-100 shadow-sm"
+          alt="TrendFit"
+        />
       </div>
 
-      <div v-else-if="sanPham" class="row g-5 text-start mt-2">
-        <div class="col-12 col-md-6">
-          <div class="border overflow-hidden bg-light">
-            <img
-              :src="layAnhMacDinh(sanPham.danhMuc?.slug)"
-              class="w-100 main-detail-image"
-              alt="Product image"
-            />
-          </div>
+      <div class="col-12 col-md-6">
+        <span class="badge bg-danger rounded-0 mb-2">NEW ARRIVAL 2026</span>
+        <h2 class="fw-bold text-uppercase text-dark mb-2">{{ product.ten }}</h2>
+        <h4 class="text-danger fw-bold mb-4">350.000 VNĐ</h4>
+        <hr class="border-dark" />
+
+        <div class="p-3 bg-light border border-dark my-4">
+          <h6 class="fw-bold text-dark text-uppercase mb-2">
+            <i class="ri-information-line"></i> Thông số trang phục
+          </h6>
+          <table class="table table-sm table-borderless m-0 small">
+            <tr>
+              <td class="fw-bold p-1" style="width: 150px">CHẤT LIỆU CHÍNH:</td>
+              <td class="p-1 text-secondary">
+                {{ product.chatLieu || '100% Cotton Premium Co giãn 4 chiều' }}
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-bold p-1">XUẤT XỨ SẢN XUẤT:</td>
+              <td class="p-1 text-secondary">
+                {{ product.xuatXu || 'Made in Việt Nam (TrendFit Factory)' }}
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-bold p-1">NĂM PHÁT HÀNH:</td>
+              <td class="p-1 text-secondary">{{ product.namRaMat || '2026' }}</td>
+            </tr>
+            <tr>
+              <td class="fw-bold p-1">MÃ SẢN PHẨM (SLUG):</td>
+              <td class="p-1 text-secondary">
+                <code>{{ product.slug }}</code>
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <div class="col-12 col-md-6 d-flex flex-column justify-content-between">
-          <div>
-            <span class="text-muted text-uppercase font-size-11 tracking-widest d-block mb-2">
-              {{ sanPham.danhMuc?.ten }} / {{ sanPham.gioiTinh }}
-            </span>
-            <h1 class="fw-black text-uppercase fs-3 mb-3 tracking-wide text-dark">
-              {{ sanPham.ten }}
-            </h1>
-
-            <div class="mb-4 pb-3 border-bottom">
-              <span v-if="bienTheHienTai" class="fs-4 fw-bold text-danger">
-                {{ bienTheHienTai.gia?.toLocaleString() }} đ
-              </span>
-              <span v-else class="text-muted font-size-13">Sản phẩm hiện đang cập nhật giá</span>
-            </div>
-
-            <div class="mb-4">
-              <label class="fw-bold small text-uppercase tracking-wider text-muted d-block mb-2"
-                >Màu sắc: {{ mauDuocChon }}</label
-              >
-              <div class="d-flex gap-2">
-                <button
-                  v-for="mau in danhSachMauUnique"
-                  :key="mau"
-                  @click="mauDuocChon = mau"
-                  class="btn btn-sm rounded-0 text-uppercase btn-option"
-                  :class="mauDuocChon === mau ? 'btn-dark' : 'btn-outline-dark'"
-                >
-                  {{ mau }}
-                </button>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <label class="fw-bold small text-uppercase tracking-wider text-muted d-block mb-2"
-                >Kích cỡ (Size): {{ sizeDuocChon }}</label
-              >
-              <div class="d-flex gap-2">
-                <button
-                  v-for="size in danhSachSizeUnique"
-                  :key="size"
-                  @click="sizeDuocChon = size"
-                  class="btn btn-sm rounded-0 btn-option"
-                  :class="sizeDuocChon === size ? 'btn-dark' : 'btn-outline-dark'"
-                >
-                  {{ size }}
-                </button>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <label class="fw-bold small text-uppercase tracking-wider text-muted d-block mb-2"
-                >Số lượng</label
-              >
-              <div class="d-flex align-items-center gap-1 qty-box">
-                <button
-                  @click="soLuongMua > 1 ? soLuongMua-- : null"
-                  class="btn btn-outline-dark btn-sm rounded-0 px-3"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  v-model.number="soLuongMua"
-                  class="form-control form-control-sm rounded-0 text-center border-dark bg-white"
-                  readonly
-                />
-                <button @click="soLuongMua++" class="btn btn-outline-dark btn-sm rounded-0 px-3">
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="d-grid gap-2 mt-4">
+        <div class="mb-4">
+          <label class="form-label fw-bold small text-dark"
+            ><i class="ri-t-shirt-line"></i> BƯỚC 1: LỰA CHỌN KÍCH CỠ (SIZE):</label
+          >
+          <div class="d-flex gap-2">
             <button
-              @click="themVaoGioHang"
-              class="btn btn-dark rounded-0 py-3 text-uppercase fw-bold tracking-widest text-sm"
+              v-for="s in ['S', 'M', 'L', 'XL', 'XXL']"
+              :key="s"
+              type="button"
+              @click="selectedSize = s"
+              :class="selectedSize === s ? 'btn-dark' : 'btn-outline-dark'"
+              class="btn rounded-0 px-3 fw-bold"
             >
-              Thêm vào giỏ hàng
+              {{ s }}
             </button>
           </div>
+        </div>
 
-          <div class="mt-5 pt-4 border-top">
-            <h5 class="fw-bold small text-uppercase tracking-wider text-dark mb-2">
-              Đặc tính chất liệu
-            </h5>
-            <ul class="list-unstyled text-muted small d-grid gap-2 ps-1">
-              <li>
-                • Chất liệu: <strong>{{ sanPham.chatLieu }}</strong>
-              </li>
-            </ul>
+        <div class="mb-5">
+          <label class="form-label fw-bold small text-dark"
+            ><i class="ri-palette-line"></i> BƯỚC 2: LỰA CHỌN MÀU SẮC ÁO:</label
+          >
+          <div class="d-flex gap-2">
+            <button
+              v-for="m in ['Đen truyền thống', 'Trắng tinh khôi', 'Xám xi măng']"
+              :key="m"
+              type="button"
+              @click="selectedColor = m"
+              :class="selectedColor === m ? 'btn-dark' : 'btn-outline-dark'"
+              class="btn rounded-0 px-3 fw-bold"
+            >
+              {{ m }}
+            </button>
           </div>
         </div>
-      </div>
 
-      <div v-else class="text-center py-5">
-        <h4 class="text-danger fw-bold">SẢN PHẨM KHÔNG TỒN TẠI HỆ THỐNG</h4>
-        <router-link to="/" class="btn btn-dark rounded-0 mt-3 px-4 btn-sm"
-          >QUAY LẠI TRANG CHỦ</router-link
+        <button
+          @click="xuLyThemVaoGio"
+          class="btn btn-dark btn-lg w-100 rounded-0 fw-bold py-3 text-uppercase fs-5 tracking-wide shadow"
         >
+          <i class="ri-shopping-cart-2-line"></i> Thêm vào giỏ hàng ngay
+        </button>
       </div>
     </div>
+  </div>
 
-    <LayoutFooter />
+  <div v-else class="text-center py-5">
+    <div class="spinner-border text-dark"></div>
   </div>
 </template>
 
-<style scoped>
-.font-size-11 {
-  font-size: 11px;
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+
+const route = useRoute()
+const router = useRouter()
+const product = ref(null)
+const selectedSize = ref('L')
+const selectedColor = ref('Đen truyền thống')
+
+onMounted(async () => {
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/products/${route.params.id}`)
+    product.value = res.data
+  } catch (err) {
+    alert('Sản phẩm áo TrendFit này không tồn tại trên hệ thống hoặc đã bị ẩn kho!')
+    router.push('/')
+  }
+})
+
+const xuLyThemVaoGio = () => {
+  const khoGioHangCucBo = JSON.parse(localStorage.getItem('trendfit_cart') || '[]')
+  const itemGioHang = {
+    id: product.value.id,
+    ten: product.value.ten,
+    size: selectedSize.value,
+    mau: selectedColor.value,
+    soLuong: 1,
+    giaGhiNhan: 350000,
+  }
+
+  // Nếu khách mua trùng mã áo, trùng cả size và màu sắc thì tăng số lượng lên 1
+  const hangDaCoTrongGio = khoGioHangCucBo.find(
+    (x) => x.id === itemGioHang.id && x.size === itemGioHang.size && x.mau === itemGioHang.mau,
+  )
+  if (hangDaCoTrongGio) {
+    hangDaCoTrongGio.soLuong += 1
+  } else {
+    khoGioHangCucBo.push(itemGioHang)
+  }
+
+  localStorage.setItem('trendfit_cart', JSON.stringify(khoGioHangCucBo))
+  alert('Đã bỏ sản phẩm áo vào giỏ hàng TrendFit thành công!')
+  router.push('/cart')
 }
-.font-size-13 {
-  font-size: 13px;
-}
-.fw-black {
-  font-weight: 900;
-}
-.main-detail-image {
-  height: 550px;
-  object-fit: cover;
-}
-.btn-option {
-  min-width: 55px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.qty-box {
-  max-width: 130px;
-}
-input[type='number']::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-</style>
+</script>

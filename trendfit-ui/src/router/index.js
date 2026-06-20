@@ -3,13 +3,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 // 1. Import các phân khu dành cho KHÁCH HÀNG (CLIENT)
 import HomeView from '../views/client/home/HomeView.vue'
 import ProductDetailView from '../views/client/product/ProductDetailView.vue'
+import CartView from '../views/client/cart/CartView.vue' // Thêm mới trang Giỏ hàng
+import CheckoutView from '../views/client/checkout/CheckoutView.vue' // Thêm mới trang Thanh toán
 
 // 2. Import phân khu XÁC THỰC (AUTH)
 import LoginView from '../views/auth/LoginView.vue'
 
 // 3. Import các phân khu dành cho QUẢN TRỊ (ADMIN)
 import AdminProductView from '../views/admin/product/AdminProductView.vue'
-import AdminOrderView from '../views/admin/order/AdminOrderView.vue' // Đón đầu chức năng duyệt hóa đơn cô giao
+import AdminOrderView from '../views/admin/order/AdminOrderView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +19,8 @@ const router = createRouter({
     // --- TUYẾN ĐƯỜNG CHO KHÁCH HÀNG ---
     { path: '/', name: 'home', component: HomeView },
     { path: '/product/:id', name: 'product-detail', component: ProductDetailView },
+    { path: '/cart', name: 'cart', component: CartView }, // Route giỏ hàng mới
+    { path: '/checkout', name: 'checkout', component: CheckoutView }, // Route đặt hàng mới
 
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
     { path: '/login', name: 'login', component: LoginView },
@@ -45,10 +49,10 @@ router.beforeEach((to, from, next) => {
     if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
       next('/admin/products') // Đá thẳng vào trang quản lý sản phẩm
     } else {
-      next('/') // Đá khách hàng về trang chủ mua sắm đồ Owen
+      next('/') // Đá khách hàng về trang chủ mua sắm đồ TrendFit
     }
   }
-  // Các trang công cộng còn lại cho phép ra vào tự do
+  // Các trang công cộng còn lại (bao gồm /cart và /checkout) cho phép ra vào tự do
   else {
     next()
   }
