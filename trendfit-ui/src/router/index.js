@@ -13,6 +13,8 @@ import LoginView from '../views/auth/LoginView.vue'
 import AdminProductView from '../views/admin/product/AdminProductView.vue'
 import AdminOrderView from '../views/admin/order/AdminOrderView.vue'
 
+import AoView from '../views/client/ao/AoView.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -28,6 +30,7 @@ const router = createRouter({
     // --- TUYẾN ĐƯỜNG QUẢN TRỊ (ADMIN) ---
     { path: '/admin/products', name: 'admin-product', component: AdminProductView },
     { path: '/admin/orders', name: 'admin-order', component: AdminOrderView },
+    { path: '/ao', name: 'ao', component: AoView },
   ],
 })
 

@@ -20,28 +20,30 @@
             <i class="ri-information-line"></i> Thông số trang phục
           </h6>
           <table class="table table-sm table-borderless m-0 small">
-            <tr>
-              <td class="fw-bold p-1" style="width: 150px">CHẤT LIỆU CHÍNH:</td>
-              <td class="p-1 text-secondary">
-                {{ product.chatLieu || '100% Cotton Premium Co giãn 4 chiều' }}
-              </td>
-            </tr>
-            <tr>
-              <td class="fw-bold p-1">XUẤT XỨ SẢN XUẤT:</td>
-              <td class="p-1 text-secondary">
-                {{ product.xuatXu || 'Made in Việt Nam (TrendFit Factory)' }}
-              </td>
-            </tr>
-            <tr>
-              <td class="fw-bold p-1">NĂM PHÁT HÀNH:</td>
-              <td class="p-1 text-secondary">{{ product.namRaMat || '2026' }}</td>
-            </tr>
-            <tr>
-              <td class="fw-bold p-1">MÃ SẢN PHẨM (SLUG):</td>
-              <td class="p-1 text-secondary">
-                <code>{{ product.slug }}</code>
-              </td>
-            </tr>
+            <tbody>
+              <tr>
+                <td class="fw-bold p-1" style="width: 150px">CHẤT LIỆU CHÍNH:</td>
+                <td class="p-1 text-secondary">
+                  {{ product.chatLieu || '100% Cotton Premium Co giãn 4 chiều' }}
+                </td>
+              </tr>
+              <tr>
+                <td class="fw-bold p-1">XUẤT XỨ SẢN XUẤT:</td>
+                <td class="p-1 text-secondary">
+                  {{ product.xuatXu || 'Made in Việt Nam (TrendFit Factory)' }}
+                </td>
+              </tr>
+              <tr>
+                <td class="fw-bold p-1">NĂM PHÁT HÀNH:</td>
+                <td class="p-1 text-secondary">{{ product.namRaMat || '2026' }}</td>
+              </tr>
+              <tr>
+                <td class="fw-bold p-1">MÃ SẢN PHẨM (SLUG):</td>
+                <td class="p-1 text-secondary">
+                  <code>{{ product.slug }}</code>
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
 
