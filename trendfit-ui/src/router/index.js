@@ -2,35 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 1. Import các phân khu dành cho KHÁCH HÀNG (CLIENT)
 import HomeView from '../views/client/home/HomeView.vue'
-import ProductDetailView from '../views/client/product/ProductDetailView.vue'
-import CartView from '../views/client/cart/CartView.vue' // Thêm mới trang Giỏ hàng
-import CheckoutView from '../views/client/checkout/CheckoutView.vue' // Thêm mới trang Thanh toán
 
 // 2. Import phân khu XÁC THỰC (AUTH)
 import LoginView from '../views/auth/LoginView.vue'
-
-// 3. Import các phân khu dành cho QUẢN TRỊ (ADMIN)
-import AdminProductView from '../views/admin/product/AdminProductView.vue'
-import AdminOrderView from '../views/admin/order/AdminOrderView.vue'
-
-import AoView from '../views/client/ao/AoView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     // --- TUYẾN ĐƯỜNG CHO KHÁCH HÀNG ---
     { path: '/', name: 'home', component: HomeView },
-    { path: '/product/:id', name: 'product-detail', component: ProductDetailView },
-    { path: '/cart', name: 'cart', component: CartView }, // Route giỏ hàng mới
-    { path: '/checkout', name: 'checkout', component: CheckoutView }, // Route đặt hàng mới
 
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
     { path: '/login', name: 'login', component: LoginView },
-
-    // --- TUYẾN ĐƯỜNG QUẢN TRỊ (ADMIN) ---
-    { path: '/admin/products', name: 'admin-product', component: AdminProductView },
-    { path: '/admin/orders', name: 'admin-order', component: AdminOrderView },
-    { path: '/ao', name: 'ao', component: AoView },
   ],
 })
 
