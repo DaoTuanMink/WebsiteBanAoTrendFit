@@ -1,45 +1,70 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// 1. Import các phân khu dành cho KHÁCH HÀNG (CLIENT)
-import HomeView from '../views/client/home/HomeView.vue'
-
-// 2. Import phân khu XÁC THỰC (AUTH)
-import LoginView from '../views/auth/LoginView.vue'
+// Import các component chính
+import HomeView from '@/views/client/home/HomeView.vue'
+import LoginView from '@/views/auth/LoginView.vue'
+// Import AdminLayout từ thư mục bạn đã tạo
+import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     // --- TUYẾN ĐƯỜNG CHO KHÁCH HÀNG ---
-    { path: '/', name: 'home', component: HomeView },
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+    },
+    {
+      path: '/ao',
+      name: 'ao',
+      // Đường dẫn đã sửa khớp với thư mục: src/views/client/ao/AoView.vue
+      component: () => import('@/views/client/ao/AoView.vue'),
+    },
 
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
-    { path: '/login', name: 'login', component: LoginView },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+    },
+
+    // --- TUYẾN ĐƯỜNG QUẢN TRỊ ---
+    {
+      path: '/admin',
+      component: AdminLayout,
+      children: [
+        {
+          path: 'products',
+          component: () => import('@/views/admin/product/AdminProductView.vue'),
+        },
+        {
+          path: 'orders',
+          component: () => import('@/views/admin/order/AdminOrderView.vue'),
+        },
+      ],
+    },
   ],
 })
 
-// 4. HỆ THỐNG NAVIGATION GUARD (BẢO VỆ CHẶN CỬA PHÂN QUYỀN)
+// HỆ THỐNG NAVIGATION GUARD
 router.beforeEach((to, from, next) => {
-  const userRole = localStorage.getItem('user_role') // Bốc quyền từ trình duyệt ra đối chiếu
+  const userRole = localStorage.getItem('user_role')
 
-  // Tình huống 1: Người dùng cố ý gõ link vào thẳng vùng quản trị /admin/...
   if (to.path.startsWith('/admin')) {
     if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
-      next() // Đúng vai trò Nhân viên/Quản lý -> Mở cửa cho qua
+      next()
     } else {
       alert('Cảnh báo an ninh: Khu vực này chỉ dành riêng cho Ban quản trị!')
-      next('/login') // Đá bay người lạ hoặc khách hàng thường về màn hình đăng nhập
+      next('/login')
     }
-  }
-  // Tình huống 2: Đã đăng nhập rồi nhưng vẫn bấm cố vào lại trang /login
-  else if (to.path === '/login' && userRole) {
+  } else if (to.path === '/login' && userRole) {
     if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
-      next('/admin/products') // Đá thẳng vào trang quản lý sản phẩm
+      next('/admin/products')
     } else {
-      next('/') // Đá khách hàng về trang chủ mua sắm đồ TrendFit
+      next('/')
     }
-  }
-  // Các trang công cộng còn lại (bao gồm /cart và /checkout) cho phép ra vào tự do
-  else {
+  } else {
     next()
   }
 })
