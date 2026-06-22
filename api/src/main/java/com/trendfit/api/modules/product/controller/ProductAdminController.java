@@ -3,6 +3,7 @@ package com.trendfit.api.modules.product.controller;
 import com.trendfit.api.modules.product.dto.ProductSaveDTO;
 import com.trendfit.api.modules.product.entity.DanhMuc;
 import com.trendfit.api.modules.product.entity.ThuongHieu;
+import com.trendfit.api.modules.product.repository.AnhSanPhamRepository;
 import com.trendfit.api.modules.product.repository.DanhMucRepository;
 import com.trendfit.api.modules.product.repository.ThuongHieuRepository;
 import com.trendfit.api.modules.product.service.SanPhamService;
@@ -18,6 +19,7 @@ public class ProductAdminController {
     @Autowired private SanPhamService sanPhamService;
     @Autowired private DanhMucRepository danhMucRepository;
     @Autowired private ThuongHieuRepository thuongHieuRepository;
+    @Autowired private AnhSanPhamRepository anhSanPhamRepository;
 
     @GetMapping("/metadata")
     public ResponseEntity<?> getMetadata() {
@@ -80,5 +82,11 @@ public ResponseEntity<?> deleteCategory(@PathVariable Integer id) {
 @GetMapping("/{id}/variants")
 public ResponseEntity<?> getVariants(@PathVariable Integer id) {
     return ResponseEntity.ok(sanPhamService.findBySanPhamId(id));
+}
+
+@GetMapping("/{id}/images")
+public ResponseEntity<?> getImages(@PathVariable Integer id) {
+    // Giả sử bạn đã có anhSanPhamRepository.findBySanPham_Id(id)
+    return ResponseEntity.ok(anhSanPhamRepository.findBySanPham_Id(id));
 }
 }

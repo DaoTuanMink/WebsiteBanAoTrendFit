@@ -1,7 +1,11 @@
 package com.trendfit.api.modules.product.repository;
 
 import com.trendfit.api.modules.product.entity.BienTheSanPham;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -10,7 +14,8 @@ public interface BienTheSanPhamRepository extends JpaRepository<BienTheSanPham, 
     // Tìm theo sản phẩm cha
     List<BienTheSanPham> findBySanPham_Id(Integer sanPhamId);
     
-    // Xóa tất cả biến thể của sản phẩm (dùng khi cập nhật lại toàn bộ)
+    @Modifying
+    @Transactional
     void deleteBySanPham_Id(Integer sanPhamId);
 
     

@@ -6,17 +6,21 @@
       <h5 class="fw-bold">
         {{ dangSua ? 'Sửa sản phẩm #' + (formData.sanPham.id || 'N/A') : 'Thêm sản phẩm mới' }}
       </h5>
+
       <div class="row g-3">
         <div class="col-md-6">
-          <input v-model="formData.sanPham.ten" class="form-control" placeholder="Tên sản phẩm" />
+          <label class="form-label">Tên sản phẩm</label>
+          <input v-model="formData.sanPham.ten" class="form-control" />
         </div>
         <div class="col-md-3">
+          <label class="form-label">Danh mục</label>
           <select v-model="formData.sanPham.danhMuc" class="form-select">
             <option :value="null">-- Chọn Danh mục --</option>
             <option v-for="dm in metadata.danhMucs" :key="dm.id" :value="dm">{{ dm.ten }}</option>
           </select>
         </div>
         <div class="col-md-3">
+          <label class="form-label">Thương hiệu</label>
           <select v-model="formData.sanPham.thuongHieu" class="form-select">
             <option :value="null">-- Chọn Thương hiệu --</option>
             <option v-for="th in metadata.thuongHieus" :key="th.id" :value="th">
@@ -65,7 +69,39 @@
         </button>
       </div>
 
-      <div class="mt-3">
+      <div class="mt-4">
+        <h6>Ảnh Sản Phẩm</h6>
+        <table class="table table-sm table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>URL Ảnh</th>
+              <th>Ảnh Chính?</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(img, idx) in formData.anhSanPhams" :key="idx">
+              <td><input v-model="img.urlAnh" class="form-control" /></td>
+              <td class="text-center">
+                <input type="checkbox" v-model="img.laAnhChinh" class="form-check-input" />
+              </td>
+              <td>
+                <button @click="formData.anhSanPhams.splice(idx, 1)" class="btn btn-danger btn-sm">
+                  x
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button
+          @click="formData.anhSanPhams.push({ urlAnh: '', laAnhChinh: false })"
+          class="btn btn-dark btn-sm"
+        >
+          + Thêm ảnh
+        </button>
+      </div>
+
+      <div class="mt-4">
         <button @click="saveFullProduct" class="btn btn-success me-2">LƯU THAY ĐỔI</button>
         <button @click="hienThiForm = false" class="btn btn-secondary">Hủy</button>
       </div>
@@ -123,17 +159,23 @@ const loadData = async () => {
 }
 
 const saveFullProduct = async () => {
+  console.log('Dữ liệu gửi lên server:', formData.value) // Kiểm tra xem ID có null không
+
   try {
+    // Ép kiểu ID về số nguyên để server nhận diện đúng bản ghi cần update
+    formData.value.sanPham.id = Number(formData.value.sanPham.id)
+
     if (dangSua.value) {
       await axios.put(`${API_BASE}/full`, formData.value)
     } else {
+      formData.value.sanPham.id = null // Đảm bảo thêm mới không có ID
       await axios.post(`${API_BASE}/full`, formData.value)
     }
     alert('Lưu thành công!')
     hienThiForm.value = false
     loadData()
   } catch (err) {
-    alert('Lỗi: Kiểm tra lại dữ liệu!')
+    alert('Lỗi: Kiểm tra dữ liệu!')
     console.error(err)
   }
 }
@@ -142,18 +184,24 @@ const kichHoatSuaForm = async (sp) => {
   dangSua.value = true
   hienThiForm.value = true
 
-  // Gọi API lấy biến thể chi tiết theo ID sản phẩm
   try {
-    const resVariants = await axios.get(`${API_BASE}/${sp.id}/variants`)
+    const [resVariants, resImages] = await Promise.all([
+      axios.get(`${API_BASE}/${sp.id}/variants`),
+      axios.get(`${API_BASE}/${sp.id}/images`),
+    ])
 
-    // Ép kiểu để đảm bảo formData có ID chính xác
+    // Load dữ liệu và đảm bảo tìm đúng object trong metadata để Select hoạt động
     formData.value = {
-      sanPham: { ...sp },
+      sanPham: {
+        ...sp,
+        danhMuc: metadata.value.danhMucs.find((d) => d.id === sp.danhMuc?.id) || null,
+        thuongHieu: metadata.value.thuongHieus.find((t) => t.id === sp.thuongHieu?.id) || null,
+      },
       bienTheSanPhams: resVariants.data || [],
-      anhSanPhams: [],
+      anhSanPhams: resImages.data || [],
     }
   } catch (err) {
-    console.error('Lỗi lấy biến thể:', err)
+    console.error('Lỗi load chi tiết:', err)
   }
 }
 

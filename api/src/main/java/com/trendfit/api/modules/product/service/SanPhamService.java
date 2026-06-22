@@ -43,19 +43,42 @@ public class SanPhamService {
 
 @Transactional
 public SanPham capNhatSanPhamFull(ProductSaveDTO dto) {
-    SanPham sp = sanPhamRepository.save(dto.getSanPham());
-    
-    // Xóa biến thể/ảnh cũ để cập nhật mới (cách nhanh nhất)
-    bienTheRepository.deleteBySanPham_Id(sp.getId());
-    anhRepository.deleteBySanPham_Id(sp.getId());
+    // 1. Kiểm tra xem sản phẩm có tồn tại không
+    SanPham existingSp = sanPhamRepository.findById(dto.getSanPham().getId())
+            .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
 
-    // Thêm lại biến thể/ảnh mới
+    // 2. Cập nhật thông tin cơ bản
+    existingSp.setTen(dto.getSanPham().getTen());
+    existingSp.setDanhMuc(dto.getSanPham().getDanhMuc());
+    existingSp.setThuongHieu(dto.getSanPham().getThuongHieu());
+    
+    // 3. Xóa dữ liệu cũ (Đã có logic delete trong Repository)
+    bienTheRepository.deleteBySanPham_Id(existingSp.getId());
+    anhRepository.deleteBySanPham_Id(existingSp.getId());
+    
+    // Cần flush để DB thực thi lệnh xóa trước khi thêm mới
+    bienTheRepository.flush();
+    anhRepository.flush();
+
+    // 4. Lưu biến thể mới
     if (dto.getBienTheSanPhams() != null) {
-        dto.getBienTheSanPhams().forEach(bt -> { bt.setSanPham(sp); bt.setId(null); });
+        dto.getBienTheSanPhams().forEach(bt -> { 
+            bt.setSanPham(existingSp); 
+            bt.setId(null); // Luôn set null ID để JPA tự tạo mới
+        });
         bienTheRepository.saveAll(dto.getBienTheSanPhams());
     }
-    // ... làm tương tự cho ảnh
-    return sp;
+
+    // 5. Lưu ảnh mới
+    if (dto.getAnhSanPhams() != null) {
+        dto.getAnhSanPhams().forEach(anh -> { 
+            anh.setSanPham(existingSp); 
+            anh.setId(null); 
+        });
+        anhRepository.saveAll(dto.getAnhSanPhams());
+    }
+    
+    return sanPhamRepository.save(existingSp);
 }
 
 public void delete(Integer id) {
