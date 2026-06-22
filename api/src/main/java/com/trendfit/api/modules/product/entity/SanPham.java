@@ -3,6 +3,7 @@ package com.trendfit.api.modules.product.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "san_pham")
@@ -51,4 +52,6 @@ public class SanPham {
 
     @PreUpdate
     protected void onUpdate() { ngayCapNhat = LocalDateTime.now(); }
+
+    
 }

@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 // Import các component chính
 import HomeView from '@/views/client/home/HomeView.vue'
 import LoginView from '@/views/auth/LoginView.vue'
-// Import AdminLayout từ thư mục bạn đã tạo
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const router = createRouter({
@@ -18,7 +17,6 @@ const router = createRouter({
     {
       path: '/ao',
       name: 'ao',
-      // Đường dẫn đã sửa khớp với thư mục: src/views/client/ao/AoView.vue
       component: () => import('@/views/client/ao/AoView.vue'),
     },
 
@@ -29,7 +27,7 @@ const router = createRouter({
       component: LoginView,
     },
 
-    // --- TUYẾN ĐƯỜNG QUẢN TRỊ ---
+    // --- TUYẾN ĐƯỜNG QUẢN TRỊ (Nested Routes) ---
     {
       path: '/admin',
       component: AdminLayout,
@@ -38,9 +36,18 @@ const router = createRouter({
           path: 'products',
           component: () => import('@/views/admin/product/AdminProductView.vue'),
         },
+        // ĐÃ DI CHUYỂN VÀO ĐÂY ĐỂ GIỮ NGUYÊN MENU SIDEBAR
+        {
+          path: 'categories',
+          component: () => import('@/views/admin/product/AdminCategoryView.vue'),
+        },
         {
           path: 'orders',
           component: () => import('@/views/admin/order/AdminOrderView.vue'),
+        },
+        {
+          path: 'brands',
+          component: () => import('@/views/admin/product/AdminBrandView.vue'),
         },
       ],
     },

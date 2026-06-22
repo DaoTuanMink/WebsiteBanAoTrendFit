@@ -1,104 +1,84 @@
 package com.trendfit.api.modules.product.controller;
 
-import com.trendfit.api.modules.product.entity.*;
-import com.trendfit.api.modules.product.repository.*;
+import com.trendfit.api.modules.product.dto.ProductSaveDTO;
+import com.trendfit.api.modules.product.entity.DanhMuc;
+import com.trendfit.api.modules.product.entity.ThuongHieu;
+import com.trendfit.api.modules.product.repository.DanhMucRepository;
+import com.trendfit.api.modules.product.repository.ThuongHieuRepository;
 import com.trendfit.api.modules.product.service.SanPhamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/admin/products")
 @CrossOrigin("*")
 public class ProductAdminController {
-    @Autowired private SanPhamService sanPhamService;
-    @Autowired private BienTheSanPhamRepository bienTheSanPhamRepository;
-    @Autowired private AnhSanPhamRepository anhSanPhamRepository;
-    @Autowired private DanhMucRepository danhMucRepository;
-@Autowired private ThuongHieuRepository thuongHieuRepository;
-
-@GetMapping("/metadata")
-public ResponseEntity<?> getMetadata() {
-    Map<String, Object> data = new HashMap<>();
-    data.put("danhMucs", danhMucRepository.findAll());
-    data.put("thuongHieus", thuongHieuRepository.findAll());
-    return ResponseEntity.ok(data);
-
-    // Lấy biến thể của 1 sản phẩm
-    @GetMapping("/{id}/variants")
-    public List<BienTheSanPham> getVariants(@PathVariable Integer id) {
-        return bienTheSanPhamRepository.findBySanPham_Id(id);
-    }
-
-    // Lưu biến thể (Chỉ cập nhật danh sách biến thể)
-    @PostMapping("/{id}/variants")
-    public ResponseEntity<?> saveVariants(@PathVariable Integer id, @RequestBody List<BienTheSanPham> variants) {
-        // Xóa cũ thêm mới để đảm bảo tính toàn vẹn
-        bienTheSanPhamRepository.deleteBySanPham_Id(id);
-        
-        SanPham sp = new SanPham(); sp.setId(id);
-        for(BienTheSanPham bt : variants) {
-            bt.setSanPham(sp);
-            bt.setId(null); // Đảm bảo tạo mới
-        }
-        return ResponseEntity.ok(bienTheSanPhamRepository.saveAll(variants));
-    }
     
-    // Tương tự cho Ảnh sản phẩm...
+    @Autowired private SanPhamService sanPhamService;
+    @Autowired private DanhMucRepository danhMucRepository;
+    @Autowired private ThuongHieuRepository thuongHieuRepository;
+
+    @GetMapping("/metadata")
+    public ResponseEntity<?> getMetadata() {
+        return ResponseEntity.ok(sanPhamService.getMetadata());
+    }
+
+    @PostMapping("/full")
+    public ResponseEntity<?> createFull(@RequestBody ProductSaveDTO dto) {
+        return ResponseEntity.ok(sanPhamService.luuSanPhamFull(dto));
+    }
+
+    @GetMapping
+public ResponseEntity<?> getAll() {
+    return ResponseEntity.ok(sanPhamService.findAll());
 }
 
-// @RestController
-// @RequestMapping("/api/admin/products")
-// @CrossOrigin(origins = "*")
-// public class ProductAdminController {
+@DeleteMapping("/{id}")
+public ResponseEntity<?> delete(@PathVariable Integer id) {
+    sanPhamService.delete(id); // Bạn cần viết hàm delete này trong SanPhamService
+    return ResponseEntity.ok("Đã xóa");
+}
 
-//     @Autowired
-//     private SanPhamService sanPhamService;
+@PutMapping("/full")
+public ResponseEntity<?> updateFull(@RequestBody ProductSaveDTO dto) {
+    // Sửa sản phẩm chính và cập nhật danh sách biến thể/ảnh
+    return ResponseEntity.ok(sanPhamService.capNhatSanPhamFull(dto));
+}
 
-//     @GetMapping
-//     public ResponseEntity<List<SanPham>> getAllProducts(
-//             @RequestParam(value = "search", required = false, defaultValue = "") String search,
-//             @RequestParam(value = "danhMucId", required = false) Integer danhMucId,
-//             @RequestParam(value = "thuongHieuId", required = false) Integer thuongHieuId) {
-        
-//         List<SanPham> products = sanPhamService.timKiemSanPhamAdmin(search, danhMucId, thuongHieuId);
-//         return ResponseEntity.ok(products);
-//     }
+// --- DANH MỤC ---
+@GetMapping("/categories")
+public ResponseEntity<?> getAllCategories() { return ResponseEntity.ok(danhMucRepository.findAll()); }
 
-//     @PostMapping
-//     public ResponseEntity<SanPham> createProduct(@RequestBody SanPham sanPham) {
-//         SanPham savedProduct = sanPhamService.themMoiSanPham(sanPham);
-//         return ResponseEntity.ok(savedProduct);
-//     }
+@PostMapping("/categories")
+public ResponseEntity<?> saveCategory(@RequestBody DanhMuc dm) { return ResponseEntity.ok(danhMucRepository.save(dm)); }
 
-//     @PutMapping("/{id}")
-//     public ResponseEntity<SanPham> updateProduct(@PathVariable Integer id, @RequestBody SanPham updateData) {
-//         SanPham updatedProduct = sanPhamService.capNhatSanPham(id, updateData);
-//         return ResponseEntity.ok(updatedProduct);
-//     }
+@DeleteMapping("/categories/{id}")
+public ResponseEntity<?> deleteCategory(@PathVariable Integer id) { 
+    danhMucRepository.deleteById(id); 
+    return ResponseEntity.ok("Xóa thành công"); 
+}
 
-//     @DeleteMapping("/{id}")
-//     public ResponseEntity<String> deleteProduct(@PathVariable Integer id) {
-//         sanPhamService.xoaSanPham(id);
-//         return ResponseEntity.ok("Xóa sản phẩm TrendFit thành công!");
-//     }
+// --- QUẢN LÝ THƯƠNG HIỆU ---
+    @GetMapping("/brands")
+    public ResponseEntity<?> getAllBrands() {
+        return ResponseEntity.ok(thuongHieuRepository.findAll());
+    }
 
-//     @Autowired
-//     private BienTheSanPhamService bienTheSanPhamService;
+    @PostMapping("/brands")
+    public ResponseEntity<?> saveBrand(@RequestBody ThuongHieu thuongHieu) {
+        return ResponseEntity.ok(thuongHieuRepository.save(thuongHieu));
+    }
 
-//     // Sửa @PathVariable từ Long sang Integer
-//     @GetMapping("/{productId}/variants")
-//     public ResponseEntity<?> getVariants(@PathVariable Integer productId) {
-//         return ResponseEntity.ok(bienTheSanPhamService.getBySanPhamId(productId));
-//     }
+    @DeleteMapping("/brands/{id}")
+    public ResponseEntity<?> deleteBrand(@PathVariable Integer id) {
+        thuongHieuRepository.deleteById(id);
+        return ResponseEntity.ok("Xóa thương hiệu thành công");
+    }
 
-//     // Sửa @PathVariable từ Long sang Integer
-//     @PostMapping("/{productId}/variants")
-//     public ResponseEntity<?> saveVariants(@PathVariable Integer productId, @RequestBody List<BienTheSanPham> variants) {
-//         return ResponseEntity.ok(bienTheSanPhamService.saveAll(productId, variants));
-//     }
-// }
+    // Thêm API này vào Controller
+@GetMapping("/{id}/variants")
+public ResponseEntity<?> getVariants(@PathVariable Integer id) {
+    return ResponseEntity.ok(sanPhamService.findBySanPhamId(id));
+}
+}
