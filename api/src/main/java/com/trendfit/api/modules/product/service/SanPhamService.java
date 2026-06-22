@@ -1,5 +1,8 @@
 package com.trendfit.api.modules.product.service;
 
+import com.trendfit.api.modules.order.entity.ChiTietDonHang;
+import com.trendfit.api.modules.order.entity.DonHang;
+import com.trendfit.api.modules.product.dto.ProductDetailDTO;
 import com.trendfit.api.modules.product.dto.ProductSaveDTO;
 import com.trendfit.api.modules.product.entity.*;
 import com.trendfit.api.modules.product.repository.*;
@@ -15,6 +18,7 @@ public class SanPhamService {
     @Autowired private AnhSanPhamRepository anhRepository;
     @Autowired private DanhMucRepository danhMucRepository;
     @Autowired private ThuongHieuRepository thuongHieuRepository;
+    
 
     public Map<String, Object> getMetadata() {
         Map<String, Object> data = new HashMap<>();
@@ -91,4 +95,17 @@ public void delete(Integer id) {
 public List<BienTheSanPham> findBySanPhamId(Integer id) {
     return bienTheRepository.findBySanPham_Id(id);
 }
+
+public ProductDetailDTO findByIdFull(Integer id) {
+    SanPham sp = sanPhamRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+
+    ProductDetailDTO dto = new ProductDetailDTO();
+    dto.setSanPham(sp);
+    dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(id));
+    dto.setAnhSanPhams(anhRepository.findBySanPham_Id(id));
+    
+    return dto;
+}
+
 }

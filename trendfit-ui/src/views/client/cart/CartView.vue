@@ -1,117 +1,101 @@
 <template>
-  <div class="container py-5 text-start">
-    <h3 class="fw-bold mb-4 text-dark">
-      <i class="ri-shopping-bag-line"></i> GIỎ HÀNG TRENDFIT CỦA BẠN
-    </h3>
-    <hr class="border-dark mb-4" />
+  <div class="cart-view container py-5">
+    <h2 class="fw-bold mb-4">GIỎ HÀNG CỦA BẠN</h2>
 
-    <div class="row g-4" v-if="cartItems.length > 0">
-      <div class="col-12 col-lg-8">
-        <div
-          class="card rounded-0 border-dark p-3 mb-3 shadow-sm bg-white"
-          v-for="(item, index) in cartItems"
-          :key="index"
-        >
-          <div class="row align-items-center g-3">
-            <div class="col-12 col-md-6">
-              <h5 class="fw-bold m-0 text-uppercase text-dark">{{ item.ten }}</h5>
-              <div class="mt-1">
-                <span class="badge bg-secondary rounded-0 me-2">Size: {{ item.size }}</span>
-                <span class="badge bg-info text-dark rounded-0">Màu: {{ item.mau }}</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3 d-flex align-items-center gap-2">
-              <button
-                @click="giamSoLuongMua(index)"
-                class="btn btn-sm btn-outline-dark rounded-0 fw-bold px-2"
-              >
-                -
-              </button>
-              <span class="fw-bold text-dark px-3 border border-dark bg-light py-1">{{
-                item.soLuong
-              }}</span>
-              <button
-                @click="tangSoLuongMua(index)"
-                class="btn btn-sm btn-outline-dark rounded-0 fw-bold px-2"
-              >
-                +
-              </button>
-            </div>
-            <div class="col-6 col-md-3 text-end">
-              <span class="fw-bold text-danger fs-5"
-                >{{ (item.giaGhiNhan * item.soLuong).toLocaleString('vi-VN') }} đ</span
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-lg-4">
-        <div class="card rounded-0 border-dark bg-light shadow-sm p-4 text-center">
-          <h5 class="fw-bold text-dark mb-3 text-uppercase">TÓM TẮT ĐƠN HÀNG</h5>
-          <div class="d-flex justify-content-between mb-2 small text-secondary">
-            <span>Tổng số lượng áo:</span>
-            <span>{{ tongSoLuongAo }} chiếc</span>
-          </div>
-          <hr class="my-2" />
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <span class="fw-bold text-dark">TỔNG TIỀN TẠM TÍNH:</span>
-            <span class="text-danger fw-bold h3 m-0"
-              >{{ tongTienHoaDon.toLocaleString('vi-VN') }} đ</span
-            >
-          </div>
-          <router-link
-            to="/checkout"
-            class="btn btn-dark w-100 rounded-0 fw-bold py-3 text-uppercase tracking-wider"
-          >
-            TIẾN HÀNH ĐẶT HÀNG <i class="ri-arrow-right-line"></i>
-          </router-link>
-        </div>
-      </div>
+    <div v-if="cart.length === 0" class="text-center py-5">
+      <p>Giỏ hàng trống.</p>
+      <router-link to="/ao" class="btn btn-dark">Mua sắm ngay</router-link>
     </div>
 
-    <div v-else class="text-center py-5 border border-dashed border-dark bg-light my-5">
-      <i class="ri-shopping-cart-line display-1 text-muted d-block mb-3"></i>
-      <h5 class="text-muted fw-bold">Giỏ hàng của bạn đang trống rỗng!</h5>
-      <p class="small text-secondary mb-4">
-        Hãy ra trang chủ lựa chọn những chiếc áo TrendFit cực chất nhé.
-      </p>
-      <router-link to="/" class="btn btn-dark rounded-0 fw-bold px-4 py-2 text-uppercase"
-        >QUAY LẠI MUA SẮM</router-link
-      >
+    <div v-else class="row">
+      <div class="col-md-8">
+        <table class="table align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Sản phẩm</th>
+              <th>Chi tiết</th>
+              <th>Đơn giá</th>
+              <th>Số lượng</th>
+              <th>Thành tiền</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in cart" :key="index">
+              <td>
+                <div class="d-flex align-items-center">
+                  <img :src="item.anhChinh" width="50" class="me-2" />
+                  <span>{{ item.ten }}</span>
+                </div>
+              </td>
+              <td>{{ item.mauSac }} / {{ item.kichCoSize }}</td>
+              <td>{{ formatPrice(item.gia) }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button @click="updateQuantity(index, -1)" class="btn btn-outline-secondary">
+                    -
+                  </button>
+                  <span class="px-3 border">{{ item.quantity }}</span>
+                  <button @click="updateQuantity(index, 1)" class="btn btn-outline-secondary">
+                    +
+                  </button>
+                </div>
+              </td>
+              <td class="fw-bold">{{ formatPrice(item.gia * item.quantity) }}</td>
+              <td>
+                <button @click="removeItem(index)" class="btn btn-sm btn-outline-danger">
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card p-4 shadow-sm">
+          <h5 class="mb-3">Tổng thanh toán</h5>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Tạm tính:</span>
+            <span>{{ formatPrice(totalPrice) }}</span>
+          </div>
+          <button @click="$router.push('/checkout')" class="btn btn-dark w-100 py-2">
+            THANH TOÁN
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-const cartItems = ref(JSON.parse(localStorage.getItem('trendfit_cart') || '[]'))
+const cart = ref([])
 
-const tongSoLuongAo = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.soLuong, 0)
+onMounted(() => {
+  cart.value = JSON.parse(localStorage.getItem('cart') || '[]')
 })
 
-const tongTienHoaDon = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.giaGhiNhan * item.soLuong, 0)
-})
+const totalPrice = computed(() =>
+  cart.value.reduce((sum, item) => sum + item.gia * item.quantity, 0),
+)
 
-const tangSoLuongMua = (index) => {
-  cartItems.value[index].soLuong++
-  capNhatBoNhoCucBo()
+const updateQuantity = (index, delta) => {
+  cart.value[index].quantity += delta
+  if (cart.value[index].quantity < 1) cart.value[index].quantity = 1
+  saveCart()
 }
 
-const giamSoLuongMua = (index) => {
-  if (cartItems.value[index].soLuong > 1) {
-    cartItems.value[index].soLuong--
-  } else {
-    // Nếu số lượng về 0 thì xóa hẳn bản ghi áo đó khỏi giỏ
-    cartItems.value.splice(index, 1)
-  }
-  capNhatBoNhoCucBo()
+const removeItem = (index) => {
+  cart.value.splice(index, 1)
+  saveCart()
 }
 
-const capNhatBoNhoCucBo = () => {
-  localStorage.setItem('trendfit_cart', JSON.stringify(cartItems.value))
+const saveCart = () => {
+  localStorage.setItem('cart', JSON.stringify(cart.value))
 }
+
+const formatPrice = (v) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
 </script>

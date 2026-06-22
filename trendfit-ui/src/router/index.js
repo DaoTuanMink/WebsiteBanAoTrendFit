@@ -20,11 +20,27 @@ const router = createRouter({
       component: () => import('@/views/client/ao/AoView.vue'),
     },
 
+    {
+      path: '/cart',
+      name: 'cart',
+      component: () => import('@/views/client/cart/CartView.vue'),
+    },
+    {
+      path: '/checkout',
+      name: 'checkout',
+      component: () => import('@/views/client/cart/CheckoutView.vue'),
+    },
+
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
     {
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/product/:id',
+      name: 'ProductDetail',
+      component: () => import('@/views/client/product/ProductDetailView.vue'),
     },
 
     // --- TUYẾN ĐƯỜNG QUẢN TRỊ (Nested Routes) ---
