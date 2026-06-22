@@ -13,26 +13,26 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class SanPhamClientController {
 
-    @Autowired
-    private SanPhamService sanPhamService;
+    // @Autowired
+    // private SanPhamService sanPhamService;
 
-    // 1. Lấy danh sách sản phẩm (Có search/filter)
-    @GetMapping
-    public ResponseEntity<List<SanPham>> getProducts(
-            @RequestParam(value = "search", required = false, defaultValue = "") String search) {
-        return ResponseEntity.ok(sanPhamService.timKiemSanPhamAdmin(search, null, null));
-    }
+    // // 1. Lấy danh sách sản phẩm (Có search/filter)
+    // @GetMapping
+    // public ResponseEntity<List<SanPham>> getProducts(
+    //         @RequestParam(value = "search", required = false, defaultValue = "") String search) {
+    //     return ResponseEntity.ok(sanPhamService.timKiemSanPhamAdmin(search, null, null));
+    // }
 
-    // 2. Lấy chi tiết sản phẩm
-    @GetMapping("/{id}")
-    public ResponseEntity<SanPham> getProductDetail(@PathVariable Integer id) {
-        SanPham sanPham = sanPhamService.layChiTietSanPham(id);
-        return (sanPham != null) ? ResponseEntity.ok(sanPham) : ResponseEntity.notFound().build();
-    }
+    // // 2. Lấy chi tiết sản phẩm
+    // @GetMapping("/{id}")
+    // public ResponseEntity<SanPham> getProductDetail(@PathVariable Integer id) {
+    //     SanPham sanPham = sanPhamService.layChiTietSanPham(id);
+    //     return (sanPham != null) ? ResponseEntity.ok(sanPham) : ResponseEntity.notFound().build();
+    // }
 
-    // 3. Lấy biến thể (Size/Màu) - FIX LỖI Ở ĐÂY
-    @GetMapping("/{id}/variants")
-    public ResponseEntity<List<BienTheSanPham>> getProductVariants(@PathVariable Integer id) {
-        return ResponseEntity.ok(sanPhamService.layBienTheCuaSanPham(id));
-    }
+    // // 3. Lấy biến thể (Size/Màu) - FIX LỖI Ở ĐÂY
+    // @GetMapping("/{id}/variants")
+    // public ResponseEntity<List<BienTheSanPham>> getProductVariants(@PathVariable Integer id) {
+    //     return ResponseEntity.ok(sanPhamService.layBienTheCuaSanPham(id));
+    // }
 }
