@@ -65,6 +65,10 @@ const router = createRouter({
           path: 'brands',
           component: () => import('@/views/admin/product/AdminBrandView.vue'),
         },
+        {
+          path: 'vouchers',
+          component: () => import('@/views/admin/marketing/AdminVoucherView.vue'),
+        },
       ],
     },
   ],

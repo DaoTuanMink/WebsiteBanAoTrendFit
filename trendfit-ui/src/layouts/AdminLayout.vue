@@ -12,6 +12,7 @@
           >Quản lý Thương hiệu</router-link
         >
         <router-link to="/admin/orders" class="nav-link text-white">Quản lý Đơn hàng</router-link>
+        <router-link to="/admin/vouchers" class="nav-link text-white">Quản lý Voucher</router-link>
       </nav>
 
       <div class="sidebar-footer p-3 border-top border-secondary">
