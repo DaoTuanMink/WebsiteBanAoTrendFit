@@ -81,7 +81,21 @@
           </thead>
           <tbody>
             <tr v-for="(img, idx) in formData.anhSanPhams" :key="idx">
-              <td><input v-model="img.urlAnh" class="form-control" /></td>
+              <td>
+                <div class="input-group">
+                  <input v-model="img.urlAnh" class="form-control" placeholder="URL ảnh..." />
+                  <input
+                    type="file"
+                    class="d-none"
+                    :id="'file-' + idx"
+                    @change="handleFileUpload($event, idx)"
+                    accept="image/*"
+                  />
+                  <label :for="'file-' + idx" class="btn btn-outline-secondary">
+                    <i class="bi bi-upload"></i> Chọn ảnh
+                  </label>
+                </div>
+              </td>
               <td class="text-center">
                 <input type="checkbox" v-model="img.laAnhChinh" class="form-check-input" />
               </td>
@@ -125,7 +139,7 @@
             <button class="btn btn-warning btn-sm me-2" @click="kichHoatSuaForm(sp)">
               Sửa/Biến thể
             </button>
-            <button class="btn btn-danger btn-sm" @click="hanhdongXoaCSDL(sp.id)">Xóa</button>
+            <button class="btn btn-danger btn-sm" @click="deleteProduct(sp.id)">Xóa</button>
           </td>
         </tr>
       </tbody>
@@ -136,6 +150,33 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+
+// ... ở phía trên cùng của script
+const CLOUD_NAME = 'dqciew3rk'
+const UPLOAD_PRESET = 'trendfit_preset' // Tên preset bạn vừa tạo
+
+const handleFileUpload = async (event, idx) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // ĐỔI TÊN BIẾN NÀY ĐỂ TRÁNH TRÙNG VỚI formData.value (ref sản phẩm)
+  const uploadData = new FormData()
+  uploadData.append('file', file)
+  uploadData.append('upload_preset', UPLOAD_PRESET)
+
+  try {
+    const res = await axios.post(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      uploadData, // Dùng tên biến mới ở đây
+    )
+
+    // Bây giờ bạn dùng 'formData' (là cái ref ở trên) sẽ không bị lỗi nữa
+    formData.value.anhSanPhams[idx].urlAnh = res.data.secure_url
+  } catch (err) {
+    console.error(err)
+    alert('Upload ảnh thất bại: ' + (err.response?.data?.error?.message || err.message))
+  }
+}
 
 const API_BASE = 'http://localhost:8080/api/admin/products'
 const danhSachSanPham = ref([])
@@ -215,10 +256,22 @@ const moFormThemMoi = () => {
   }
 }
 
-const hanhdongXoaCSDL = async (id) => {
-  if (confirm('Bạn chắc chắn muốn xóa sản phẩm này?')) {
-    await axios.delete(`${API_BASE}/${id}`)
-    loadData()
+// Thêm hàm lấy danh sách chỉ lấy sản phẩm "đang bán" (nếu cần)
+// Ở backend bạn nên sửa sanPhamRepository.findAll() thành hàm tìm những sản phẩm dangBan = true
+
+const deleteProduct = async (id) => {
+  if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return
+
+  try {
+    // Đảm bảo URL này khớp với Controller của bạn
+    await axios.delete(`http://localhost:8080/api/admin/products/${id}`)
+    alert('Xóa sản phẩm thành công!')
+    loadData() // Tải lại danh sách sau khi xóa
+  } catch (err) {
+    console.error(err)
+    // Hiển thị lỗi từ server hoặc lỗi mặc định
+    const msg = err.response?.data?.message || err.message
+    alert('Lỗi: ' + msg)
   }
 }
 

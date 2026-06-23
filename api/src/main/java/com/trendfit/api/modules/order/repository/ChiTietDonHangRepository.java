@@ -9,4 +9,6 @@ import java.util.List;
 public interface ChiTietDonHangRepository extends JpaRepository<ChiTietDonHang, Integer> {
     // Hàm này rất quan trọng để tìm các sản phẩm nằm trong 1 đơn hàng cụ thể
     List<ChiTietDonHang> findByDonHang_Id(Integer donHangId);
+
+    boolean existsByBienTheSanPham_Id(Integer bienTheId);
 }

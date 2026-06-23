@@ -76,29 +76,38 @@ const router = createRouter({
           path: 'brands',
           component: () => import('@/views/admin/product/AdminBrandView.vue'),
         },
+        {
+          path: 'vouchers',
+          component: () => import('@/views/admin/marketing/AdminVoucherView.vue'),
+        },
       ],
     },
   ],
 })
 
 // HỆ THỐNG NAVIGATION GUARD
+// ... (các import giữ nguyên)
+
 router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem('user_role')
+  const isAdminOrEmployee = userRole === 'ADMIN' || userRole === 'EMPLOYEE'
 
+  // 1. Kiểm tra nếu đang truy cập vào khu vực admin
   if (to.path.startsWith('/admin')) {
-    if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
-      next()
+    if (isAdminOrEmployee) {
+      next() // Cho phép vào
     } else {
+      // Nếu không có quyền, đẩy về login
       alert('Cảnh báo an ninh: Khu vực này chỉ dành riêng cho Ban quản trị!')
       next('/login')
     }
-  } else if (to.path === '/login' && userRole) {
-    if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
-      next('/admin/products')
-    } else {
-      next('/')
-    }
-  } else {
+  }
+  // 2. Kiểm tra nếu đang ở trang login mà đã đăng nhập rồi
+  else if (to.path === '/login' && isAdminOrEmployee) {
+    next('/admin/products')
+  }
+  // 3. Các trường hợp còn lại (bao gồm trang chủ '/'): Cho phép truy cập tự do
+  else {
     next()
   }
 })

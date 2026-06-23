@@ -2,6 +2,7 @@ package com.trendfit.api.modules.product.service;
 
 import com.trendfit.api.modules.order.entity.ChiTietDonHang;
 import com.trendfit.api.modules.order.entity.DonHang;
+import com.trendfit.api.modules.order.repository.ChiTietDonHangRepository;
 import com.trendfit.api.modules.product.dto.ProductDetailDTO;
 import com.trendfit.api.modules.product.dto.ProductSaveDTO;
 import com.trendfit.api.modules.product.entity.*;
@@ -18,6 +19,7 @@ public class SanPhamService {
     @Autowired private AnhSanPhamRepository anhRepository;
     @Autowired private DanhMucRepository danhMucRepository;
     @Autowired private ThuongHieuRepository thuongHieuRepository;
+    @Autowired private ChiTietDonHangRepository chiTietDonHangRepository;
     
 
     public Map<String, Object> getMetadata() {
@@ -47,33 +49,39 @@ public class SanPhamService {
 
 @Transactional
 public SanPham capNhatSanPhamFull(ProductSaveDTO dto) {
-    // 1. Kiểm tra xem sản phẩm có tồn tại không
     SanPham existingSp = sanPhamRepository.findById(dto.getSanPham().getId())
             .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
 
-    // 2. Cập nhật thông tin cơ bản
+    // 1. Kiểm tra xem có biến thể nào đã nằm trong đơn hàng chưa
+    List<BienTheSanPham> oldVariants = bienTheRepository.findBySanPham_Id(existingSp.getId());
+    for (BienTheSanPham bt : oldVariants) {
+        if (chiTietDonHangRepository.existsByBienTheSanPham_Id(bt.getId())) {
+            throw new RuntimeException("Sản phẩm này đã có đơn hàng phát sinh, không thể thay đổi biến thể (Size/Màu)!");
+        }
+    }
+
+    // 2. Nếu đi được tới đây nghĩa là KHÔNG CÓ ĐƠN HÀNG, bạn có quyền xóa cứng
     existingSp.setTen(dto.getSanPham().getTen());
     existingSp.setDanhMuc(dto.getSanPham().getDanhMuc());
     existingSp.setThuongHieu(dto.getSanPham().getThuongHieu());
     
-    // 3. Xóa dữ liệu cũ (Đã có logic delete trong Repository)
+    // Xóa an toàn vì đã chắc chắn không có đơn hàng liên quan
     bienTheRepository.deleteBySanPham_Id(existingSp.getId());
     anhRepository.deleteBySanPham_Id(existingSp.getId());
     
-    // Cần flush để DB thực thi lệnh xóa trước khi thêm mới
     bienTheRepository.flush();
     anhRepository.flush();
 
-    // 4. Lưu biến thể mới
+    // 3. Lưu biến thể mới
     if (dto.getBienTheSanPhams() != null) {
         dto.getBienTheSanPhams().forEach(bt -> { 
             bt.setSanPham(existingSp); 
-            bt.setId(null); // Luôn set null ID để JPA tự tạo mới
+            bt.setId(null); 
         });
         bienTheRepository.saveAll(dto.getBienTheSanPhams());
     }
 
-    // 5. Lưu ảnh mới
+    // 4. Lưu ảnh mới
     if (dto.getAnhSanPhams() != null) {
         dto.getAnhSanPhams().forEach(anh -> { 
             anh.setSanPham(existingSp); 
@@ -85,11 +93,18 @@ public SanPham capNhatSanPhamFull(ProductSaveDTO dto) {
     return sanPhamRepository.save(existingSp);
 }
 
+// Trong SanPhamService.java
+@Transactional
 public void delete(Integer id) {
-    // Lưu ý: Phải xóa biến thể và ảnh trước khi xóa sản phẩm (do ràng buộc khóa ngoại)
-    bienTheRepository.deleteBySanPham_Id(id);
-    anhRepository.deleteBySanPham_Id(id);
-    sanPhamRepository.deleteById(id);
+    try {
+        // Cố gắng xóa các thành phần con trước
+        bienTheRepository.deleteBySanPham_Id(id);
+        anhRepository.deleteBySanPham_Id(id);
+        sanPhamRepository.deleteById(id);
+    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+        // Bắt lỗi ràng buộc khóa ngoại (Foreign Key)
+        throw new RuntimeException("Đã liên kết với đơn hàng, không thể xóa!");
+    }
 }
 
 public List<BienTheSanPham> findBySanPhamId(Integer id) {
@@ -107,5 +122,6 @@ public ProductDetailDTO findByIdFull(Integer id) {
     
     return dto;
 }
+
 
 }
