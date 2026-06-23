@@ -11,6 +11,7 @@
           >Quản lý Thương hiệu</router-link
         >
         <router-link to="/admin/orders" class="nav-link text-white">Quản lý Đơn hàng</router-link>
+        <router-link to="/admin/dashboard"  class="nav-link text-white"> Thống Kê Doanh Số</router-link>
       </nav>
     </aside>
 
@@ -38,4 +39,7 @@
 .nav-link:hover {
   background: #334155;
 }
+
+
+
 </style>
