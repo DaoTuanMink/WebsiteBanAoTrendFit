@@ -10,6 +10,8 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@cloudinary/url-gen": "^1.22.0",
+    "@cloudinary/vue": "^1.13.4",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.17.0",
     "bootstrap": "^5.3.8",

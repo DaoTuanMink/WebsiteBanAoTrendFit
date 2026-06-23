@@ -43,7 +43,7 @@
 
         <router-link to="/cart" class="text-white position-relative icon-box">
           <i class="bi bi-cart3"></i>
-          <span class="badge-count">0</span>
+          <span v-if="cartCount > 0" class="badge-count">{{ cartCount }}</span>
         </router-link>
       </div>
     </div>
@@ -57,10 +57,16 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const username = ref('')
 const userRole = ref('')
+const cartCount = ref(0) // Biến lưu số lượng sản phẩm
 
 const kiemTraTrangThai = () => {
   username.value = localStorage.getItem('username') || ''
   userRole.value = localStorage.getItem('user_role') || ''
+
+  // Lấy giỏ hàng từ localStorage (giả sử bạn lưu key là 'cart')
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+  // Tính tổng số lượng (mỗi item có thuộc tính quantity)
+  cartCount.value = cart.reduce((total, item) => total + (item.quantity || 1), 0)
 }
 
 const dangXuat = () => {
@@ -69,6 +75,14 @@ const dangXuat = () => {
     window.location.reload()
   }
 }
+
+// Cập nhật giỏ hàng khi trang được tải
+onMounted(() => {
+  kiemTraTrangThai()
+
+  // Lắng nghe sự kiện nếu bạn muốn cập nhật số lượng ngay khi người dùng thêm hàng vào giỏ
+  window.addEventListener('storage', kiemTraTrangThai)
+})
 
 onMounted(kiemTraTrangThai)
 </script>
