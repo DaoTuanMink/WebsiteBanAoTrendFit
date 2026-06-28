@@ -8,12 +8,18 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/my-orders',
+      name: 'my-orders',
+      component: () => import('@/views/client/order/MyOrdersView.vue'),
+    },
     // --- TUYẾN ĐƯỜNG CHO KHÁCH HÀNG ---
     {
       path: '/',
       name: 'home',
       component: HomeView,
     },
+
     {
       path: '/ao',
       name: 'ao',
@@ -28,7 +34,7 @@ const router = createRouter({
     {
       path: '/checkout',
       name: 'checkout',
-      component: () => import('@/views/client/cart/CheckoutView.vue'),
+      component: () => import('@/views/client/checkout/CheckoutView.vue'),
     },
 
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
@@ -36,6 +42,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/auth/RegisterView.vue'),
     },
     {
       path: '/product/:id',
@@ -48,7 +59,7 @@ const router = createRouter({
       path: '/admin',
       component: AdminLayout,
       children: [
-        // 
+        //
         {
           path: '',
           redirect: '/admin/dashboard',
@@ -58,7 +69,7 @@ const router = createRouter({
           name: 'admin-dashboard',
           component: () => import('@/views/admin/dashboard/AdminDashboardView.vue'),
         },
-        // 
+        //
         {
           path: 'products',
           component: () => import('@/views/admin/product/AdminProductView.vue'),

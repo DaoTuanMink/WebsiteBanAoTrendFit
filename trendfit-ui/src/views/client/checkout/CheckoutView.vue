@@ -18,6 +18,23 @@
             <option value="COD">Thanh toán khi nhận hàng (COD)</option>
             <option value="CHUYEN_KHOAN">Chuyển khoản ngân hàng</option>
           </select>
+
+          <div class="input-group mb-3">
+            <input v-model="voucherCode" class="form-control" placeholder="Nhập mã giảm giá" />
+            <button @click="apDungVoucher" class="btn btn-outline-secondary" type="button">
+              Áp dụng
+            </button>
+          </div>
+
+          <div v-if="appliedVoucher" class="d-flex justify-content-between text-success">
+            <span>Giảm giá ({{ appliedVoucher.ma }}):</span>
+            <span>-{{ formatPrice(giamGia) }}</span>
+          </div>
+
+          <div class="d-flex justify-content-between fw-bold h5">
+            <span>Tổng thanh toán:</span>
+            <span class="text-danger">{{ formatPrice(finalPrice) }}</span>
+          </div>
         </div>
       </div>
 
@@ -67,26 +84,56 @@ const confirmOrder = async () => {
 
   const payload = {
     ...form.value,
-    tongTien: totalPrice.value,
+    userId: parseInt(localStorage.getItem('user_id')), // Ép kiểu sang số nguyên
+    tongThanhToan: finalPrice.value,
+    tienGiam: giamGia.value,
+    voucherId: appliedVoucher.value ? appliedVoucher.value.id : null,
     items: cart.value.map((i) => ({
-      bienTheId: i.bienTheId,
+      bienTheId: i.bienTheId, // Đảm bảo key này khớp với backend
       quantity: i.quantity,
       ten: i.ten,
       gia: i.gia,
     })),
   }
 
-  try {
-    // Gọi API lưu đơn hàng
-    await axios.post('http://localhost:8080/api/public/orders', payload)
+  console.log('Payload gửi đi:', JSON.stringify(payload))
 
-    // Đặt hàng xong thì xóa giỏ hàng
+  try {
+    await axios.post('http://localhost:8080/api/public/orders', payload)
     localStorage.removeItem('cart')
-    alert('Đặt hàng thành công! Cảm ơn bạn đã mua hàng tại TrendFit.')
-    router.push('/') // Về trang chủ
+    alert('Đặt hàng thành công!')
+    router.push('/')
   } catch (err) {
     console.error(err)
-    alert('Có lỗi xảy ra khi đặt hàng, vui lòng thử lại!')
+    alert('Có lỗi xảy ra: ' + (err.response?.data?.message || 'Vui lòng thử lại'))
+  }
+}
+
+const voucherCode = ref('')
+const appliedVoucher = ref(null)
+
+// Tính số tiền được giảm
+const giamGia = computed(() => {
+  if (!appliedVoucher.value) return 0
+  const v = appliedVoucher.value
+  if (v.loai === 'PERCENT') return (totalPrice.value * v.giaTriGiam) / 100
+  return v.giaTriGiam // Trường hợp FIXED
+})
+
+// Tổng tiền sau giảm
+const finalPrice = computed(() => totalPrice.value - giamGia.value)
+
+const apDungVoucher = async () => {
+  try {
+    // Gọi API kiểm tra (bạn cần viết API này ở VoucherAdminController hoặc một PublicController)
+    const res = await axios.post(`http://localhost:8080/api/public/vouchers/check`, {
+      ma: voucherCode.value,
+      tongDon: totalPrice.value,
+    })
+    appliedVoucher.value = res.data
+    alert('Áp dụng mã thành công!')
+  } catch (err) {
+    alert(err.response?.data?.message || 'Mã không hợp lệ!')
   }
 }
 </script>
