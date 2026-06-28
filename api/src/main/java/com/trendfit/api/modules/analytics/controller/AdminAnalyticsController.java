@@ -22,7 +22,7 @@ public class AdminAnalyticsController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /*hihihihihi
+    /*hihihihihihihiggg
      * API kiểm tra xem controller đã hoạt động chưa.
      * Mở trình duyệt:
      * http://localhost:8080/api/admin/analytics/test
