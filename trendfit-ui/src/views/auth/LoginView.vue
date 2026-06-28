@@ -22,6 +22,7 @@ const xuLyDangNhap = async () => {
     const data = response.data
     if (data.status === 'success') {
       // 1. Lưu thông tin xác thực vào LocalStorage của trình duyệt
+      localStorage.setItem('user_id', data.id) // <--- THÊM DÒNG NÀY
       localStorage.setItem('user_role', data.vaiTro)
       localStorage.setItem('user_token', data.token)
       localStorage.setItem('username', data.username)
@@ -95,6 +96,14 @@ const xuLyDangNhap = async () => {
         >
           {{ loading ? 'Đang xác thực...' : 'Đăng nhập hệ thống' }}
         </button>
+        <div class="text-center mt-3">
+          <small class="text-muted">
+            Chưa có tài khoản?
+            <router-link to="/register" class="text-dark fw-bold text-decoration-underline">
+              Đăng ký ngay
+            </router-link>
+          </small>
+        </div>
       </form>
 
       <div class="mt-4 pt-3 border-top font-size-11 text-muted bg-white p-2 border">

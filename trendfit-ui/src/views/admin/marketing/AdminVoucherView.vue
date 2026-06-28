@@ -20,7 +20,9 @@
         <tr v-for="v in vouchers" :key="v.id">
           <td class="fw-bold text-primary">{{ v.ma }}</td>
           <td>{{ v.ten }}</td>
-          <td>{{ v.giaTriGiam }} {{ v.loai === 'PERCENT' ? '%' : 'đ' }}</td>
+          <td>
+            {{ v.loai === 'PERCENT' ? v.giaTriGiam + '%' : formatCurrency(v.giaTriGiam) }}
+          </td>
           <td class="small">{{ v.ngayBatDau }} - {{ v.ngayKetThuc }}</td>
           <td>{{ v.soLanDaDung }} / {{ v.gioiHanSuDung }}</td>
           <td>
@@ -92,6 +94,10 @@ const showForm = ref(false)
 const editMode = ref(false)
 const form = ref({})
 
+const formatCurrency = (val) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
+}
+
 const loadVouchers = async () => {
   const res = await axios.get(API)
   vouchers.value = res.data
@@ -103,22 +109,40 @@ const moFormMoi = () => {
   showForm.value = true
 }
 
-const saveVoucher = async () => {
-  try {
-    if (editMode.value) await axios.put(`${API}/${form.value.id}`, form.value)
-    else await axios.post(API, form.value)
-    alert('Lưu thành công!')
-    showForm.value = false
-    loadVouchers()
-  } catch (e) {
-    alert('Lỗi lưu voucher!')
-  }
-}
-
 const xoaVoucher = async (id) => {
   if (confirm('Xóa voucher này?')) {
     await axios.delete(`${API}/${id}`)
     loadVouchers()
+  }
+}
+
+// ... (các import giữ nguyên)
+
+const editVoucher = (v) => {
+  // Clone object v để tránh thay đổi trực tiếp trên danh sách khi chưa lưu
+  form.value = { ...v }
+  editMode.value = true
+  showForm.value = true
+}
+
+const saveVoucher = async () => {
+  // Validate cơ bản
+  if (!form.value.ma || !form.value.giaTriGiam) {
+    alert('Vui lòng nhập đủ Mã và Giá trị giảm!')
+    return
+  }
+
+  try {
+    if (editMode.value) {
+      await axios.put(`${API}/${form.value.id}`, form.value)
+    } else {
+      await axios.post(API, form.value)
+    }
+    alert('Lưu thành công!')
+    showForm.value = false
+    loadVouchers()
+  } catch (e) {
+    alert('Lỗi lưu voucher: ' + (e.response?.data?.message || 'Có lỗi xảy ra'))
   }
 }
 
