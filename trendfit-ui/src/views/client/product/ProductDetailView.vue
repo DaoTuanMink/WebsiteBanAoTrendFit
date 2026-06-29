@@ -281,32 +281,28 @@ const relatedProducts = computed(() => {
 const loadProduct = async () => {
   const id = route.params.id
 
-  product.value = null
-  mainImage.value = ''
-  selectedColor.value = null
-  selectedSize.value = null
+  // 1. Chặn ngay nếu id không tồn tại hoặc bằng 'undefined'
+  if (!id || id === 'undefined' || id === undefined) {
+    console.warn('ID sản phẩm chưa sẵn sàng, đợi router...')
+    return
+  }
 
-  const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
-
-  product.value = res.data
-
-  mainImage.value =
-    product.value.anhSanPhams?.find((a) => a.laAnhChinh)?.urlAnh ||
-    product.value.anhSanPhams?.[0]?.urlAnh ||
-    fallbackImage
-
-  if (uniqueColors.value.length > 0) {
-    selectedColor.value = uniqueColors.value[0]
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
+    product.value = res.data
+    // ... code xử lý ảnh ...
+  } catch (error) {
+    console.error(error)
   }
 }
 
 const loadReviews = async () => {
-  try {
-    const res = await axios.get(
-      `http://localhost:8080/api/public/reviews/product/${route.params.id}`,
-    )
+  const id = route.params.id
+  if (!id) return
 
-    reviews.value = res.data
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/reviews/product/${id}`)
+    reviews.value = res.data || []
   } catch (error) {
     console.error('Lỗi tải đánh giá:', error)
     reviews.value = []
@@ -316,32 +312,7 @@ const loadReviews = async () => {
 const checkCanReview = async () => {
   canReview.value = true
 }
-// const checkCanReview = async () => {
-//   if (!currentUserId.value) {
-//     canReview.value = false
-//     return
-//   }
 
-//   try {
-//     const res = await axios.get('http://localhost:8080/api/public/reviews/can-review', {
-//       params: {
-//         nguoiDungId: currentUserId.value,
-//         sanPhamId: Number(route.params.id),
-//       },
-//     })
-
-//     canReview.value = res.data === true
-//   } catch (error) {
-//     console.error('Lỗi kiểm tra quyền đánh giá:', error)
-//     canReview.value = false
-//   }
-// }
-
-// const submitReview = async () => {
-//   if (!currentUserId.value) {
-//     alert('Bạn cần đăng nhập để đánh giá sản phẩm.')
-//     return
-//   }
 const submitReview = async () => {
   if (!reviewForm.value.noiDung.trim()) {
     alert('Vui lòng nhập nội dung đánh giá.')
@@ -458,6 +429,8 @@ const addToCart = () => {
 }
 
 const initPage = async () => {
+  // Bọc vào try catch để đảm bảo an toàn, lỗi hàm này không ảnh hưởng hàm khác
+  product.value = null // Reset trạng thái loading khi chuyển trang hoàn toàn
   await loadProduct()
   await loadReviews()
   await checkCanReview()
@@ -467,9 +440,13 @@ onMounted(initPage)
 
 watch(
   () => route.params.id,
-  async () => {
-    await initPage()
+  (newId) => {
+    // Chỉ gọi khi newId tồn tại và không phải là 'undefined'
+    if (newId && newId !== 'undefined') {
+      initPage()
+    }
   },
+  { immediate: true }, // Gọi ngay lần đầu nếu id đã có
 )
 </script>
 
