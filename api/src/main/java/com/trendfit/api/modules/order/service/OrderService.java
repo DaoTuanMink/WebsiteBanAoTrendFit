@@ -39,6 +39,13 @@ public class OrderService {
     public void taoDonHang(OrderRequestDTO dto) {
         DonHang dh = new DonHang();
         
+// LOGIC GÁN USER:
+    // 1. Nếu là Admin hoặc Nhân viên tạo (có creatorId), gán creatorId vào đơn
+    if (dto.getCreatorId() != null) {
+        NguoiDung creator = nguoiDungRepository.findById(dto.getCreatorId()).orElse(null);
+        dh.setNguoiDung(creator); 
+    }
+
         // 1. Gán người dùng (đã fix lỗi null)
         if (dto.getUserId() != null) {
         NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
@@ -139,5 +146,18 @@ public class OrderService {
 // Thêm vào OrderService.java
 public List<DonHang> findDonHangByUserId(Integer userId) {
     return donHangRepository.findByNguoiDung_IdOrderByNgayDatDesc(userId);
+}
+
+public List<OrderResponseDTO> findOrdersWithNullUser() {
+    // Chỉ lấy đơn hàng nơi người dùng là NULL
+    List<DonHang> list = donHangRepository.findByNguoiDungIsNull();
+    List<OrderResponseDTO> result = new ArrayList<>();
+    for(DonHang dh : list) {
+        OrderResponseDTO dto = new OrderResponseDTO();
+        dto.setDonHang(dh);
+        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
+        result.add(dto);
+    }
+    return result;
 }
 }

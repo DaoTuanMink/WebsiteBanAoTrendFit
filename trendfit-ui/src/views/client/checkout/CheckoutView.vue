@@ -82,14 +82,26 @@ const confirmOrder = async () => {
     return alert('Vui lòng điền đủ thông tin!')
   }
 
+  // Lấy thông tin từ LocalStorage
+  const idFromStorage = localStorage.getItem('user_id')
+  const roleFromStorage = localStorage.getItem('user_role') // Giả sử bạn lưu role khi login
+  const numericId = idFromStorage ? parseInt(idFromStorage) : null
+
   const payload = {
     ...form.value,
-    userId: parseInt(localStorage.getItem('user_id')), // Ép kiểu sang số nguyên
+    tongTienHang: totalPrice.value, // Đảm bảo truyền đủ tiền hàng
     tongThanhToan: finalPrice.value,
     tienGiam: giamGia.value,
     voucherId: appliedVoucher.value ? appliedVoucher.value.id : null,
+
+    // Logic gán ID tùy theo vai trò
+    // Nếu là Admin(1) hoặc NV(2) -> gán vào creatorId
+    // Nếu là Khách hàng(3+) -> gán vào userId
+    creatorId: roleFromStorage === 'ADMIN' || roleFromStorage === 'EMPLOYEE' ? numericId : null,
+    userId: roleFromStorage === 'CUSTOMER' ? numericId : null,
+
     items: cart.value.map((i) => ({
-      bienTheId: i.bienTheId, // Đảm bảo key này khớp với backend
+      bienTheId: i.bienTheId,
       quantity: i.quantity,
       ten: i.ten,
       gia: i.gia,
