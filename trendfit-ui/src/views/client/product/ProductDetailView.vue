@@ -89,19 +89,13 @@
             </div>
           </div>
 
-          <button
-            @click="addToCart"
-            class="btn btn-dark btn-lg w-100 py-3 text-uppercase"
-          >
+          <button @click="addToCart" class="btn btn-dark btn-lg w-100 py-3 text-uppercase">
             Thêm vào giỏ hàng
           </button>
-          
         </div>
-        
       </div>
 
-      <!-- Đánh giá sản phẩm -->
-      <!-- <div class="review-section mt-5">
+      <div class="review-section mt-5">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h4 class="fw-bold mb-0">Đánh giá sản phẩm</h4>
 
@@ -110,7 +104,8 @@
           </span>
         </div>
 
-        <div v-if="true" class="review-form mb-4">
+        <!-- FORM ĐÁNH GIÁ LUÔN HIỆN ĐỂ TEST -->
+        <div class="review-form mb-4">
           <h6 class="fw-bold mb-3">Viết đánh giá của bạn</h6>
 
           <div class="mb-3">
@@ -146,21 +141,12 @@
             ></textarea>
           </div>
 
-          <button class="btn btn-dark px-4" @click="submitReview">
-            Gửi đánh giá
-          </button>
+          <button class="btn btn-dark px-4" @click="submitReview">Gửi đánh giá</button>
         </div>
 
-        <div v-else class="alert alert-light border">
-          Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua hàng thành công, hoặc bạn đã đánh giá sản phẩm này rồi.
-        </div>
-
+        <!-- DANH SÁCH ĐÁNH GIÁ -->
         <div v-if="reviews.length">
-          <div
-            v-for="review in reviews"
-            :key="review.id"
-            class="review-item"
-          >
+          <div v-for="review in reviews" :key="review.id" class="review-item">
             <div class="d-flex justify-content-between align-items-start gap-3">
               <div>
                 <strong>{{ review.tenNguoiDung || 'Khách hàng' }}</strong>
@@ -185,119 +171,21 @@
           </div>
         </div>
 
-        <div v-else class="text-muted">
-          Sản phẩm chưa có đánh giá nào.
-        </div>
-      </div> -->
-
-      <!-- Đánh giá sản phẩm -->
-<div class="review-section mt-5">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold mb-0">Đánh giá sản phẩm</h4>
-
-    <span class="text-muted small">
-      {{ product.sanPham.tongLuotDanhGia || 0 }} lượt đánh giá
-    </span>
-  </div>
-
-  <!-- FORM ĐÁNH GIÁ LUÔN HIỆN ĐỂ TEST -->
-  <div class="review-form mb-4">
-    <h6 class="fw-bold mb-3">Viết đánh giá của bạn</h6>
-
-    <div class="mb-3">
-      <label class="form-label">Số sao</label>
-
-      <select v-model.number="reviewForm.saoXepHang" class="form-select review-select">
-        <option :value="5">5 sao - Rất tốt</option>
-        <option :value="4">4 sao - Tốt</option>
-        <option :value="3">3 sao - Bình thường</option>
-        <option :value="2">2 sao - Chưa tốt</option>
-        <option :value="1">1 sao - Tệ</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Tiêu đề</label>
-
-      <input
-        v-model="reviewForm.tieuDe"
-        class="form-control"
-        placeholder="Ví dụ: Sản phẩm đẹp, chất lượng tốt"
-      />
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Nội dung đánh giá</label>
-
-      <textarea
-        v-model="reviewForm.noiDung"
-        class="form-control"
-        rows="4"
-        placeholder="Chia sẻ cảm nhận của bạn sau khi mua sản phẩm..."
-      ></textarea>
-    </div>
-
-    <button class="btn btn-dark px-4" @click="submitReview">
-      Gửi đánh giá
-    </button>
-  </div>
-
-  <!-- DANH SÁCH ĐÁNH GIÁ -->
-  <div v-if="reviews.length">
-    <div
-      v-for="review in reviews"
-      :key="review.id"
-      class="review-item"
-    >
-      <div class="d-flex justify-content-between align-items-start gap-3">
-        <div>
-          <strong>{{ review.tenNguoiDung || 'Khách hàng' }}</strong>
-
-          <div class="small text-muted">
-            {{ formatDate(review.ngayTao) }}
-          </div>
-        </div>
-
-        <span class="stars">
-          {{ renderStars(review.saoXepHang) }}
-        </span>
+        <div v-else class="text-muted">Sản phẩm chưa có đánh giá nào.</div>
       </div>
-
-      <h6 v-if="review.tieuDe" class="fw-bold mt-3 mb-1">
-        {{ review.tieuDe }}
-      </h6>
-
-      <p class="mb-0 text-muted">
-        {{ review.noiDung }}
-      </p>
-    </div>
-  </div>
-
-  <div v-else class="text-muted">
-    Sản phẩm chưa có đánh giá nào.
-  </div>
-</div>
 
       <!-- Sản phẩm liên quan -->
       <div v-if="relatedProducts.length" class="related-section mt-5">
         <h4 class="fw-bold mb-4">Sản phẩm liên quan</h4>
 
         <div class="row row-cols-2 row-cols-md-4 g-4">
-          <div
-            v-for="item in relatedProducts"
-            :key="item.id"
-            class="col"
-          >
+          <div v-for="item in relatedProducts" :key="item.id" class="col">
             <router-link
               :to="'/product/' + item.id"
               class="related-card text-decoration-none text-dark d-block"
             >
               <div class="related-img-wrap bg-light mb-3">
-                <img
-                  :src="getProductImage(item)"
-                  class="related-img"
-                  alt="Sản phẩm liên quan"
-                />
+                <img :src="getProductImage(item)" class="related-img" alt="Sản phẩm liên quan" />
               </div>
 
               <h6 class="related-name">
@@ -433,7 +321,6 @@ const checkCanReview = async () => {
 //     canReview.value = false
 //     return
 //   }
-  
 
 //   try {
 //     const res = await axios.get('http://localhost:8080/api/public/reviews/can-review', {
@@ -486,7 +373,6 @@ const submitReview = async () => {
     alert(error.response?.data?.message || 'Không thể gửi đánh giá.')
   }
 }
-
 
 const selectColor = (color) => {
   selectedColor.value = color

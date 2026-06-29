@@ -82,8 +82,11 @@
           <tbody>
             <tr v-for="(img, idx) in formData.anhSanPhams" :key="idx">
               <td>
-                <div class="input-group">
+                <div class="input-group mb-2">
                   <input v-model="img.urlAnh" class="form-control" placeholder="URL ảnh..." />
+                  <label :for="'file-' + idx" class="btn btn-outline-secondary">
+                    <i class="bi bi-upload"></i>
+                  </label>
                   <input
                     type="file"
                     class="d-none"
@@ -91,10 +94,13 @@
                     @change="handleFileUpload($event, idx)"
                     accept="image/*"
                   />
-                  <label :for="'file-' + idx" class="btn btn-outline-secondary">
-                    <i class="bi bi-upload"></i> Chọn ảnh
-                  </label>
                 </div>
+                <img
+                  v-if="img.urlAnh"
+                  :src="img.urlAnh"
+                  style="width: 80px; height: 80px; object-fit: cover"
+                  class="border"
+                />
               </td>
               <td class="text-center">
                 <input type="checkbox" v-model="img.laAnhChinh" class="form-check-input" />

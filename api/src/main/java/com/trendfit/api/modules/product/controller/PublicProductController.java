@@ -18,8 +18,8 @@ public class PublicProductController {
 
     @GetMapping
     public ResponseEntity<?> getAllPublic() {
-        // Trả về toàn bộ danh sách sản phẩm cho khách hàng
-        return ResponseEntity.ok(sanPhamRepository.findAll());
+        // Gọi hàm getAllPublicProducts() mà tôi đã hướng dẫn bạn thêm vào Service
+        return ResponseEntity.ok(sanPhamService.getAllPublicProducts());
     }
 
     @GetMapping("/{id}")
@@ -31,4 +31,10 @@ public class PublicProductController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/public/products")
+public ResponseEntity<?> getAllProducts() {
+    // Gọi phương thức mới thay vì findAll() cũ
+    return ResponseEntity.ok(sanPhamService.getAllPublicProducts());
+}
 }

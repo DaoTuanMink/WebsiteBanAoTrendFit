@@ -104,10 +104,7 @@
             <div class="trendfit-product-card">
               <div class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light">
                 <img
-                  :src="
-                    item.anhChinh ||
-                    'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
-                  "
+                  :src="getAnhChinh(item.anhSanPhams)"
                   class="w-100 img-product-dynamic"
                   alt="product"
                 />
@@ -211,6 +208,16 @@ const filters = reactive({
   thuongHieuId: '',
 })
 
+const getAnhChinh = (anhList) => {
+  if (anhList && anhList.length > 0) {
+    // Ưu tiên lấy ảnh có laAnhChinh == true, nếu không có thì lấy ảnh đầu tiên
+    const anh = anhList.find((a) => a.laAnhChinh === true) || anhList[0]
+    return anh.urlAnh
+  }
+  // Ảnh mặc định nếu không có ảnh
+  return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
+}
+
 const taiDanhSachSanPham = async () => {
   try {
     loading.value = true
@@ -224,7 +231,7 @@ const taiDanhSachSanPham = async () => {
     })
     sanPhams.value = res.data
   } catch (err) {
-    System.out.println('Lỗi kết nối API public sản phẩm:', err)
+    console.error('Lỗi kết nối API public sản phẩm:', err)
   } finally {
     loading.value = false
   }
@@ -232,15 +239,18 @@ const taiDanhSachSanPham = async () => {
 
 onMounted(async () => {
   await taiDanhSachSanPham()
-  // Giả lập Mocking danh mục và thương hiệu, sau này đồng bộ với CSDL của Thành viên 4
-  listDanhMuc.value = [
-    { id: 1, ten: 'Áo phông Unisex' },
-    { id: 2, ten: 'Áo sơ mi' },
-  ]
-  listThuongHieu.value = [
-    { id: 1, ten: 'TrendFit Premium' },
-    { id: 2, ten: 'TrendFit Sport Active' },
-  ]
+
+  // Gọi API lấy danh mục và thương hiệu thật từ DB
+  try {
+    const [dmRes, thRes] = await Promise.all([
+      axios.get('http://localhost:8080/api/public/categories'),
+      axios.get('http://localhost:8080/api/public/brands'),
+    ])
+    listDanhMuc.value = dmRes.data
+    listThuongHieu.value = thRes.data
+  } catch (e) {
+    console.error('Lỗi tải danh mục/thương hiệu:', e)
+  }
 })
 </script>
 
