@@ -23,16 +23,6 @@
       <div class="card rounded-0 border-dark mb-5 shadow-sm bg-light">
         <div class="card-body p-4 row g-3">
           <div class="col-12 col-md-4">
-            <label class="form-label fw-bold text-dark small">TÌM KIẾM THEO TÊN ÁO</label>
-            <input
-              v-model="filters.search"
-              @input="taiDanhSachSanPham"
-              type="text"
-              class="form-control rounded-0 border-dark shadow-none"
-              placeholder="Nhập tên áo thun, sơ mi cần tìm..."
-            />
-          </div>
-          <div class="col-12 col-md-4">
             <label class="form-label fw-bold text-dark small">PHÂN LOẠI DANH MỤC</label>
             <select
               v-model="filters.danhMucId"
