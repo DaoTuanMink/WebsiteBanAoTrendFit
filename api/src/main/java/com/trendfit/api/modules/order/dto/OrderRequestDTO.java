@@ -22,6 +22,10 @@ public class OrderRequestDTO {
 
     @JsonProperty("userId") // Đảm bảo khớp với key trong JSON của Frontend
     private Integer userId;
+
+    private Integer creatorId;
     
     private List<OrderItemDTO> items;
+
+    
 }

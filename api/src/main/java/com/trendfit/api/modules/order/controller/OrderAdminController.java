@@ -34,4 +34,12 @@ public class OrderAdminController {
 public ResponseEntity<?> getAllOrders() {
     return ResponseEntity.ok(orderService.findAllOrdersWithDetails());
 }
+
+// Lấy các đơn hàng chưa gán cho khách (userId is null)
+@GetMapping("/null-user")
+public ResponseEntity<?> getOrdersWithNullUser() {
+    return ResponseEntity.ok(orderService.findOrdersWithNullUser());
+}
+
+
 }
