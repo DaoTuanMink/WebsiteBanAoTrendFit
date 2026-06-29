@@ -100,7 +100,7 @@
         </div>
 
         <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
-          <div class="col" v-for="item in sanPhams" :key="item.id">
+          <div class="col" v-for="item in sanPhams" :key="item.sanPham.id">
             <div class="trendfit-product-card">
               <div class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light">
                 <img
@@ -112,21 +112,23 @@
                   <span class="tag-new-trendfit">NEW</span>
                 </div>
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-uppercase fw-bold text-xs text-center text-decoration-none text-white"
                 >
                   Xem chi tiết / Đặt mua
                 </router-link>
               </div>
               <div class="trendfit-info text-start px-1">
-                <span class="text-muted text-uppercase font-size-10 d-block mb-1"
-                  >{{ item.chatLieu || 'Premium Cotton' }} | {{ item.xuatXu || 'Việt Nam' }}</span
-                >
+                <span class="text-muted text-uppercase font-size-10 d-block mb-1">
+                  {{ item.sanPham.chatLieu || 'Premium Cotton' }} |
+                  {{ item.sanPham.xuatXu || 'Việt Nam' }}
+                </span>
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
-                  >{{ item.ten }}</router-link
                 >
+                  {{ item.sanPham.ten }}
+                </router-link>
                 <p class="trendfit-price fw-bold text-danger m-0">350.000 đ</p>
               </div>
             </div>
