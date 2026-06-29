@@ -4,6 +4,7 @@
       <div class="p-3 fs-4 fw-bold text-white border-bottom border-secondary">TrendFit Admin</div>
 
       <nav class="nav flex-column p-2 flex-grow-1">
+        <router-link to="/admin/staff" class="nav-link text-white"> Quản lý Nhân viên </router-link>
         <router-link to="/admin/products" class="nav-link text-white">Quản lý Sản phẩm</router-link>
         <router-link to="/admin/categories" class="nav-link text-white"
           >Quản lý Danh mục</router-link
@@ -12,7 +13,9 @@
           >Quản lý Thương hiệu</router-link
         >
         <router-link to="/admin/orders" class="nav-link text-white">Quản lý Đơn hàng</router-link>
-        <router-link to="/admin/dashboard"  class="nav-link text-white"> Thống Kê Doanh Số</router-link>
+        <router-link to="/admin/dashboard" class="nav-link text-white">
+          Thống Kê Doanh Số</router-link
+        >
         <router-link to="/admin/vouchers" class="nav-link text-white">Quản lý Voucher</router-link>
       </nav>
 

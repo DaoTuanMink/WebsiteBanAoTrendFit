@@ -123,5 +123,33 @@ public ProductDetailDTO findByIdFull(Integer id) {
     return dto;
 }
 
+// Sửa phương thức findAll hiện tại thành thế này:
+public List<ProductDetailDTO> findAllFull() {
+    List<SanPham> listSp = sanPhamRepository.findAll();
+    List<ProductDetailDTO> listDto = new ArrayList<>();
+    
+    for (SanPham sp : listSp) {
+        ProductDetailDTO dto = new ProductDetailDTO();
+        dto.setSanPham(sp);
+        dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
+        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
+        listDto.add(dto);
+    }
+    return listDto;
+}
+
+public List<ProductDetailDTO> getAllPublicProducts() {
+    List<SanPham> list = sanPhamRepository.findAll();
+    List<ProductDetailDTO> result = new ArrayList<>();
+    for (SanPham sp : list) {
+        ProductDetailDTO dto = new ProductDetailDTO();
+        dto.setSanPham(sp);
+        // Tự load ảnh cho từng sản phẩm
+        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
+        result.add(dto);
+    }
+    return result;
+}
+
 
 }

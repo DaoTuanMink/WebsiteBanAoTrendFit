@@ -59,6 +59,10 @@ const router = createRouter({
       path: '/admin',
       component: AdminLayout,
       children: [
+        {
+          path: 'staff', // Route con của /admin
+          component: () => import('@/views/admin/staff/ManageStaffView.vue'),
+        },
         //
         {
           path: '',
