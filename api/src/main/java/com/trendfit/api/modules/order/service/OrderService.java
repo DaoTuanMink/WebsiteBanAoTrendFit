@@ -36,61 +36,62 @@ public class OrderService {
     }
 
     @Transactional
-    public void taoDonHang(OrderRequestDTO dto) {
-        DonHang dh = new DonHang();
-        
-// LOGIC GÁN USER:
-    // 1. Nếu là Admin hoặc Nhân viên tạo (có creatorId), gán creatorId vào đơn
-    if (dto.getCreatorId() != null) {
+public void taoDonHang(OrderRequestDTO dto) {
+    DonHang dh = new DonHang();
+    
+    // 1. Gán người dùng
+    if (dto.getUserId() != null) {
+        NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
+        dh.setNguoiDung(user); 
+    } else if (dto.getCreatorId() != null) {
         NguoiDung creator = nguoiDungRepository.findById(dto.getCreatorId()).orElse(null);
         dh.setNguoiDung(creator); 
     }
-
-        // 1. Gán người dùng (đã fix lỗi null)
-        if (dto.getUserId() != null) {
-        NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
-        dh.setNguoiDung(user); 
-    }
-        
-        // 2. Lưu thông tin đơn hàng
-        dh.setTenNguoiNhan(dto.getHoTen());
-        dh.setSoDienThoaiGiao(dto.getSdt());
-        dh.setDiaChiGiao(dto.getDiaChi());
-        dh.setTongTienHang(dto.getTongTienHang());
-        dh.setTienGiam(dto.getTienGiam());
-        dh.setTongThanhToan(dto.getTongThanhToan());
-        dh.setTrangThai("CHO_XAC_NHAN");
-        
-        // 3. Gán Voucher
-        if (dto.getVoucherId() != null) {
-            MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
-            if (voucher != null) {
-                dh.setMaGiamGia(voucher);
-                voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
-                maGiamGiaRepository.save(voucher);
-            }
+    
+    // 2. Lưu thông tin đơn hàng
+    dh.setTenNguoiNhan(dto.getHoTen());
+    dh.setSoDienThoaiGiao(dto.getSdt());
+    dh.setDiaChiGiao(dto.getDiaChi());
+    dh.setTongTienHang(dto.getTongTienHang());
+    dh.setTienGiam(dto.getTienGiam());
+    dh.setTongThanhToan(dto.getTongThanhToan());
+    dh.setTrangThai("CHO_XAC_NHAN");
+    
+    // 3. Gán Voucher
+    if (dto.getVoucherId() != null) {
+        MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
+        if (voucher != null) {
+            dh.setMaGiamGia(voucher);
+            voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
+            maGiamGiaRepository.save(voucher);
         }
-        
-        // Save đơn hàng trước để lấy ID
-        donHangRepository.save(dh);
+    }
+    
+    // Save đơn hàng trước để lấy ID
+    donHangRepository.save(dh);
 
-        // 4. LƯU CHI TIẾT ĐƠN HÀNG (MỚI THÊM VÀO)
-        if (dto.getItems() != null) {
-            for (OrderItemDTO item : dto.getItems()) {
-                ChiTietDonHang ct = new ChiTietDonHang();
-                ct.setDonHang(dh); // Gán đơn hàng cha
-                ct.setTenSanPham(item.getTen());
-                ct.setSoLuong(item.getQuantity());
-                ct.setDonGia(item.getGia());
-                
-                // Giả sử bạn lấy bienTheSanPham theo ID
-                BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId()).orElse(null);
+    // 4. LƯU CHI TIẾT ĐƠN HÀNG
+    if (dto.getItems() != null) {
+        for (OrderItemDTO item : dto.getItems()) {
+            ChiTietDonHang ct = new ChiTietDonHang();
+            ct.setDonHang(dh);
+            ct.setTenSanPham(item.getTen());
+            ct.setSoLuong(item.getQuantity());
+            ct.setDonGia(item.getGia());
+            
+            // Lấy thông tin biến thể để gán Size và Màu
+            BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId()).orElse(null);
+            if (bt != null) {
                 ct.setBienTheSanPham(bt);
-                
-                chiTietDonHangRepository.save(ct);
+                // GÁN DỮ LIỆU SIZE/MÀU ĐỂ HIỂN THỊ TRONG HÓA ĐƠN
+                ct.setKichCoSize(bt.getKichCoSize());
+                ct.setMauSac(bt.getMauSac());
             }
+            
+            chiTietDonHangRepository.save(ct);
         }
     }
+}
 
     @Transactional
     public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
@@ -151,6 +152,18 @@ public List<DonHang> findDonHangByUserId(Integer userId) {
 public List<OrderResponseDTO> findOrdersWithNullUser() {
     // Chỉ lấy đơn hàng nơi người dùng là NULL
     List<DonHang> list = donHangRepository.findByNguoiDungIsNull();
+    List<OrderResponseDTO> result = new ArrayList<>();
+    for(DonHang dh : list) {
+        OrderResponseDTO dto = new OrderResponseDTO();
+        dto.setDonHang(dh);
+        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
+        result.add(dto);
+    }
+    return result;
+}
+
+public List<OrderResponseDTO> getOrdersByUserId(Integer userId) {
+    List<DonHang> list = donHangRepository.findByNguoiDung_IdOrderByNgayDatDesc(userId);
     List<OrderResponseDTO> result = new ArrayList<>();
     for(DonHang dh : list) {
         OrderResponseDTO dto = new OrderResponseDTO();

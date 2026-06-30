@@ -29,11 +29,9 @@ public ResponseEntity<?> placeOrder(@RequestBody OrderRequestDTO dto) {
     return ResponseEntity.ok("Đặt hàng thành công!");
 }
 
+@GetMapping("/user/{userId}")
+public ResponseEntity<?> getOrdersByUser(@PathVariable Integer userId) {
+    return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
+}
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<DonHang>> getDonHangCuaUser(@PathVariable Integer userId) {
-        // Gọi qua Service thay vì Repository trực tiếp
-        List<DonHang> danhSachDonHang = orderService.findDonHangByUserId(userId);
-        return ResponseEntity.ok(danhSachDonHang);
-    }
 }
