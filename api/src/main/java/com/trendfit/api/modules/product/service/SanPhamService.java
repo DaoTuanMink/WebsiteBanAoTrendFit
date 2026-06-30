@@ -162,11 +162,17 @@ public List<ProductDetailDTO> findAllFull() {
 public List<ProductDetailDTO> getAllPublicProducts() {
     List<SanPham> list = sanPhamRepository.findAll();
     List<ProductDetailDTO> result = new ArrayList<>();
+    
     for (SanPham sp : list) {
         ProductDetailDTO dto = new ProductDetailDTO();
         dto.setSanPham(sp);
-        // Tự load ảnh cho từng sản phẩm
+        
+        // Nạp ảnh cho sản phẩm
         dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
+        
+        // --- THÊM DÒNG NÀY ĐỂ NẠP BIẾN THỂ ---
+        dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
+        
         result.add(dto);
     }
     return result;
