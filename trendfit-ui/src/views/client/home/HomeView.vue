@@ -108,6 +108,7 @@
                   Xem chi tiết / Đặt mua
                 </router-link>
               </div>
+
               <div class="trendfit-info text-start px-1">
                 <span class="text-muted text-uppercase font-size-10 d-block mb-1">
                   {{ item.sanPham.chatLieu || 'Premium Cotton' }} |
@@ -119,7 +120,10 @@
                 >
                   {{ item.sanPham.ten }}
                 </router-link>
-                <p class="trendfit-price fw-bold text-danger m-0">350.000 đ</p>
+
+                <p class="trendfit-price fw-bold text-danger m-0">
+                  {{ formatPrice(getMinPrice(item.bienTheSanPhams)) }}
+                </p>
               </div>
             </div>
           </div>
@@ -227,6 +231,17 @@ const taiDanhSachSanPham = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const formatPrice = (v) => {
+  if (!v || v === 0) return 'Liên hệ'
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
+}
+
+const getMinPrice = (variants) => {
+  if (!variants || variants.length === 0) return 0
+  const prices = variants.map((v) => Number(v.gia || 0)).filter((p) => p > 0)
+  return prices.length > 0 ? Math.min(...prices) : 0
 }
 
 onMounted(async () => {

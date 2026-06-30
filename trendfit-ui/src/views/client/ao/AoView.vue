@@ -11,20 +11,17 @@
         </div>
 
         <div v-else class="row row-cols-2 row-cols-md-4 g-4">
-          <div class="col" v-for="item in sanPhams" :key="item.id">
+          <div class="col" v-for="item in sanPhams" :key="item.sanPham.id">
             <div class="trendfit-product-card">
               <div class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light">
                 <img
-                  :src="
-                    item.anhChinh ||
-                    'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
-                  "
+                  :src="getAnhChinh(item.anhSanPhams)"
                   class="w-100 img-product-dynamic"
                   style="height: 300px; object-fit: cover"
                   alt="product"
                 />
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-white text-decoration-none text-uppercase fw-bold text-center"
                 >
                   Xem chi tiết
@@ -32,6 +29,15 @@
               </div>
 
               <div class="trendfit-info px-1">
+                <div
+                  class="d-flex justify-content-between font-size-10 text-uppercase text-muted mb-1"
+                >
+                  <span>{{ item.sanPham.danhMuc?.ten || 'Chưa phân loại' }}</span>
+                  <span class="fw-bold text-dark">{{
+                    item.sanPham.thuongHieu?.ten || 'No Brand'
+                  }}</span>
+                </div>
+
                 <div class="d-flex gap-1 mb-2">
                   <span
                     v-for="(color, idx) in getUniqueColors(item.bienTheSanPhams)"
@@ -44,14 +50,16 @@
                 </div>
 
                 <span class="text-muted text-uppercase font-size-10 d-block mb-1">
-                  {{ item.chatLieu || 'Premium Cotton' }}
+                  {{ item.sanPham.chatLieu || 'Premium Cotton' }}
                 </span>
+
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
                 >
-                  {{ item.ten }}
+                  {{ item.sanPham.ten }}
                 </router-link>
+
                 <p class="trendfit-price fw-bold text-danger m-0">
                   {{ formatPrice(getMinPrice(item.bienTheSanPhams)) }}
                 </p>
@@ -91,15 +99,30 @@ const getUniqueColors = (variants) => {
 }
 
 const getMinPrice = (variants) => {
-  if (!variants || variants.length === 0) return null
-  const prices = variants.map((v) => v.gia)
+  // Kiểm tra nếu variants bị null hoặc trống
+  if (!variants || variants.length === 0) return 0
+
+  // Lấy danh sách giá từ các biến thể
+  const prices = variants.map((v) => Number(v.gia || 0))
+
+  // Trả về giá trị nhỏ nhất
   return Math.min(...prices)
 }
 
-const formatPrice = (value) => {
-  if (!value) return 'Liên hệ'
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
+const formatPrice = (v) => {
+  if (!v || v === 0) return 'Liên hệ'
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
 }
+
+const getAnhChinh = (anhList) => {
+  if (anhList && anhList.length > 0) {
+    const anh = anhList.find((a) => a.laAnhChinh === true) || anhList[0]
+    return anh.urlAnh
+  }
+  return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
+}
+
+// Giữ nguyên các hàm cũ: getUniqueColors, getMinPrice, formatPrice
 
 onMounted(async () => {
   try {
