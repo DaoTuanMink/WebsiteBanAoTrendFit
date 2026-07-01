@@ -35,6 +35,15 @@ public class DonHang {
     private BigDecimal tienGiam;
     private Integer diemSuDung;
     private BigDecimal tongThanhToan;
+    /*
+ * NOTE DATN:
+ * Hai trường này dùng cho nghiệp vụ bán hàng tại quầy.
+ * tienKhachDua: số tiền khách đưa cho nhân viên.
+ * tienThua: số tiền nhân viên cần trả lại khách.
+ */
+private BigDecimal tienKhachDua = BigDecimal.ZERO;
+
+private BigDecimal tienThua = BigDecimal.ZERO;
     private String trangThai;
     private String phuongThucThanhToan;
     private String trangThaiHoanTra;

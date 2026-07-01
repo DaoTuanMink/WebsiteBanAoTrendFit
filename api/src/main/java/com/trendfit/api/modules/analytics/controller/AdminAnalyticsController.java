@@ -64,21 +64,58 @@ public class AdminAnalyticsController {
         // Cộng thêm 1 ngày để lấy hết dữ liệu của ngày kết thúc
         LocalDateTime toDate = to.plusDays(1).atStartOfDay();
 
+        // BigDecimal totalRevenue = getTotalRevenue(fromDate, toDate);
+        // Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
+        // Long totalFailedOrders = countFailedOrders(fromDate, toDate);
+
+        // List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
+        // List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
+        // List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
+
+        // Map<String, Object> result = new HashMap<>();
+        // result.put("totalRevenue", totalRevenue);
+        // result.put("totalSuccessOrders", totalSuccessOrders);
+        // result.put("totalFailedOrders", totalFailedOrders);
+        // result.put("revenueChart", revenueChart);
+        // result.put("orderStatusChart", orderStatusChart);
+        // result.put("topProducts", topProducts);
+
         BigDecimal totalRevenue = getTotalRevenue(fromDate, toDate);
-        Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
-        Long totalFailedOrders = countFailedOrders(fromDate, toDate);
 
-        List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
-        List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
-        List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
+BigDecimal totalImportCost = getTotalImportCost(fromDate, toDate);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalRevenue", totalRevenue);
-        result.put("totalSuccessOrders", totalSuccessOrders);
-        result.put("totalFailedOrders", totalFailedOrders);
-        result.put("revenueChart", revenueChart);
-        result.put("orderStatusChart", orderStatusChart);
-        result.put("topProducts", topProducts);
+BigDecimal grossProfit = totalRevenue.subtract(totalImportCost);
+
+BigDecimal profitRate = BigDecimal.ZERO;
+
+if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+    profitRate = grossProfit
+            .multiply(BigDecimal.valueOf(100))
+            .divide(totalRevenue, 2, java.math.RoundingMode.HALF_UP);
+}
+
+Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
+
+Long totalFailedOrders = countFailedOrders(fromDate, toDate);
+
+List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
+
+List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
+
+List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
+
+Map<String, Object> result = new HashMap<>();
+
+result.put("totalRevenue", totalRevenue);
+result.put("totalImportCost", totalImportCost);
+result.put("grossProfit", grossProfit);
+result.put("profitRate", profitRate);
+
+result.put("totalSuccessOrders", totalSuccessOrders);
+result.put("totalFailedOrders", totalFailedOrders);
+result.put("revenueChart", revenueChart);
+result.put("orderStatusChart", orderStatusChart);
+result.put("topProducts", topProducts);
 
         return result;
     }
@@ -87,17 +124,26 @@ public class AdminAnalyticsController {
      * Tính tổng doanh thu.
      * Chỉ tính các đơn đã giao / hoàn thành / thành công.
      */
-    private BigDecimal getTotalRevenue(LocalDateTime fromDate, LocalDateTime toDate) {
-        String sql = """
-                SELECT COALESCE(SUM(dh.tong_thanh_toan), 0)
-                FROM don_hang dh
-                WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
-                  AND dh.ngay_dat >= ?
-                  AND dh.ngay_dat < ?
-                """;
+    private BigDecimal getTotalImportCost(LocalDateTime fromDate, LocalDateTime toDate) {
+    String sql = """
+            SELECT COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0)
+            FROM chi_tiet_don_hang ctdh
+            JOIN don_hang dh ON dh.id = ctdh.don_hang_id
+            JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
+            WHERE UPPER(dh.trang_thai) IN (
+                'DA_GIAO',
+                'HOAN_THANH',
+                'THANH_CONG',
+                'DA_THANH_CONG',
+                'SUCCESS',
+                'COMPLETED'
+            )
+            AND dh.ngay_dat >= ?
+            AND dh.ngay_dat < ?
+            """;
 
-        return jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
-    }
+    return jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
+}
 
     /*
      * Đếm số đơn hàng thành công.
@@ -106,7 +152,7 @@ public class AdminAnalyticsController {
         String sql = """
                 SELECT COUNT(*)
                 FROM don_hang dh
-                WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
+                WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG',               'SUCCESS', 'COMPLETED')
                   AND dh.ngay_dat >= ?
                   AND dh.ngay_dat < ?
                 """;
@@ -144,8 +190,7 @@ public class AdminAnalyticsController {
                         DATE_FORMAT(dh.ngay_dat, '%d/%m/%Y') AS label,
                         COALESCE(SUM(dh.tong_thanh_toan), 0) AS revenue
                     FROM don_hang dh
-                    WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
-                      AND dh.ngay_dat >= ?
+WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG', 'SUCCESS', 'COMPLETED')                      AND dh.ngay_dat >= ?
                       AND dh.ngay_dat < ?
                     GROUP BY DATE(dh.ngay_dat), DATE_FORMAT(dh.ngay_dat, '%d/%m/%Y')
                     ORDER BY DATE(dh.ngay_dat)
@@ -156,8 +201,7 @@ public class AdminAnalyticsController {
                         CAST(YEAR(dh.ngay_dat) AS CHAR) AS label,
                         COALESCE(SUM(dh.tong_thanh_toan), 0) AS revenue
                     FROM don_hang dh
-                    WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
-                      AND dh.ngay_dat >= ?
+WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG', 'SUCCESS', 'COMPLETED')                      AND dh.ngay_dat >= ?
                       AND dh.ngay_dat < ?
                     GROUP BY YEAR(dh.ngay_dat)
                     ORDER BY YEAR(dh.ngay_dat)
@@ -168,8 +212,7 @@ public class AdminAnalyticsController {
                         DATE_FORMAT(dh.ngay_dat, '%m/%Y') AS label,
                         COALESCE(SUM(dh.tong_thanh_toan), 0) AS revenue
                     FROM don_hang dh
-                    WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
-                      AND dh.ngay_dat >= ?
+WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG', 'SUCCESS', 'COMPLETED')                      AND dh.ngay_dat >= ?
                       AND dh.ngay_dat < ?
                     GROUP BY DATE_FORMAT(dh.ngay_dat, '%Y-%m'), DATE_FORMAT(dh.ngay_dat, '%m/%Y')
                     ORDER BY DATE_FORMAT(dh.ngay_dat, '%Y-%m')
@@ -213,22 +256,67 @@ public class AdminAnalyticsController {
      * Lấy top 5 sản phẩm bán chạy nhất.
      * Chỉ lấy từ những đơn hàng đã thành công.
      */
-    private List<Map<String, Object>> getTopProducts(LocalDateTime fromDate, LocalDateTime toDate) {
-        String sql = """
-                SELECT 
-                    ctdh.ten_san_pham AS productName,
-                    SUM(ctdh.so_luong) AS quantitySold,
-                    COALESCE(SUM(ctdh.thanh_tien), 0) AS revenue
-                FROM chi_tiet_don_hang ctdh
-                JOIN don_hang dh ON dh.id = ctdh.don_hang_id
-                WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'SUCCESS', 'COMPLETED')
-                  AND dh.ngay_dat >= ?
-                  AND dh.ngay_dat < ?
-                GROUP BY ctdh.ten_san_pham
-                ORDER BY quantitySold DESC
-                LIMIT 5
-                """;
+    // private List<Map<String, Object>> getTopProducts(LocalDateTime fromDate, LocalDateTime toDate) {
+    //     String sql = """
+    //             SELECT 
+    //                 ctdh.ten_san_pham AS productName,
+    //                 SUM(ctdh.so_luong) AS quantitySold,
+    //                 COALESCE(SUM(ctdh.thanh_tien), 0) AS revenue
+    //             FROM chi_tiet_don_hang ctdh
+    //             JOIN don_hang dh ON dh.id = ctdh.don_hang_id
+    //             WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG', 'SUCCESS', 'COMPLETED')                  AND dh.ngay_dat >= ?
+    //               AND dh.ngay_dat < ?
+    //             GROUP BY ctdh.ten_san_pham
+    //             ORDER BY quantitySold DESC
+    //             LIMIT 5
+    //             """;
 
-        return jdbcTemplate.queryForList(sql, fromDate, toDate);
-    }
+    //     return jdbcTemplate.queryForList(sql, fromDate, toDate);
+    private List<Map<String, Object>> getTopProducts(LocalDateTime fromDate, LocalDateTime toDate) {
+    String sql = """
+            SELECT
+                ctdh.ten_san_pham AS productName,
+                SUM(ctdh.so_luong) AS quantitySold,
+                COALESCE(SUM(ctdh.thanh_tien), 0) AS revenue,
+                COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS importCost,
+                COALESCE(SUM(ctdh.thanh_tien), 0)
+                    - COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS profit
+            FROM chi_tiet_don_hang ctdh
+            JOIN don_hang dh ON dh.id = ctdh.don_hang_id
+            JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
+            WHERE UPPER(dh.trang_thai) IN (
+                'DA_GIAO',
+                'HOAN_THANH',
+                'THANH_CONG',
+                'DA_THANH_CONG',
+                'SUCCESS',
+                'COMPLETED'
+            )
+            AND dh.ngay_dat >= ?
+            AND dh.ngay_dat < ?
+            GROUP BY ctdh.ten_san_pham
+            ORDER BY quantitySold DESC
+            LIMIT 5
+            """;
+
+    return jdbcTemplate.queryForList(sql, fromDate, toDate);
+}
+    private BigDecimal getTotalRevenue(LocalDateTime fromDate, LocalDateTime toDate) {
+    String sql = """
+            SELECT COALESCE(SUM(dh.tong_thanh_toan), 0)
+            FROM don_hang dh
+            WHERE UPPER(dh.trang_thai) IN (
+                'DA_GIAO',
+                'HOAN_THANH',
+                'THANH_CONG',
+                'DA_THANH_CONG',
+                'SUCCESS',
+                'COMPLETED'
+            )
+            AND dh.ngay_dat >= ?
+            AND dh.ngay_dat < ?
+            """;
+
+    return jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
+}
 }
