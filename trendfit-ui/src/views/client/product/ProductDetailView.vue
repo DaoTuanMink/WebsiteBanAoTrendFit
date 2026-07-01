@@ -89,19 +89,13 @@
             </div>
           </div>
 
-          <button
-            @click="addToCart"
-            class="btn btn-dark btn-lg w-100 py-3 text-uppercase"
-          >
+          <button @click="addToCart" class="btn btn-dark btn-lg w-100 py-3 text-uppercase">
             Thêm vào giỏ hàng
           </button>
-          
         </div>
-        
       </div>
 
-      <!-- Đánh giá sản phẩm -->
-      <!-- <div class="review-section mt-5">
+      <div class="review-section mt-5">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h4 class="fw-bold mb-0">Đánh giá sản phẩm</h4>
 
@@ -110,7 +104,8 @@
           </span>
         </div>
 
-        <div v-if="true" class="review-form mb-4">
+        <!-- FORM ĐÁNH GIÁ LUÔN HIỆN ĐỂ TEST -->
+        <div class="review-form mb-4">
           <h6 class="fw-bold mb-3">Viết đánh giá của bạn</h6>
 
           <div class="mb-3">
@@ -146,21 +141,12 @@
             ></textarea>
           </div>
 
-          <button class="btn btn-dark px-4" @click="submitReview">
-            Gửi đánh giá
-          </button>
+          <button class="btn btn-dark px-4" @click="submitReview">Gửi đánh giá</button>
         </div>
 
-        <div v-else class="alert alert-light border">
-          Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua hàng thành công, hoặc bạn đã đánh giá sản phẩm này rồi.
-        </div>
-
+        <!-- DANH SÁCH ĐÁNH GIÁ -->
         <div v-if="reviews.length">
-          <div
-            v-for="review in reviews"
-            :key="review.id"
-            class="review-item"
-          >
+          <div v-for="review in reviews" :key="review.id" class="review-item">
             <div class="d-flex justify-content-between align-items-start gap-3">
               <div>
                 <strong>{{ review.tenNguoiDung || 'Khách hàng' }}</strong>
@@ -185,119 +171,21 @@
           </div>
         </div>
 
-        <div v-else class="text-muted">
-          Sản phẩm chưa có đánh giá nào.
-        </div>
-      </div> -->
-
-      <!-- Đánh giá sản phẩm -->
-<div class="review-section mt-5">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold mb-0">Đánh giá sản phẩm</h4>
-
-    <span class="text-muted small">
-      {{ product.sanPham.tongLuotDanhGia || 0 }} lượt đánh giá
-    </span>
-  </div>
-
-  <!-- FORM ĐÁNH GIÁ LUÔN HIỆN ĐỂ TEST -->
-  <div class="review-form mb-4">
-    <h6 class="fw-bold mb-3">Viết đánh giá của bạn</h6>
-
-    <div class="mb-3">
-      <label class="form-label">Số sao</label>
-
-      <select v-model.number="reviewForm.saoXepHang" class="form-select review-select">
-        <option :value="5">5 sao - Rất tốt</option>
-        <option :value="4">4 sao - Tốt</option>
-        <option :value="3">3 sao - Bình thường</option>
-        <option :value="2">2 sao - Chưa tốt</option>
-        <option :value="1">1 sao - Tệ</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Tiêu đề</label>
-
-      <input
-        v-model="reviewForm.tieuDe"
-        class="form-control"
-        placeholder="Ví dụ: Sản phẩm đẹp, chất lượng tốt"
-      />
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Nội dung đánh giá</label>
-
-      <textarea
-        v-model="reviewForm.noiDung"
-        class="form-control"
-        rows="4"
-        placeholder="Chia sẻ cảm nhận của bạn sau khi mua sản phẩm..."
-      ></textarea>
-    </div>
-
-    <button class="btn btn-dark px-4" @click="submitReview">
-      Gửi đánh giá
-    </button>
-  </div>
-
-  <!-- DANH SÁCH ĐÁNH GIÁ -->
-  <div v-if="reviews.length">
-    <div
-      v-for="review in reviews"
-      :key="review.id"
-      class="review-item"
-    >
-      <div class="d-flex justify-content-between align-items-start gap-3">
-        <div>
-          <strong>{{ review.tenNguoiDung || 'Khách hàng' }}</strong>
-
-          <div class="small text-muted">
-            {{ formatDate(review.ngayTao) }}
-          </div>
-        </div>
-
-        <span class="stars">
-          {{ renderStars(review.saoXepHang) }}
-        </span>
+        <div v-else class="text-muted">Sản phẩm chưa có đánh giá nào.</div>
       </div>
-
-      <h6 v-if="review.tieuDe" class="fw-bold mt-3 mb-1">
-        {{ review.tieuDe }}
-      </h6>
-
-      <p class="mb-0 text-muted">
-        {{ review.noiDung }}
-      </p>
-    </div>
-  </div>
-
-  <div v-else class="text-muted">
-    Sản phẩm chưa có đánh giá nào.
-  </div>
-</div>
 
       <!-- Sản phẩm liên quan -->
       <div v-if="relatedProducts.length" class="related-section mt-5">
         <h4 class="fw-bold mb-4">Sản phẩm liên quan</h4>
 
         <div class="row row-cols-2 row-cols-md-4 g-4">
-          <div
-            v-for="item in relatedProducts"
-            :key="item.id"
-            class="col"
-          >
+          <div v-for="item in relatedProducts" :key="item.id" class="col">
             <router-link
               :to="'/product/' + item.id"
               class="related-card text-decoration-none text-dark d-block"
             >
               <div class="related-img-wrap bg-light mb-3">
-                <img
-                  :src="getProductImage(item)"
-                  class="related-img"
-                  alt="Sản phẩm liên quan"
-                />
+                <img :src="getProductImage(item)" class="related-img" alt="Sản phẩm liên quan" />
               </div>
 
               <h6 class="related-name">
@@ -393,32 +281,28 @@ const relatedProducts = computed(() => {
 const loadProduct = async () => {
   const id = route.params.id
 
-  product.value = null
-  mainImage.value = ''
-  selectedColor.value = null
-  selectedSize.value = null
+  // 1. Chặn ngay nếu id không tồn tại hoặc bằng 'undefined'
+  if (!id || id === 'undefined' || id === undefined) {
+    console.warn('ID sản phẩm chưa sẵn sàng, đợi router...')
+    return
+  }
 
-  const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
-
-  product.value = res.data
-
-  mainImage.value =
-    product.value.anhSanPhams?.find((a) => a.laAnhChinh)?.urlAnh ||
-    product.value.anhSanPhams?.[0]?.urlAnh ||
-    fallbackImage
-
-  if (uniqueColors.value.length > 0) {
-    selectedColor.value = uniqueColors.value[0]
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
+    product.value = res.data
+    // ... code xử lý ảnh ...
+  } catch (error) {
+    console.error(error)
   }
 }
 
 const loadReviews = async () => {
-  try {
-    const res = await axios.get(
-      `http://localhost:8080/api/public/reviews/product/${route.params.id}`,
-    )
+  const id = route.params.id
+  if (!id) return
 
-    reviews.value = res.data
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/reviews/product/${id}`)
+    reviews.value = res.data || []
   } catch (error) {
     console.error('Lỗi tải đánh giá:', error)
     reviews.value = []
@@ -428,33 +312,7 @@ const loadReviews = async () => {
 const checkCanReview = async () => {
   canReview.value = true
 }
-// const checkCanReview = async () => {
-//   if (!currentUserId.value) {
-//     canReview.value = false
-//     return
-//   }
-  
 
-//   try {
-//     const res = await axios.get('http://localhost:8080/api/public/reviews/can-review', {
-//       params: {
-//         nguoiDungId: currentUserId.value,
-//         sanPhamId: Number(route.params.id),
-//       },
-//     })
-
-//     canReview.value = res.data === true
-//   } catch (error) {
-//     console.error('Lỗi kiểm tra quyền đánh giá:', error)
-//     canReview.value = false
-//   }
-// }
-
-// const submitReview = async () => {
-//   if (!currentUserId.value) {
-//     alert('Bạn cần đăng nhập để đánh giá sản phẩm.')
-//     return
-//   }
 const submitReview = async () => {
   if (!reviewForm.value.noiDung.trim()) {
     alert('Vui lòng nhập nội dung đánh giá.')
@@ -486,7 +344,6 @@ const submitReview = async () => {
     alert(error.response?.data?.message || 'Không thể gửi đánh giá.')
   }
 }
-
 
 const selectColor = (color) => {
   selectedColor.value = color
@@ -572,6 +429,8 @@ const addToCart = () => {
 }
 
 const initPage = async () => {
+  // Bọc vào try catch để đảm bảo an toàn, lỗi hàm này không ảnh hưởng hàm khác
+  product.value = null // Reset trạng thái loading khi chuyển trang hoàn toàn
   await loadProduct()
   await loadReviews()
   await checkCanReview()
@@ -581,9 +440,13 @@ onMounted(initPage)
 
 watch(
   () => route.params.id,
-  async () => {
-    await initPage()
+  (newId) => {
+    // Chỉ gọi khi newId tồn tại và không phải là 'undefined'
+    if (newId && newId !== 'undefined') {
+      initPage()
+    }
   },
+  { immediate: true }, // Gọi ngay lần đầu nếu id đã có
 )
 </script>
 

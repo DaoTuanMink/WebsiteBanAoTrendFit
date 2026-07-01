@@ -23,16 +23,6 @@
       <div class="card rounded-0 border-dark mb-5 shadow-sm bg-light">
         <div class="card-body p-4 row g-3">
           <div class="col-12 col-md-4">
-            <label class="form-label fw-bold text-dark small">TÌM KIẾM THEO TÊN ÁO</label>
-            <input
-              v-model="filters.search"
-              @input="taiDanhSachSanPham"
-              type="text"
-              class="form-control rounded-0 border-dark shadow-none"
-              placeholder="Nhập tên áo thun, sơ mi cần tìm..."
-            />
-          </div>
-          <div class="col-12 col-md-4">
             <label class="form-label fw-bold text-dark small">PHÂN LOẠI DANH MỤC</label>
             <select
               v-model="filters.danhMucId"
@@ -100,14 +90,11 @@
         </div>
 
         <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
-          <div class="col" v-for="item in sanPhams" :key="item.id">
+          <div class="col" v-for="item in sanPhams" :key="item.sanPham.id">
             <div class="trendfit-product-card">
               <div class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light">
                 <img
-                  :src="
-                    item.anhChinh ||
-                    'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
-                  "
+                  :src="getAnhChinh(item.anhSanPhams)"
                   class="w-100 img-product-dynamic"
                   alt="product"
                 />
@@ -115,22 +102,28 @@
                   <span class="tag-new-trendfit">NEW</span>
                 </div>
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-uppercase fw-bold text-xs text-center text-decoration-none text-white"
                 >
                   Xem chi tiết / Đặt mua
                 </router-link>
               </div>
+
               <div class="trendfit-info text-start px-1">
-                <span class="text-muted text-uppercase font-size-10 d-block mb-1"
-                  >{{ item.chatLieu || 'Premium Cotton' }} | {{ item.xuatXu || 'Việt Nam' }}</span
-                >
+                <span class="text-muted text-uppercase font-size-10 d-block mb-1">
+                  {{ item.sanPham.chatLieu || 'Premium Cotton' }} |
+                  {{ item.sanPham.xuatXu || 'Việt Nam' }}
+                </span>
                 <router-link
-                  :to="'/product/' + item.id"
+                  :to="'/product/' + item.sanPham.id"
                   class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
-                  >{{ item.ten }}</router-link
                 >
-                <p class="trendfit-price fw-bold text-danger m-0">350.000 đ</p>
+                  {{ item.sanPham.ten }}
+                </router-link>
+
+                <p class="trendfit-price fw-bold text-danger m-0">
+                  {{ formatPrice(getMinPrice(item.bienTheSanPhams)) }}
+                </p>
               </div>
             </div>
           </div>
@@ -211,6 +204,16 @@ const filters = reactive({
   thuongHieuId: '',
 })
 
+const getAnhChinh = (anhList) => {
+  if (anhList && anhList.length > 0) {
+    // Ưu tiên lấy ảnh có laAnhChinh == true, nếu không có thì lấy ảnh đầu tiên
+    const anh = anhList.find((a) => a.laAnhChinh === true) || anhList[0]
+    return anh.urlAnh
+  }
+  // Ảnh mặc định nếu không có ảnh
+  return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
+}
+
 const taiDanhSachSanPham = async () => {
   try {
     loading.value = true
@@ -224,23 +227,37 @@ const taiDanhSachSanPham = async () => {
     })
     sanPhams.value = res.data
   } catch (err) {
-    System.out.println('Lỗi kết nối API public sản phẩm:', err)
+    console.error('Lỗi kết nối API public sản phẩm:', err)
   } finally {
     loading.value = false
   }
 }
 
+const formatPrice = (v) => {
+  if (!v || v === 0) return 'Liên hệ'
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
+}
+
+const getMinPrice = (variants) => {
+  if (!variants || variants.length === 0) return 0
+  const prices = variants.map((v) => Number(v.gia || 0)).filter((p) => p > 0)
+  return prices.length > 0 ? Math.min(...prices) : 0
+}
+
 onMounted(async () => {
   await taiDanhSachSanPham()
-  // Giả lập Mocking danh mục và thương hiệu, sau này đồng bộ với CSDL của Thành viên 4
-  listDanhMuc.value = [
-    { id: 1, ten: 'Áo phông Unisex' },
-    { id: 2, ten: 'Áo sơ mi' },
-  ]
-  listThuongHieu.value = [
-    { id: 1, ten: 'TrendFit Premium' },
-    { id: 2, ten: 'TrendFit Sport Active' },
-  ]
+
+  // Gọi API lấy danh mục và thương hiệu thật từ DB
+  try {
+    const [dmRes, thRes] = await Promise.all([
+      axios.get('http://localhost:8080/api/public/categories'),
+      axios.get('http://localhost:8080/api/public/brands'),
+    ])
+    listDanhMuc.value = dmRes.data
+    listThuongHieu.value = thRes.data
+  } catch (e) {
+    console.error('Lỗi tải danh mục/thương hiệu:', e)
+  }
 })
 </script>
 

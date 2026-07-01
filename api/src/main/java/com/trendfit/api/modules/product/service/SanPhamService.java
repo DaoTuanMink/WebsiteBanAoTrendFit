@@ -52,36 +52,57 @@ public SanPham capNhatSanPhamFull(ProductSaveDTO dto) {
     SanPham existingSp = sanPhamRepository.findById(dto.getSanPham().getId())
             .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại!"));
 
-    // 1. Kiểm tra xem có biến thể nào đã nằm trong đơn hàng chưa
-    List<BienTheSanPham> oldVariants = bienTheRepository.findBySanPham_Id(existingSp.getId());
-    for (BienTheSanPham bt : oldVariants) {
-        if (chiTietDonHangRepository.existsByBienTheSanPham_Id(bt.getId())) {
-            throw new RuntimeException("Sản phẩm này đã có đơn hàng phát sinh, không thể thay đổi biến thể (Size/Màu)!");
-        }
-    }
-
-    // 2. Nếu đi được tới đây nghĩa là KHÔNG CÓ ĐƠN HÀNG, bạn có quyền xóa cứng
+    // 1. Cập nhật thông tin cơ bản
     existingSp.setTen(dto.getSanPham().getTen());
     existingSp.setDanhMuc(dto.getSanPham().getDanhMuc());
     existingSp.setThuongHieu(dto.getSanPham().getThuongHieu());
-    
-    // Xóa an toàn vì đã chắc chắn không có đơn hàng liên quan
-    bienTheRepository.deleteBySanPham_Id(existingSp.getId());
-    anhRepository.deleteBySanPham_Id(existingSp.getId());
-    
-    bienTheRepository.flush();
-    anhRepository.flush();
+    existingSp.setMoTa(dto.getSanPham().getMoTa());
+    existingSp.setGioiTinh(dto.getSanPham().getGioiTinh());
+    existingSp.setChatLieu(dto.getSanPham().getChatLieu());
+    existingSp.setXuatXu(dto.getSanPham().getXuatXu());
+    existingSp.setNamRaMat(dto.getSanPham().getNamRaMat());
 
-    // 3. Lưu biến thể mới
+    // 2. Xử lý biến thể (Logic: Cập nhật nếu đã có đơn hàng, Xóa/Thêm nếu chưa)
+    List<BienTheSanPham> oldVariants = bienTheRepository.findBySanPham_Id(existingSp.getId());
+    
     if (dto.getBienTheSanPhams() != null) {
-        dto.getBienTheSanPhams().forEach(bt -> { 
-            bt.setSanPham(existingSp); 
-            bt.setId(null); 
-        });
-        bienTheRepository.saveAll(dto.getBienTheSanPhams());
+        // Tạo map để dễ tra cứu biến thể cũ
+        Map<Integer, BienTheSanPham> oldVariantMap = new HashMap<>();
+        for (BienTheSanPham bt : oldVariants) {
+            oldVariantMap.put(bt.getId(), bt);
+        }
+
+        for (BienTheSanPham newBt : dto.getBienTheSanPhams()) {
+            if (newBt.getId() != null && oldVariantMap.containsKey(newBt.getId())) {
+                // Đã tồn tại: Cập nhật thông tin
+                BienTheSanPham btToUpdate = oldVariantMap.get(newBt.getId());
+                btToUpdate.setKichCoSize(newBt.getKichCoSize());
+                btToUpdate.setMauSac(newBt.getMauSac());
+                btToUpdate.setGia(newBt.getGia());
+                btToUpdate.setSoLuongTon(newBt.getSoLuongTon());
+                bienTheRepository.save(btToUpdate);
+                oldVariantMap.remove(newBt.getId()); // Đánh dấu đã xử lý
+            } else {
+                // Biến thể mới: Thêm mới
+                newBt.setSanPham(existingSp);
+                newBt.setId(null);
+                bienTheRepository.save(newBt);
+            }
+        }
+        
+        // Những biến thể cũ còn sót lại trong map là những cái không có trong danh sách mới -> Cần xóa
+        for (BienTheSanPham btToDelete : oldVariantMap.values()) {
+            if (chiTietDonHangRepository.existsByBienTheSanPham_Id(btToDelete.getId())) {
+                throw new RuntimeException("Không thể xóa biến thể '" + btToDelete.getKichCoSize() + "/" + btToDelete.getMauSac() + "' vì đã có đơn hàng!");
+            }
+            bienTheRepository.delete(btToDelete);
+        }
     }
 
-    // 4. Lưu ảnh mới
+    // 3. Xử lý ảnh (Ảnh không liên quan đến đơn hàng nên xóa đi lưu lại cho sạch)
+    anhRepository.deleteBySanPham_Id(existingSp.getId());
+    anhRepository.flush();
+    
     if (dto.getAnhSanPhams() != null) {
         dto.getAnhSanPhams().forEach(anh -> { 
             anh.setSanPham(existingSp); 
@@ -121,6 +142,40 @@ public ProductDetailDTO findByIdFull(Integer id) {
     dto.setAnhSanPhams(anhRepository.findBySanPham_Id(id));
     
     return dto;
+}
+
+// Sửa phương thức findAll hiện tại thành thế này:
+public List<ProductDetailDTO> findAllFull() {
+    List<SanPham> listSp = sanPhamRepository.findAll();
+    List<ProductDetailDTO> listDto = new ArrayList<>();
+    
+    for (SanPham sp : listSp) {
+        ProductDetailDTO dto = new ProductDetailDTO();
+        dto.setSanPham(sp);
+        dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
+        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
+        listDto.add(dto);
+    }
+    return listDto;
+}
+
+public List<ProductDetailDTO> getAllPublicProducts() {
+    List<SanPham> list = sanPhamRepository.findAll();
+    List<ProductDetailDTO> result = new ArrayList<>();
+    
+    for (SanPham sp : list) {
+        ProductDetailDTO dto = new ProductDetailDTO();
+        dto.setSanPham(sp);
+        
+        // Nạp ảnh cho sản phẩm
+        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
+        
+        // --- THÊM DÒNG NÀY ĐỂ NẠP BIẾN THỂ ---
+        dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
+        
+        result.add(dto);
+    }
+    return result;
 }
 
 

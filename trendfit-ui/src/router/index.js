@@ -8,12 +8,18 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/my-orders',
+      name: 'my-orders',
+      component: () => import('@/views/client/order/MyOrdersView.vue'),
+    },
     // --- TUYẾN ĐƯỜNG CHO KHÁCH HÀNG ---
     {
       path: '/',
       name: 'home',
       component: HomeView,
     },
+
     {
       path: '/ao',
       name: 'ao',
@@ -28,7 +34,7 @@ const router = createRouter({
     {
       path: '/checkout',
       name: 'checkout',
-      component: () => import('@/views/client/cart/CheckoutView.vue'),
+      component: () => import('@/views/client/checkout/CheckoutView.vue'),
     },
 
     // --- TUYẾN ĐƯỜNG ĐĂNG NHẬP ---
@@ -38,9 +44,20 @@ const router = createRouter({
       component: LoginView,
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/auth/RegisterView.vue'),
+    },
+    {
       path: '/product/:id',
       name: 'ProductDetail',
       component: () => import('@/views/client/product/ProductDetailView.vue'),
+    },
+    {
+    path: "/history-order",
+    name: "history-order",
+    component: () =>
+        import("@/views/client/historyOrder/HistoryOrderView.vue"),
     },
 
     // --- TUYẾN ĐƯỜNG QUẢN TRỊ (Nested Routes) ---
@@ -48,7 +65,11 @@ const router = createRouter({
       path: '/admin',
       component: AdminLayout,
       children: [
-        // 
+        {
+          path: 'staff', // Route con của /admin
+          component: () => import('@/views/admin/staff/ManageStaffView.vue'),
+        },
+        //
         {
           path: '',
           redirect: '/admin/dashboard',

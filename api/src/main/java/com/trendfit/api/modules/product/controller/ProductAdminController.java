@@ -48,7 +48,7 @@ public ResponseEntity<?> updateFull(@RequestBody ProductSaveDTO dto) {
     return ResponseEntity.ok(sanPhamService.capNhatSanPhamFull(dto));
 }
 
-// --- DANH MỤC ---
+// --- DANH MỤC --- ahihihihi
 @GetMapping("/categories")
 public ResponseEntity<?> getAllCategories() { return ResponseEntity.ok(danhMucRepository.findAll()); }
 

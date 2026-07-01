@@ -1,5 +1,7 @@
 package com.trendfit.api.modules.order.service;
 
+import com.trendfit.api.modules.marketing.entity.MaGiamGia;
+import com.trendfit.api.modules.marketing.repository.MaGiamGiaRepository;
 import com.trendfit.api.modules.order.dto.OrderItemDTO;
 import com.trendfit.api.modules.order.dto.OrderRequestDTO;
 import com.trendfit.api.modules.order.dto.OrderResponseDTO;
@@ -9,6 +11,9 @@ import com.trendfit.api.modules.order.repository.ChiTietDonHangRepository;
 import com.trendfit.api.modules.order.repository.DonHangRepository;
 import com.trendfit.api.modules.product.entity.BienTheSanPham;
 import com.trendfit.api.modules.product.repository.BienTheSanPhamRepository;
+import com.trendfit.api.modules.user.entity.NguoiDung;
+import com.trendfit.api.modules.user.repository.NguoiDungRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,34 +24,74 @@ import java.util.List; // <--- Đã thêm import này
 
 @Service
 public class OrderService {
+    @Autowired private MaGiamGiaRepository maGiamGiaRepository;
     @Autowired private DonHangRepository donHangRepository;
     @Autowired private ChiTietDonHangRepository chiTietDonHangRepository;
     @Autowired private BienTheSanPhamRepository bienTheRepository;
+    @Autowired private NguoiDungRepository nguoiDungRepository;
+
+    
+    OrderService(MaGiamGiaRepository maGiamGiaRepository) {
+        this.maGiamGiaRepository = maGiamGiaRepository;
+    }
 
     @Transactional
-    public void taoDonHang(OrderRequestDTO dto) {
-        DonHang dh = new DonHang();
-        dh.setTenNguoiNhan(dto.getHoTen());
-        dh.setSoDienThoaiGiao(dto.getSdt());
-        dh.setDiaChiGiao(dto.getDiaChi());
-        dh.setTongThanhToan(dto.getTongTien());
-        dh.setTrangThai("CHO_XAC_NHAN");
-        dh.setNgayDat(LocalDateTime.now());
-        donHangRepository.save(dh);
+public void taoDonHang(OrderRequestDTO dto) {
+    DonHang dh = new DonHang();
+    
+    // 1. Gán người dùng
+    if (dto.getUserId() != null) {
+        NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
+        dh.setNguoiDung(user); 
+    } else if (dto.getCreatorId() != null) {
+        NguoiDung creator = nguoiDungRepository.findById(dto.getCreatorId()).orElse(null);
+        dh.setNguoiDung(creator); 
+    }
+    
+    // 2. Lưu thông tin đơn hàng
+    dh.setTenNguoiNhan(dto.getHoTen());
+    dh.setSoDienThoaiGiao(dto.getSdt());
+    dh.setDiaChiGiao(dto.getDiaChi());
+    dh.setTongTienHang(dto.getTongTienHang());
+    dh.setTienGiam(dto.getTienGiam());
+    dh.setTongThanhToan(dto.getTongThanhToan());
+    dh.setTrangThai("CHO_XAC_NHAN");
+    
+    // 3. Gán Voucher
+    if (dto.getVoucherId() != null) {
+        MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
+        if (voucher != null) {
+            dh.setMaGiamGia(voucher);
+            voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
+            maGiamGiaRepository.save(voucher);
+        }
+    }
+    
+    // Save đơn hàng trước để lấy ID
+    donHangRepository.save(dh);
 
+    // 4. LƯU CHI TIẾT ĐƠN HÀNG
+    if (dto.getItems() != null) {
         for (OrderItemDTO item : dto.getItems()) {
             ChiTietDonHang ct = new ChiTietDonHang();
             ct.setDonHang(dh);
-            BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
-                    .orElseThrow(() -> new RuntimeException("Biến thể không tồn tại"));
-            ct.setBienTheSanPham(bt);
+            ct.setTenSanPham(item.getTen());
             ct.setSoLuong(item.getQuantity());
             ct.setDonGia(item.getGia());
-            ct.setThanhTien(item.getGia().multiply(BigDecimal.valueOf(item.getQuantity())));
-            ct.setTenSanPham(item.getTen());
+            
+            // Lấy thông tin biến thể để gán Size và Màu
+            BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId()).orElse(null);
+            if (bt != null) {
+                ct.setBienTheSanPham(bt);
+                // GÁN DỮ LIỆU SIZE/MÀU ĐỂ HIỂN THỊ TRONG HÓA ĐƠN
+                ct.setKichCoSize(bt.getKichCoSize());
+                ct.setMauSac(bt.getMauSac());
+            }
+            
             chiTietDonHangRepository.save(ct);
         }
     }
+}
 
     
 

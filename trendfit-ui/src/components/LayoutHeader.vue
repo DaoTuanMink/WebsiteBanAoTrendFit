@@ -33,9 +33,20 @@
         </router-link>
 
         <div v-else class="d-flex align-items-center gap-2">
-          <span class="small border border-secondary px-2 py-1 bg-dark text-white text-uppercase">{{
-            username
-          }}</span>
+          <router-link to="/my-orders" class="text-white icon-box" title="Đơn hàng của tôi">
+            <i class="bi bi-box-seam"></i>
+          </router-link>
+          <router-link
+  to="/history-order"
+  class="text-white icon-box"
+  title="Lịch sử đặt hàng"
+>
+  <i class="bi bi-clock-history"></i>
+</router-link>
+
+          <span class="small border border-secondary px-2 py-1 bg-dark text-white text-uppercase">
+            {{ username }}
+          </span>
           <div class="icon-box text-danger border-danger" @click="dangXuat" title="Đăng xuất">
             <i class="bi bi-box-arrow-right"></i>
           </div>

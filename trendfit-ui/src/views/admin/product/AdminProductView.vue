@@ -28,6 +28,31 @@
             </option>
           </select>
         </div>
+        <div class="col-md-3">
+          <label class="form-label">Giới tính</label>
+          <select v-model="formData.sanPham.gioiTinh" class="form-select">
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+            <option value="Unisex">Unisex</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Chất liệu</label>
+          <input v-model="formData.sanPham.chatLieu" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Xuất xứ</label>
+          <input v-model="formData.sanPham.xuatXu" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Năm ra mắt</label>
+          <input v-model.number="formData.sanPham.namRaMat" type="number" class="form-control" />
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">Mô tả chi tiết</label>
+        <textarea v-model="formData.sanPham.moTa" class="form-control" rows="3"></textarea>
       </div>
 
       <div class="mt-4">
@@ -82,8 +107,11 @@
           <tbody>
             <tr v-for="(img, idx) in formData.anhSanPhams" :key="idx">
               <td>
-                <div class="input-group">
+                <div class="input-group mb-2">
                   <input v-model="img.urlAnh" class="form-control" placeholder="URL ảnh..." />
+                  <label :for="'file-' + idx" class="btn btn-outline-secondary">
+                    <i class="bi bi-upload"></i>
+                  </label>
                   <input
                     type="file"
                     class="d-none"
@@ -91,10 +119,13 @@
                     @change="handleFileUpload($event, idx)"
                     accept="image/*"
                   />
-                  <label :for="'file-' + idx" class="btn btn-outline-secondary">
-                    <i class="bi bi-upload"></i> Chọn ảnh
-                  </label>
                 </div>
+                <img
+                  v-if="img.urlAnh"
+                  :src="img.urlAnh"
+                  style="width: 80px; height: 80px; object-fit: cover"
+                  class="border"
+                />
               </td>
               <td class="text-center">
                 <input type="checkbox" v-model="img.laAnhChinh" class="form-check-input" />
@@ -126,7 +157,9 @@
         <tr>
           <th>ID</th>
           <th>Tên</th>
-          <th>Danh Mục</th>
+          <th>DM</th>
+          <th>Thương hiệu</th>
+          <th>Giới tính</th>
           <th>Thao tác</th>
         </tr>
       </thead>
@@ -134,11 +167,11 @@
         <tr v-for="sp in danhSachSanPham" :key="sp.id">
           <td>{{ sp.id }}</td>
           <td>{{ sp.ten }}</td>
-          <td>{{ sp.danhMuc?.ten || 'N/A' }}</td>
+          <td>{{ sp.danhMuc?.ten }}</td>
+          <td>{{ sp.thuongHieu?.ten }}</td>
+          <td>{{ sp.gioiTinh }}</td>
           <td>
-            <button class="btn btn-warning btn-sm me-2" @click="kichHoatSuaForm(sp)">
-              Sửa/Biến thể
-            </button>
+            <button class="btn btn-warning btn-sm me-2" @click="kichHoatSuaForm(sp)">Sửa</button>
             <button class="btn btn-danger btn-sm" @click="deleteProduct(sp.id)">Xóa</button>
           </td>
         </tr>
@@ -250,7 +283,17 @@ const moFormThemMoi = () => {
   dangSua.value = false
   hienThiForm.value = true
   formData.value = {
-    sanPham: { id: null, ten: '', moTa: '', danhMuc: null, thuongHieu: null },
+    sanPham: {
+      id: null,
+      ten: '',
+      moTa: '',
+      danhMuc: null,
+      thuongHieu: null,
+      gioiTinh: 'Unisex',
+      chatLieu: '',
+      xuatXu: 'Việt Nam',
+      namRaMat: new Date().getFullYear(),
+    },
     bienTheSanPhams: [],
     anhSanPhams: [],
   }
