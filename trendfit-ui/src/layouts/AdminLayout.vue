@@ -13,9 +13,8 @@
           >Quản lý Thương hiệu</router-link
         >
         <router-link to="/admin/orders" class="nav-link text-white">Quản lý Đơn hàng</router-link>
-        <router-link to="/admin/dashboard" class="nav-link text-white">
-          Thống Kê Doanh Số</router-link
-        >
+        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white">Bán hàng tại quầy </router-link>
+        <router-link to="/admin/dashboard"  class="nav-link text-white"> Thống Kê Doanh Số</router-link>
         <router-link to="/admin/vouchers" class="nav-link text-white">Quản lý Voucher</router-link>
       </nav>
 
@@ -24,7 +23,7 @@
           <small class="text-secondary d-block"
             >Quyền: <span class="badge bg-success">Admin</span></small
           >
-          <span class="fw-bold">Nguyễn Văn Admin</span>
+          <span class="fw-bold">{{ fullName }}</span>
         </div>
 
         <router-link to="/" class="btn btn-outline-light btn-sm w-100 mb-2">
@@ -44,9 +43,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const role = computed(() => localStorage.getItem('user_role') || 'GUEST')
+const fullName = computed(() => localStorage.getItem('full_name') || 'Nhân viên')
 
 const dangXuat = () => {
   if (confirm('Bạn muốn đăng xuất?')) {

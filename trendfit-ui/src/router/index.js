@@ -73,17 +73,32 @@ const router = createRouter({
         {
           path: '',
           redirect: '/admin/dashboard',
+           // Khi người dùng truy cập /admin, hệ thống tự chuyển về dashboard.
+  // Tránh lỗi màn hình trắng do /admin không có component con mặc định.
         },
         {
           path: 'dashboard',
           name: 'admin-dashboard',
           component: () => import('@/views/admin/dashboard/AdminDashboardView.vue'),
-        },
-        //
-        {
-          path: 'products',
-          component: () => import('@/views/admin/product/AdminProductView.vue'),
-        },
+
+        
+  // Route quản lý sản phẩm dành cho ADMIN và EMPLOYEE.
+  // Không comment route này vì menu admin và redirect sau đăng nhập có thể trỏ tới /admin/products.
+  meta: {
+    roles: ['ADMIN', 'EMPLOYEE'],
+  },
+},
+       {
+  path: 'products',
+  name: 'admin-products',
+  component: () => import('@/views/admin/product/AdminProductView.vue'),
+
+  // quản lí sản phẩm , giá bán và tồn kho
+  meta: {
+    roles: ['ADMIN', 'EMPLOYEE'],
+  },
+},
+
         // ĐÃ DI CHUYỂN VÀO ĐÂY ĐỂ GIỮ NGUYÊN MENU SIDEBAR
         {
           path: 'categories',
@@ -101,6 +116,15 @@ const router = createRouter({
           path: 'vouchers',
           component: () => import('@/views/admin/marketing/AdminVoucherView.vue'),
         },
+
+        {
+  path: 'ban-hang-tai-quay',
+  name: 'admin-pos',
+  component: () => import('@/views/admin/pos/AdminPosView.vue'),
+  meta: {
+    roles: ['ADMIN', 'EMPLOYEE'],
+  },
+},
       ],
     },
   ],
@@ -124,9 +148,14 @@ router.beforeEach((to, from, next) => {
     }
   }
   // 2. Kiểm tra nếu đang ở trang login mà đã đăng nhập rồi
+  // else if (to.path === '/login' && isAdminOrEmployee) {
+  //   next('/admin/products')
+  // }
   else if (to.path === '/login' && isAdminOrEmployee) {
-    next('/admin/products')
-  }
+  next('/admin/dashboard')
+  
+
+}
   // 3. Các trường hợp còn lại (bao gồm trang chủ '/'): Cho phép truy cập tự do
   else {
     next()

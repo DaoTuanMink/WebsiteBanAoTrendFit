@@ -21,6 +21,7 @@ public class BienTheSanPham {
     private String mauSac;
     private BigDecimal gia;
     private BigDecimal giaSale;
+    private BigDecimal giaNhap = BigDecimal.ZERO;
     private Integer soLuongTon = 0;
     private Integer soLuongDaBan = 0;
     private String maSku;

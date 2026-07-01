@@ -6,7 +6,7 @@
       <h1>Thống kê doanh số</h1>
 
       <p>
-        Theo dõi doanh thu, hiệu quả xử lý đơn hàng và sản phẩm bán chạy của cửa hàng TrendFit
+        Theo dõi doanh thu, tiền nhập hàng, lợi nhuận và sản phẩm bán chạy của cửa hàng TrendFit
       </p>
     </div>
 
@@ -30,27 +30,39 @@
     <template v-else>
       <div class="summary-grid">
         <div class="summary-card revenue">
-          <p>Doanh số đạt được</p>
+          <p>Doanh thu</p>
           <h2>{{ formatMoney(dashboard.totalRevenue) }}</h2>
-          <span>Tổng doanh thu trong thời gian đã chọn</span>
+          <span>Tổng tiền khách đã thanh toán</span>
+        </div>
+
+        <div class="summary-card cost">
+          <p>Tiền nhập hàng</p>
+          <h2>{{ formatMoney(dashboard.totalImportCost) }}</h2>
+          <span>Giá nhập * số lượng đã bán</span>
+        </div>
+
+        <div class="summary-card profit">
+          <p>Lợi nhuận gộp</p>
+          <h2>{{ formatMoney(dashboard.grossProfit) }}</h2>
+          <span>Doanh thu trừ tiền nhập hàng</span>
+        </div>
+
+        <div class="summary-card rate">
+          <p>Tỷ suất lãi</p>
+          <h2>{{ formatPercent(dashboard.profitRate) }}</h2>
+          <span>Lợi nhuận / doanh thu</span>
         </div>
 
         <div class="summary-card success">
           <p>Đơn hàng thành công</p>
           <h2>{{ dashboard.totalSuccessOrders }}</h2>
-          <span>Số đơn đã giao / hoàn thành</span>
+          <span>Số đơn đã giao / hoàn thành / tại quầy</span>
         </div>
 
         <div class="summary-card failed">
           <p>Đơn hàng thất bại / đã hủy</p>
           <h2>{{ dashboard.totalFailedOrders }}</h2>
           <span>Số đơn bị hủy hoặc không thành công</span>
-        </div>
-
-        <div class="summary-card rate">
-          <p>Tỷ lệ thành công</p>
-          <h2>{{ successRate }}%</h2>
-          <span>Hiệu quả xử lý đơn hàng</span>
         </div>
       </div>
 
@@ -156,7 +168,7 @@
       <div class="panel">
         <div class="panel-header">
           <h3>Top 5 sản phẩm bán chạy nhất</h3>
-          <p>Những sản phẩm có số lượng bán cao nhất trong thời gian đã chọn</p>
+          <p>Thống kê số lượng bán, doanh thu, tiền vốn và lãi của từng sản phẩm</p>
         </div>
 
         <div class="table-wrapper">
@@ -167,6 +179,9 @@
                 <th>Tên sản phẩm</th>
                 <th>Số lượng bán</th>
                 <th>Doanh thu</th>
+                <th>Tiền vốn</th>
+                <th>Lãi</th>
+                <th>Tỷ suất lãi</th>
               </tr>
             </thead>
 
@@ -176,10 +191,17 @@
                 <td>{{ item.productName }}</td>
                 <td>{{ item.quantitySold }}</td>
                 <td>{{ formatMoney(item.revenue) }}</td>
+                <td>{{ formatMoney(item.importCost) }}</td>
+                <td>
+                  <span :class="Number(item.profit || 0) >= 0 ? 'profit-text' : 'loss-text'">
+                    {{ formatMoney(item.profit) }}
+                  </span>
+                </td>
+                <td>{{ formatPercent(calcProfitRate(item.profit, item.revenue)) }}</td>
               </tr>
 
               <tr v-if="dashboard.topProducts.length === 0">
-                <td colspan="4" class="empty-table">
+                <td colspan="7" class="empty-table">
                   Chưa có dữ liệu sản phẩm bán chạy
                 </td>
               </tr>
@@ -205,6 +227,9 @@ const filter = ref({
 
 const dashboard = ref({
   totalRevenue: 0,
+  totalImportCost: 0,
+  grossProfit: 0,
+  profitRate: 0,
   totalSuccessOrders: 0,
   totalFailedOrders: 0,
   revenueChart: [],
@@ -235,6 +260,9 @@ const loadDashboard = async () => {
 
     dashboard.value = {
       totalRevenue: res.data.totalRevenue || 0,
+      totalImportCost: res.data.totalImportCost || 0,
+      grossProfit: res.data.grossProfit || 0,
+      profitRate: res.data.profitRate || 0,
       totalSuccessOrders: res.data.totalSuccessOrders || 0,
       totalFailedOrders: res.data.totalFailedOrders || 0,
       revenueChart: res.data.revenueChart || [],
@@ -243,6 +271,7 @@ const loadDashboard = async () => {
     }
   } catch (error) {
     console.error('Không tải được dữ liệu dashboard:', error)
+    alert('Không tải được dữ liệu thống kê')
   } finally {
     loading.value = false
   }
@@ -292,6 +321,7 @@ const totalStatusOrders = computed(() => {
 const statusItems = computed(() => {
   return dashboard.value.orderStatusChart.map((item, index) => {
     const count = Number(item.count || 0)
+
     const percent =
       totalStatusOrders.value === 0
         ? 0
@@ -341,6 +371,20 @@ const getRevenueShare = (value) => {
   }
 
   return ((Number(value || 0) / totalRevenueValue.value) * 100).toFixed(1) + '%'
+}
+
+const calcProfitRate = (profit, revenue) => {
+  const revenueValue = Number(revenue || 0)
+
+  if (revenueValue === 0) {
+    return 0
+  }
+
+  return (Number(profit || 0) / revenueValue) * 100
+}
+
+const formatPercent = (value) => {
+  return Number(value || 0).toFixed(2) + '%'
 }
 
 const formatMoney = (value) => {
@@ -425,7 +469,7 @@ onMounted(() => {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   margin-bottom: 22px;
 }
@@ -455,6 +499,18 @@ onMounted(() => {
   font-size: 13px;
 }
 
+.summary-card.revenue h2 {
+  color: #2563eb;
+}
+
+.summary-card.cost h2 {
+  color: #f59e0b;
+}
+
+.summary-card.profit h2 {
+  color: #16a34a;
+}
+
 .summary-card.success h2 {
   color: #16a34a;
 }
@@ -464,7 +520,7 @@ onMounted(() => {
 }
 
 .summary-card.rate h2 {
-  color: #2563eb;
+  color: #7c3aed;
 }
 
 .panel-grid {
@@ -679,6 +735,7 @@ td {
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid #edf2f7;
+  white-space: nowrap;
 }
 
 tbody tr:hover {
@@ -689,6 +746,16 @@ tbody tr:hover {
   text-align: center;
   color: #94a3b8;
   padding: 20px;
+}
+
+.profit-text {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.loss-text {
+  color: #dc2626;
+  font-weight: 700;
 }
 
 @media (max-width: 1200px) {

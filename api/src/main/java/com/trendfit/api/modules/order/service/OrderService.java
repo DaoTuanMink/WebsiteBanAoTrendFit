@@ -93,43 +93,98 @@ public void taoDonHang(OrderRequestDTO dto) {
     }
 }
 
-    @Transactional
-    public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
-        DonHang dh = donHangRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+    
 
-        String trangThaiCu = dh.getTrangThai();
-        
-        if (trangThai.equals("DA_THANH_CONG")) {
-            xuLyTonKho(dh, -1);
-        } else if (trangThai.equals("DA_HUY") && !trangThaiCu.equals("DA_HUY")) {
-            xuLyTonKho(dh, 1);
-        }
+@Transactional
+public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
+    DonHang donHang = donHangRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-        dh.setTrangThai(trangThai);
-        donHangRepository.save(dh);
+    String trangThaiCu = donHang.getTrangThai();
+
+    /*
+     * NOTE DATN:
+     * Chỉ trừ kho khi đơn hàng chuyển từ trạng thái chưa thành công
+     * sang trạng thái DA_THANH_CONG.
+     *
+     * Lý do:
+     * Nếu admin cập nhật lại đơn đã DA_THANH_CONG nhiều lần,
+     * hệ thống không được trừ kho lặp lại.
+     */
+    if ("DA_THANH_CONG".equals(trangThai) && !"DA_THANH_CONG".equals(trangThaiCu)) {
+        xuLyTonKho(donHang, -1);
     }
 
-    private void xuLyTonKho(DonHang dh, int factor) {
-        List<ChiTietDonHang> chiTiets = chiTietDonHangRepository.findByDonHang_Id(dh.getId());
-        for (ChiTietDonHang ct : chiTiets) {
-            BienTheSanPham bt = ct.getBienTheSanPham();
-            
-            // Dùng soLuongTon thay vì soLuong
-            // factor = -1 khi đơn thành công (trừ kho)
-            // factor = 1 khi đơn bị hủy (cộng kho)
-            bt.setSoLuongTon(bt.getSoLuongTon() + (ct.getSoLuong() * factor));
-            
-            // Cập nhật số lượng đã bán (nếu đơn thành công thì cộng thêm)
-            if (factor == -1) {
-                bt.setSoLuongDaBan(bt.getSoLuongDaBan() + ct.getSoLuong());
-            } else if (factor == 1) {
-                bt.setSoLuongDaBan(bt.getSoLuongDaBan() - ct.getSoLuong());
-            }
-            
-            bienTheRepository.save(bt);
-        }
+    /*
+     * NOTE DATN:
+     * Chỉ cộng lại kho khi đơn hàng trước đó đã thành công,
+     * sau đó bị chuyển sang trạng thái DA_HUY.
+     *
+     * Lý do:
+     * Nếu đơn chưa từng trừ kho mà bị hủy,
+     * hệ thống không được cộng kho sai.
+     */
+    if ("DA_HUY".equals(trangThai) && "DA_THANH_CONG".equals(trangThaiCu)) {
+        xuLyTonKho(donHang, 1);
     }
+
+    donHang.setTrangThai(trangThai);
+    donHangRepository.save(donHang);
+}
+
+
+   private void xuLyTonKho(DonHang dh, int factor) {
+    List<ChiTietDonHang> chiTiets = chiTietDonHangRepository.findByDonHang_Id(dh.getId());
+
+    for (ChiTietDonHang ct : chiTiets) {
+        BienTheSanPham bt = ct.getBienTheSanPham();
+
+        if (bt == null) {
+            throw new RuntimeException("Không tìm thấy biến thể sản phẩm trong chi tiết đơn hàng");
+        }
+
+        int soLuongMua = ct.getSoLuong() == null ? 0 : ct.getSoLuong();
+        int tonKhoHienTai = bt.getSoLuongTon() == null ? 0 : bt.getSoLuongTon();
+        int daBanHienTai = bt.getSoLuongDaBan() == null ? 0 : bt.getSoLuongDaBan();
+
+        /*
+         * NOTE DATN:
+         * factor = -1: đơn chuyển sang DA_THANH_CONG -> trừ tồn kho, tăng số lượng đã bán.
+         * factor = 1 : đơn DA_THANH_CONG bị hủy -> cộng lại tồn kho, giảm số lượng đã bán.
+         *
+         * Công thức tồn kho:
+         * - Khi bán thành công: tonKhoMoi = tonKhoHienTai - soLuongMua
+         * - Khi hủy đơn đã bán: tonKhoMoi = tonKhoHienTai + soLuongMua
+         */
+        int tonKhoMoi = tonKhoHienTai + (soLuongMua * factor);
+
+        if (tonKhoMoi < 0) {
+            throw new RuntimeException(
+                    "Sản phẩm " + ct.getTenSanPham() + " không đủ tồn kho"
+            );
+        }
+
+        /*
+         * NOTE DATN:
+         * Khi factor = -1:
+         * daBanMoi = daBanHienTai - soLuongMua * (-1)
+         *          = daBanHienTai + soLuongMua
+         *
+         * Khi factor = 1:
+         * daBanMoi = daBanHienTai - soLuongMua
+         */
+        int daBanMoi = daBanHienTai - (soLuongMua * factor);
+
+        if (daBanMoi < 0) {
+            daBanMoi = 0;
+        }
+
+        bt.setSoLuongTon(tonKhoMoi);
+        bt.setSoLuongDaBan(daBanMoi);
+
+        bienTheRepository.save(bt);
+    }
+}
 
     public List<OrderResponseDTO> findAllOrdersWithDetails() {
     List<DonHang> danhSachDonHang = donHangRepository.findAll();
@@ -144,33 +199,128 @@ public void taoDonHang(OrderRequestDTO dto) {
     return ketQua;
 }
 
-// Thêm vào OrderService.java
-public List<DonHang> findDonHangByUserId(Integer userId) {
-    return donHangRepository.findByNguoiDung_IdOrderByNgayDatDesc(userId);
+@Transactional
+public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
+    if (dto.getItems() == null || dto.getItems().isEmpty()) {
+        throw new RuntimeException("Giỏ hàng đang trống");
+    }
+
+    DonHang donHang = new DonHang();
+
+    donHang.setTenNguoiNhan(
+            dto.getHoTen() == null || dto.getHoTen().trim().isEmpty()
+                    ? "Khách lẻ"
+                    : dto.getHoTen().trim()
+    );
+
+    donHang.setSoDienThoaiGiao(dto.getSdt());
+    donHang.setDiaChiGiao("Bán tại quầy");
+    donHang.setPhiVanChuyen(BigDecimal.ZERO);
+    donHang.setTienGiam(dto.getTienGiam() == null ? BigDecimal.ZERO : dto.getTienGiam());
+    donHang.setTongTienHang(BigDecimal.ZERO);
+    donHang.setTongThanhToan(BigDecimal.ZERO);
+    donHang.setTrangThai("DA_THANH_CONG");
+    donHang.setPhuongThucThanhToan(
+            dto.getPhuongThucThanhToan() == null
+                    ? "TIEN_MAT"
+                    : dto.getPhuongThucThanhToan()
+    );
+    donHang.setGhiChu("Đơn bán tại quầy");
+    donHang.setNgayDat(LocalDateTime.now());
+
+    DonHang savedOrder = donHangRepository.save(donHang);
+
+    BigDecimal tongTienHang = BigDecimal.ZERO;
+
+    for (OrderItemDTO item : dto.getItems()) {
+        BienTheSanPham bienThe = bienTheRepository.findById(item.getBienTheId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
+
+        int soLuongMua = item.getQuantity() == null ? 0 : item.getQuantity();
+        int tonKho = bienThe.getSoLuongTon() == null ? 0 : bienThe.getSoLuongTon();
+
+        if (soLuongMua <= 0) {
+            throw new RuntimeException("Số lượng mua không hợp lệ");
+        }
+
+        if (tonKho < soLuongMua) {
+            throw new RuntimeException("Sản phẩm không đủ tồn kho");
+        }
+
+        BigDecimal donGia = item.getGia();
+
+        if (donGia == null) {
+            donGia = bienThe.getGiaSale() != null
+                    ? bienThe.getGiaSale()
+                    : bienThe.getGia();
+        }
+
+        BigDecimal thanhTien = donGia.multiply(BigDecimal.valueOf(soLuongMua));
+
+        ChiTietDonHang chiTiet = new ChiTietDonHang();
+        chiTiet.setDonHang(savedOrder);
+        chiTiet.setBienTheSanPham(bienThe);
+        chiTiet.setSoLuong(soLuongMua);
+        chiTiet.setDonGia(donGia);
+        chiTiet.setThanhTien(thanhTien);
+        chiTiet.setTenSanPham(item.getTen());
+        chiTiet.setMaSku(bienThe.getMaSku());
+        chiTiet.setKichCoSize(bienThe.getKichCoSize());
+        chiTiet.setMauSac(bienThe.getMauSac());
+
+        chiTietDonHangRepository.save(chiTiet);
+
+        bienThe.setSoLuongTon(tonKho - soLuongMua);
+        bienThe.setSoLuongDaBan(
+                (bienThe.getSoLuongDaBan() == null ? 0 : bienThe.getSoLuongDaBan()) + soLuongMua
+        );
+
+        bienTheRepository.save(bienThe);
+
+        tongTienHang = tongTienHang.add(thanhTien);
+    }
+
+    BigDecimal tienGiam = dto.getTienGiam() == null ? BigDecimal.ZERO : dto.getTienGiam();
+    BigDecimal tongThanhToan = tongTienHang.subtract(tienGiam);
+
+    if (tongThanhToan.compareTo(BigDecimal.ZERO) < 0) {
+        tongThanhToan = BigDecimal.ZERO;
+    }
+
+    BigDecimal tienKhachDua = dto.getTienKhachDua() == null
+        ? BigDecimal.ZERO
+        : dto.getTienKhachDua();
+
+String phuongThuc = savedOrder.getPhuongThucThanhToan();
+
+/*
+ * NOTE DATN:
+ * Nếu thanh toán tiền mặt, nhân viên phải nhập số tiền khách đưa.
+ * Hệ thống kiểm tra tiền khách đưa có đủ để thanh toán không.
+ */
+if ("TIEN_MAT".equals(phuongThuc)) {
+    if (tienKhachDua.compareTo(tongThanhToan) < 0) {
+        throw new RuntimeException("Tiền khách đưa chưa đủ");
+    }
+
+    savedOrder.setTienKhachDua(tienKhachDua);
+    savedOrder.setTienThua(tienKhachDua.subtract(tongThanhToan));
 }
 
-public List<OrderResponseDTO> findOrdersWithNullUser() {
-    // Chỉ lấy đơn hàng nơi người dùng là NULL
-    List<DonHang> list = donHangRepository.findByNguoiDungIsNull();
-    List<OrderResponseDTO> result = new ArrayList<>();
-    for(DonHang dh : list) {
-        OrderResponseDTO dto = new OrderResponseDTO();
-        dto.setDonHang(dh);
-        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
-        result.add(dto);
-    }
-    return result;
+/*
+ * NOTE DATN:
+ * Nếu chuyển khoản, xem như khách đã thanh toán đúng số tiền cần trả.
+ * Không phát sinh tiền thừa.
+ */
+else {
+    savedOrder.setTienKhachDua(tongThanhToan);
+    savedOrder.setTienThua(BigDecimal.ZERO);
 }
 
-public List<OrderResponseDTO> getOrdersByUserId(Integer userId) {
-    List<DonHang> list = donHangRepository.findByNguoiDung_IdOrderByNgayDatDesc(userId);
-    List<OrderResponseDTO> result = new ArrayList<>();
-    for(DonHang dh : list) {
-        OrderResponseDTO dto = new OrderResponseDTO();
-        dto.setDonHang(dh);
-        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
-        result.add(dto);
-    }
-    return result;
+savedOrder.setTongTienHang(tongTienHang);
+savedOrder.setTienGiam(tienGiam);
+savedOrder.setTongThanhToan(tongThanhToan);
+
+return donHangRepository.save(savedOrder);
 }
 }
