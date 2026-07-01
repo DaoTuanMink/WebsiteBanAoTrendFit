@@ -36,6 +36,13 @@
           <router-link to="/my-orders" class="text-white icon-box" title="Đơn hàng của tôi">
             <i class="bi bi-box-seam"></i>
           </router-link>
+          <router-link
+  to="/history-order"
+  class="text-white icon-box"
+  title="Lịch sử đặt hàng"
+>
+  <i class="bi bi-clock-history"></i>
+</router-link>
 
           <span class="small border border-secondary px-2 py-1 bg-dark text-white text-uppercase">
             {{ username }}

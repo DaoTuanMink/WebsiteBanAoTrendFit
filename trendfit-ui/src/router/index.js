@@ -53,6 +53,12 @@ const router = createRouter({
       name: 'ProductDetail',
       component: () => import('@/views/client/product/ProductDetailView.vue'),
     },
+    {
+    path: "/history-order",
+    name: "history-order",
+    component: () =>
+        import("@/views/client/historyOrder/HistoryOrderView.vue"),
+    },
 
     // --- TUYẾN ĐƯỜNG QUẢN TRỊ (Nested Routes) ---
     {
