@@ -199,6 +199,34 @@ public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
     return ketQua;
 }
 
+public List<OrderResponseDTO> findOrdersWithNullUser() {
+    // Lấy danh sách đơn hàng có người dùng là null
+    List<DonHang> list = donHangRepository.findByNguoiDungIsNull();
+    List<OrderResponseDTO> result = new ArrayList<>();
+    
+    for (DonHang dh : list) {
+        OrderResponseDTO dto = new OrderResponseDTO();
+        dto.setDonHang(dh);
+        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
+        result.add(dto);
+    }
+    return result;
+}
+
+@Transactional(readOnly = true)
+public List<OrderResponseDTO> getOrdersByUserId(Integer userId) {
+    List<DonHang> list = donHangRepository.findByNguoiDung_IdOrderByNgayDatDesc(userId);
+    List<OrderResponseDTO> result = new ArrayList<>();
+    
+    for (DonHang dh : list) {
+        OrderResponseDTO dto = new OrderResponseDTO();
+        dto.setDonHang(dh);
+        dto.setChiTietDonHangs(chiTietDonHangRepository.findByDonHang_Id(dh.getId()));
+        result.add(dto);
+    }
+    return result;
+}
+
 @Transactional
 public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
     if (dto.getItems() == null || dto.getItems().isEmpty()) {
