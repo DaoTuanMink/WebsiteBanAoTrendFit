@@ -2,7 +2,8 @@ package com.trendfit.api.modules.user.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "nhan_vien")
@@ -22,5 +23,5 @@ public class NhanVien {
     private String chucVu;
     private String phongBan;
     private Boolean dangLamViec = true;
-    private LocalDateTime ngayVaoLam;
+    private LocalDate ngayVaoLam;
 }
