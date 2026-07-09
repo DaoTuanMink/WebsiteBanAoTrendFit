@@ -54,10 +54,9 @@ const router = createRouter({
       component: () => import('@/views/client/product/ProductDetailView.vue'),
     },
     {
-    path: "/history-order",
-    name: "history-order",
-    component: () =>
-        import("@/views/client/historyOrder/HistoryOrderView.vue"),
+      path: '/history-order',
+      name: 'history-order',
+      component: () => import('@/views/client/historyOrder/HistoryOrderView.vue'),
     },
 
     // --- TUYẾN ĐƯỜNG QUẢN TRỊ (Nested Routes) ---
@@ -73,31 +72,30 @@ const router = createRouter({
         {
           path: '',
           redirect: '/admin/dashboard',
-           // Khi người dùng truy cập /admin, hệ thống tự chuyển về dashboard.
-  // Tránh lỗi màn hình trắng do /admin không có component con mặc định.
+          // Khi người dùng truy cập /admin, hệ thống tự chuyển về dashboard.
+          // Tránh lỗi màn hình trắng do /admin không có component con mặc định.
         },
         {
           path: 'dashboard',
           name: 'admin-dashboard',
           component: () => import('@/views/admin/dashboard/AdminDashboardView.vue'),
 
-        
-  // Route quản lý sản phẩm dành cho ADMIN và EMPLOYEE.
-  // Không comment route này vì menu admin và redirect sau đăng nhập có thể trỏ tới /admin/products.
-  meta: {
-    roles: ['ADMIN', 'EMPLOYEE'],
-  },
-},
-       {
-  path: 'products',
-  name: 'admin-products',
-  component: () => import('@/views/admin/product/AdminProductView.vue'),
+          // Route quản lý sản phẩm dành cho ADMIN và EMPLOYEE.
+          // Không comment route này vì menu admin và redirect sau đăng nhập có thể trỏ tới /admin/products.
+          meta: {
+            roles: ['ADMIN', 'EMPLOYEE'],
+          },
+        },
+        {
+          path: 'products',
+          name: 'admin-products',
+          component: () => import('@/views/admin/product/AdminProductView.vue'),
 
-  // quản lí sản phẩm , giá bán và tồn kho
-  meta: {
-    roles: ['ADMIN', 'EMPLOYEE'],
-  },
-},
+          // quản lí sản phẩm , giá bán và tồn kho
+          meta: {
+            roles: ['ADMIN', 'EMPLOYEE'],
+          },
+        },
 
         // ĐÃ DI CHUYỂN VÀO ĐÂY ĐỂ GIỮ NGUYÊN MENU SIDEBAR
         {
@@ -118,13 +116,13 @@ const router = createRouter({
         },
 
         {
-  path: 'ban-hang-tai-quay',
-  name: 'admin-pos',
-  component: () => import('@/views/admin/pos/AdminPosView.vue'),
-  meta: {
-    roles: ['ADMIN', 'EMPLOYEE'],
-  },
-},
+          path: 'ban-hang-tai-quay',
+          name: 'admin-pos',
+          component: () => import('@/views/admin/pos/AdminPosView.vue'),
+          meta: {
+            roles: ['ADMIN', 'EMPLOYEE'],
+          },
+        },
       ],
     },
   ],
@@ -134,30 +132,31 @@ const router = createRouter({
 // ... (các import giữ nguyên)
 
 router.beforeEach((to, from, next) => {
-  const userRole = localStorage.getItem('user_role')
-  const isAdminOrEmployee = userRole === 'ADMIN' || userRole === 'EMPLOYEE'
+  const userRole = localStorage.getItem('user_role') // 'ADMIN' hoặc 'EMPLOYEE'
+  const isLoggedIn = !!localStorage.getItem('user_id')
 
-  // 1. Kiểm tra nếu đang truy cập vào khu vực admin
+  // 1. Nếu vào khu vực Admin
   if (to.path.startsWith('/admin')) {
-    if (isAdminOrEmployee) {
-      next() // Cho phép vào
+    if (!isLoggedIn) {
+      next('/login') // Chưa đăng nhập thì đẩy về login
+    }
+    // Kiểm tra quyền riêng cho các route nhạy cảm
+    else if (
+      (to.path === '/admin/orders' ||
+        to.path === '/admin/vouchers' ||
+        to.path === '/admin/staff') &&
+      userRole !== 'ADMIN'
+    ) {
+      alert('Bạn không có quyền truy cập khu vực này!')
+      next('/admin/dashboard') // Đẩy về trang chủ admin nếu là nhân viên cố vào
     } else {
-      // Nếu không có quyền, đẩy về login
-      alert('Cảnh báo an ninh: Khu vực này chỉ dành riêng cho Ban quản trị!')
-      next('/login')
+      next() // Cho phép vào (các route còn lại như products, pos, dashboard thì cả 2 đều vào được)
     }
   }
-  // 2. Kiểm tra nếu đang ở trang login mà đã đăng nhập rồi
-  // else if (to.path === '/login' && isAdminOrEmployee) {
-  //   next('/admin/products')
-  // }
-  else if (to.path === '/login' && isAdminOrEmployee) {
-  next('/admin/dashboard')
-  
-
-}
-  // 3. Các trường hợp còn lại (bao gồm trang chủ '/'): Cho phép truy cập tự do
-  else {
+  // 2. Nếu đã đăng nhập mà vào login thì đẩy về dashboard admin
+  else if (to.path === '/login' && isLoggedIn) {
+    next('/admin/dashboard')
+  } else {
     next()
   }
 })

@@ -1,4 +1,5 @@
 <template>
+  <LayoutHeader />
   <div class="container py-5">
     <h2 class="fw-bold mb-4">ĐƠN HÀNG CỦA TÔI</h2>
 
@@ -68,6 +69,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import LayoutHeader from '@/components/LayoutHeader.vue'
 
 const allOrders = ref([])
 const loading = ref(true)

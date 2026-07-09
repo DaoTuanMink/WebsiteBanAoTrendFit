@@ -12,7 +12,7 @@ import java.util.List;
 public class UserAdminService {
     @Autowired private NguoiDungRepository nguoiDungRepository;
     @Autowired private NhanVienRepository nhanVienRepository;
-    @Autowired private PhanQuyenRepository phanQuyenRepository; // Đã thêm
+    
 
     @Transactional
     public void taoTaiKhoanNhanVien(NhanVienDTO dto) {
@@ -32,18 +32,5 @@ public class UserAdminService {
         nhanVienRepository.save(nv);
     }
 
-    @Transactional
-    public void capNhatQuyen(Integer nhanVienId, List<PhanQuyen> danhSachQuyen) {
-        // Xóa quyền cũ để gán quyền mới theo yêu cầu từ Admin
-        phanQuyenRepository.deleteByNhanVienId(nhanVienId);
-        
-        // Gán nhân viên vào từng quyền và lưu
-        NhanVien nv = nhanVienRepository.findById(nhanVienId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-        
-        for (PhanQuyen q : danhSachQuyen) {
-            q.setNhanVien(nv);
-        }
-        phanQuyenRepository.saveAll(danhSachQuyen);
-    }
+   
 }

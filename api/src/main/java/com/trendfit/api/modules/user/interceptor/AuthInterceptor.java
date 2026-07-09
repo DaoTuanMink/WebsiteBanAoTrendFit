@@ -1,6 +1,5 @@
 package com.trendfit.api.modules.user.interceptor;
 
-import com.trendfit.api.modules.user.repository.PhanQuyenRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,31 +9,22 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
-    @Autowired private PhanQuyenRepository phanQuyenRepository;
-
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 1. Lấy ID nhân viên từ header (hoặc token)
-        String nhanVienIdStr = request.getHeader("NhanVien-ID");
-        if (nhanVienIdStr == null) return true; // Nếu là Admin hoặc khách thì bỏ qua
+public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    String path = request.getRequestURI();
+    // Bỏ qua các API login/register
+    if (path.contains("/api/auth/")) return true;
 
-        Integer nhanVienId = Integer.parseInt(nhanVienIdStr);
-        String method = request.getMethod(); // GET, POST, PUT, DELETE
-        String module = "DON_HANG"; // Tạm thời để cứng, bạn có thể lấy từ path
+    String role = request.getHeader("User-Role");
 
-        // 2. Kiểm tra quyền dựa trên phương thức
-        boolean hasPermission = false;
-        if (method.equals("PUT")) {
-            hasPermission = phanQuyenRepository.existsByNhanVienIdAndModuleAndSuaDuocTrue(nhanVienId, module);
-        } else if (method.equals("POST")) {
-            hasPermission = phanQuyenRepository.existsByNhanVienIdAndModuleAndThemDuocTrue(nhanVienId, module);
-        }
-
-        if (!hasPermission) {
+    // Chỉ cho ADMIN làm những việc nhạy cảm
+    if (path.contains("/api/admin/orders") || path.contains("/api/admin/vouchers") || path.contains("/api/admin/staff")) {
+        if (!"ADMIN".equals(role)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("Bạn không có quyền thực hiện thao tác này!");
+            response.getWriter().write("Bạn không có quyền quản lý khu vực này!");
             return false;
         }
-        return true;
     }
+    return true;
+}
 }
