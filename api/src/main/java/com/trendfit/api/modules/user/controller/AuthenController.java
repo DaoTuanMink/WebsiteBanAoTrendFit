@@ -28,44 +28,38 @@ public ResponseEntity<?> register(@RequestBody NguoiDung user) {
 }
 
     @PostMapping("/login")
-public Map<String, Object> login(@RequestBody Map<String, String> loginRequest) {
+public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
     String username = loginRequest.get("username");
     String password = loginRequest.get("password");
     
-    Map<String, Object> response = new HashMap<>();
+    // In ra log để xem có bị thừa dấu cách hay không
+    System.out.println("Debug Login -> User: '" + username + "', Pass: '" + password + "'");
 
-    // 1. Kiểm tra tài khoản "cứng" (ADMIN, NHANVIEN)
+    // Thử kiểm tra cứng trước
     if ("admin".equals(username) && "123".equals(password)) {
-        response.put("status", "success");
-        response.put("id", 1);
-        response.put("username", "Quản lý cấp cao");
-        response.put("vaiTro", "ADMIN");
-        response.put("token", "fake-jwt-token-admin");
-        return response;
-    } 
-    
-    if ("nhanvien".equals(username) && "123".equals(password)) {
-        response.put("status", "success");
-        response.put("id", 2);
-        response.put("username", "Nhân viên điều hành");
-        response.put("vaiTro", "EMPLOYEE");
-        response.put("token", "fake-jwt-token-employee");
-        return response;
+        System.out.println("Login cứng khớp!");
+        return ResponseEntity.ok(createResponse(1, "Quản lý cấp cao", "ADMIN"));
     }
 
-    // 2. Nếu không phải admin/nhân viên, kiểm tra trong Database
-    NguoiDung user = nguoiDungRepository.findByEmail(username); // Giả sử username là email
-    
-    if (user != null && user.getMatKhau().equals(password)) {
-        response.put("status", "success");
-        response.put("id", user.getId());
-        response.put("username", user.getHoTen());
-        response.put("vaiTro", user.getVaiTro());
-        response.put("token", "token-thuc-te-" + user.getId());
-        return response;
+    // Nếu không khớp cứng, vào DB tìm
+    NguoiDung user = nguoiDungRepository.findByEmail(username);
+    if (user != null) {
+        System.out.println("User tìm thấy: " + user.getEmail() + ", Pass trong DB: " + user.getMatKhau());
+        if (user.getMatKhau().equals(password)) {
+             return ResponseEntity.ok(createResponse(user.getId(), user.getHoTen(), user.getVaiTro()));
+        }
     }
 
-    // 3. Nếu không khớp cả 2 trường hợp trên
-    throw new RuntimeException("Tài khoản hoặc mật khẩu không chính xác!");
+    return ResponseEntity.status(401).body("Tài khoản hoặc mật khẩu không chính xác!");
+}
+
+// Hàm phụ để code gọn hơn
+private Map<String, Object> createResponse(Integer id, String name, String role) {
+    Map<String, Object> response = new HashMap<>();
+    response.put("status", "success");
+    response.put("id", id);
+    response.put("username", name);
+    response.put("vaiTro", role);
+    return response;
 }
 }

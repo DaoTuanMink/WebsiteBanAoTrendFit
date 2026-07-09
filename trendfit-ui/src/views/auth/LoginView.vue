@@ -37,10 +37,13 @@ const xuLyDangNhap = async () => {
       }
     }
   } catch (error) {
-    errorMsg.value = 'Tài khoản hoặc mật khẩu không chính xác. Vui lòng thử lại!'
-    console.error(error)
-  } finally {
-    loading.value = false
+    if (error.response) {
+      // Server trả về mã lỗi (401, 500...)
+      errorMsg.value = error.response.data || 'Lỗi server'
+      console.log('Lỗi từ server:', error.response.data)
+    } else {
+      errorMsg.value = 'Không thể kết nối tới server'
+    }
   }
 }
 </script>

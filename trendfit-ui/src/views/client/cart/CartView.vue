@@ -1,4 +1,5 @@
 <template>
+  <LayoutHeader />
   <div class="cart-view container py-5">
     <h2 class="fw-bold mb-4">GIỎ HÀNG CỦA BẠN</h2>
 
@@ -69,6 +70,7 @@
 </template>
 
 <script setup>
+import LayoutHeader from '@/components/LayoutHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 
 const cart = ref([])

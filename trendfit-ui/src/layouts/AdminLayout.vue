@@ -4,7 +4,10 @@
       <div class="p-3 fs-4 fw-bold text-white border-bottom border-secondary">TrendFit Admin</div>
 
       <nav class="nav flex-column p-2 flex-grow-1">
-        <router-link to="/admin/staff" class="nav-link text-white"> Quản lý Nhân viên </router-link>
+        <router-link v-if="role === 'ADMIN'" to="/admin/staff" class="nav-link text-white">
+          Quản lý Nhân viên
+        </router-link>
+
         <router-link to="/admin/products" class="nav-link text-white">Quản lý Sản phẩm</router-link>
         <router-link to="/admin/categories" class="nav-link text-white"
           >Quản lý Danh mục</router-link
@@ -12,17 +15,32 @@
         <router-link to="/admin/brands" class="nav-link text-white"
           >Quản lý Thương hiệu</router-link
         >
-        <router-link to="/admin/orders" class="nav-link text-white">Quản lý Đơn hàng</router-link>
-        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white">Bán hàng tại quầy </router-link>
-        <router-link to="/admin/dashboard"  class="nav-link text-white"> Thống Kê Doanh Số</router-link>
-        <router-link to="/admin/vouchers" class="nav-link text-white">Quản lý Voucher</router-link>
+
+        <router-link v-if="role === 'ADMIN'" to="/admin/orders" class="nav-link text-white">
+          Quản lý Đơn hàng
+        </router-link>
+
+        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white"
+          >Bán hàng tại quầy</router-link
+        >
+
+        <router-link to="/admin/dashboard" class="nav-link text-white"
+          >Thống Kê Doanh Số</router-link
+        >
+
+        <router-link v-if="role === 'ADMIN'" to="/admin/vouchers" class="nav-link text-white"
+          >Quản lý Voucher</router-link
+        >
       </nav>
 
       <div class="sidebar-footer p-3 border-top border-secondary">
         <div class="user-info text-white mb-3">
-          <small class="text-secondary d-block"
-            >Quyền: <span class="badge bg-success">Admin</span></small
-          >
+          <small class="text-secondary d-block">
+            Quyền:
+            <span class="badge" :class="role === 'ADMIN' ? 'bg-success' : 'bg-info'">
+              {{ role }}
+            </span>
+          </small>
           <span class="fw-bold">{{ fullName }}</span>
         </div>
 
