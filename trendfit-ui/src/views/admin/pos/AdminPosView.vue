@@ -6,36 +6,24 @@
         <p>Tạo đơn trực tiếp cho khách mua tại cửa hàng</p>
       </div>
 
-      <button class="btn-refresh" @click="loadProducts">
-        Tải lại sản phẩm
-      </button>
+      <button class="btn-refresh" @click="loadProducts">Tải lại sản phẩm</button>
     </div>
 
     <div class="pos-grid">
       <!-- DANH SÁCH SẢN PHẨM -->
       <section class="product-panel">
         <div class="search-box">
-          <input
-            v-model="keyword"
-            type="text"
-            placeholder="Tìm sản phẩm theo tên..."
-          />
+          <input v-model="keyword" type="text" placeholder="Tìm sản phẩm theo tên..." />
         </div>
 
         <div class="product-list">
-          <div
-            v-for="product in filteredProducts"
-            :key="product.id"
-            class="product-card"
-          >
+          <div v-for="product in filteredProducts" :key="product.id" class="product-card">
             <div>
               <h4>{{ product.ten }}</h4>
               <p>{{ product.danhMuc?.ten || 'Chưa có danh mục' }}</p>
             </div>
 
-            <button @click="loadVariants(product)">
-              Chọn biến thể
-            </button>
+            <button @click="loadVariants(product)">Chọn biến thể</button>
           </div>
         </div>
       </section>
@@ -51,22 +39,14 @@
             placeholder="Tên khách hàng, bỏ trống nếu khách lẻ"
           />
 
-          <input
-            v-model="customerPhone"
-            type="text"
-            placeholder="Số điện thoại"
-          />
+          <input v-model="customerPhone" type="text" placeholder="Số điện thoại" />
         </div>
 
         <!-- BIẾN THỂ -->
         <div v-if="selectedProduct" class="variant-box">
           <h4>{{ selectedProduct.ten }}</h4>
 
-          <div
-            v-for="variant in variants"
-            :key="variant.id"
-            class="variant-row"
-          >
+          <div v-for="variant in variants" :key="variant.id" class="variant-row">
             <div>
               <b>{{ variant.kichCoSize }} - {{ variant.mauSac }}</b>
               <span>SKU: {{ variant.maSku }}</span>
@@ -118,9 +98,7 @@
                 <td>{{ formatMoney(item.gia * item.quantity) }}</td>
 
                 <td>
-                  <button class="btn-remove" @click="removeItem(item.bienTheId)">
-                    Xóa
-                  </button>
+                  <button class="btn-remove" @click="removeItem(item.bienTheId)">Xóa</button>
                 </td>
               </tr>
             </tbody>
@@ -138,13 +116,9 @@
                 :disabled="!!appliedVoucher"
               />
 
-              <button v-if="!appliedVoucher" @click="applyVoucher">
-                Áp dụng
-              </button>
+              <button v-if="!appliedVoucher" @click="applyVoucher">Áp dụng</button>
 
-              <button v-else class="btn-cancel" @click="removeVoucher">
-                Hủy mã
-              </button>
+              <button v-else class="btn-cancel" @click="removeVoucher">Hủy mã</button>
             </div>
 
             <p v-if="voucherMessage" class="voucher-message">
@@ -217,30 +191,20 @@
             </div>
           </div>
 
-          <button
-            class="btn-checkout"
-            :disabled="isSubmitting"
-            @click="checkout"
-          >
+          <button class="btn-checkout" :disabled="isSubmitting" @click="checkout">
             {{ isSubmitting ? 'Đang thanh toán...' : 'Thanh toán' }}
           </button>
         </div>
 
-        <div v-else class="empty-cart">
-          Chưa có sản phẩm nào trong giỏ hàng.
-        </div>
+        <div v-else class="empty-cart">Chưa có sản phẩm nào trong giỏ hàng.</div>
       </section>
     </div>
-        <div v-if="showInvoice && invoiceData" class="invoice-bg">
+    <div v-if="showInvoice && invoiceData" class="invoice-bg">
       <div class="invoice-box">
         <div class="invoice-actions">
-          <button @click="printInvoice">
-            In hóa đơn
-          </button>
+          <button @click="printInvoice">In hóa đơn</button>
 
-          <button @click="showInvoice = false">
-            Đóng
-          </button>
+          <button @click="showInvoice = false">Đóng</button>
         </div>
 
         <div class="invoice-paper">
@@ -284,9 +248,7 @@
             <p>Tiền thừa: {{ formatMoney(invoiceData.change) }}</p>
           </div>
 
-          <p class="invoice-thanks">
-            Cảm ơn quý khách đã mua hàng tại TrendFit!
-          </p>
+          <p class="invoice-thanks">Cảm ơn quý khách đã mua hàng tại TrendFit!</p>
         </div>
       </div>
     </div>
@@ -327,9 +289,7 @@ const filteredProducts = computed(() => {
     return products.value
   }
 
-  return products.value.filter((product) =>
-    product.ten?.toLowerCase().includes(key)
-  )
+  return products.value.filter((product) => product.ten?.toLowerCase().includes(key))
 })
 
 const totalAmount = computed(() => {
@@ -343,10 +303,7 @@ const discountAmount = computed(() => {
     return 0
   }
 
-  if (
-    appliedVoucher.value.tienGiam !== null &&
-    appliedVoucher.value.tienGiam !== undefined
-  ) {
+  if (appliedVoucher.value.tienGiam !== null && appliedVoucher.value.tienGiam !== undefined) {
     return Math.min(Number(appliedVoucher.value.tienGiam || 0), totalAmount.value)
   }
 
@@ -357,7 +314,7 @@ const discountAmount = computed(() => {
   let discount = 0
 
   if (type === 'PERCENT' || type === 'PHAN_TRAM' || type === '%') {
-    discount = totalAmount.value * value / 100
+    discount = (totalAmount.value * value) / 100
 
     if (voucher.giaTriToiDa !== null && voucher.giaTriToiDa !== undefined) {
       discount = Math.min(discount, Number(voucher.giaTriToiDa))
@@ -520,10 +477,7 @@ async function checkout() {
     return
   }
 
-  if (
-    paymentMethod.value === 'TIEN_MAT' &&
-    Number(cashReceived.value || 0) < totalPayable.value
-  ) {
+  if (paymentMethod.value === 'TIEN_MAT' && Number(cashReceived.value || 0) < totalPayable.value) {
     alert('Tiền khách đưa chưa đủ')
     return
   }
@@ -539,14 +493,9 @@ async function checkout() {
     tongThanhToan: totalPayable.value,
 
     tienKhachDua:
-      paymentMethod.value === 'TIEN_MAT'
-        ? Number(cashReceived.value || 0)
-        : totalPayable.value,
+      paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
 
-    tienThua:
-      paymentMethod.value === 'TIEN_MAT'
-        ? changeAmount.value
-        : 0,
+    tienThua: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
 
     voucherId: appliedVoucher.value?.id || null,
     maVoucher: appliedVoucher.value?.ma || null,
@@ -572,55 +521,52 @@ async function checkout() {
     })
 
     if (!response.ok) {
-  const errorText = await response.text()
-  throw new Error(errorText || 'Thanh toán thất bại')
-}
+      const errorText = await response.text()
+      throw new Error(errorText || 'Thanh toán thất bại')
+    }
 
-const createdOrder = await response.json()
+    const createdOrder = await response.json()
 
-invoiceData.value = {
-  code: createdOrder.id || 'POS',
-  date: new Date().toLocaleString('vi-VN'),
-  customer: customerName.value || 'Khách lẻ',
-  phone: customerPhone.value || '',
-  paymentMethod: paymentMethod.value === 'TIEN_MAT' ? 'Tiền mặt' : 'Chuyển khoản',
+    invoiceData.value = {
+      code: createdOrder.id || 'POS',
+      date: new Date().toLocaleString('vi-VN'),
+      customer: customerName.value || 'Khách lẻ',
+      phone: customerPhone.value || '',
+      paymentMethod: paymentMethod.value === 'TIEN_MAT' ? 'Tiền mặt' : 'Chuyển khoản',
 
-  items: cart.value.map((item) => ({
-    name: item.ten,
-    size: item.kichCoSize,
-    color: item.mauSac,
-    qty: item.quantity,
-    price: item.gia,
-    total: Number(item.gia || 0) * Number(item.quantity || 0),
-  })),
+      items: cart.value.map((item) => ({
+        name: item.ten,
+        size: item.kichCoSize,
+        color: item.mauSac,
+        qty: item.quantity,
+        price: item.gia,
+        total: Number(item.gia || 0) * Number(item.quantity || 0),
+      })),
 
-  totalAmount: totalAmount.value,
-  discount: discountAmount.value,
-  payable: totalPayable.value,
-  paid: paymentMethod.value === 'TIEN_MAT'
-    ? Number(cashReceived.value || 0)
-    : totalPayable.value,
-  change: paymentMethod.value === 'TIEN_MAT'
-    ? changeAmount.value
-    : 0,
-}
+      totalAmount: totalAmount.value,
+      discount: discountAmount.value,
+      payable: totalPayable.value,
+      paid:
+        paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
+      change: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
+    }
 
-showInvoice.value = true
+    showInvoice.value = true
 
-alert('Thanh toán thành công')
+    alert('Thanh toán thành công')
 
-cart.value = []
-customerName.value = ''
-customerPhone.value = ''
-voucherCode.value = ''
-appliedVoucher.value = null
-voucherMessage.value = ''
-paymentMethod.value = 'TIEN_MAT'
-cashReceived.value = 0
-variants.value = []
-selectedProduct.value = null
+    cart.value = []
+    customerName.value = ''
+    customerPhone.value = ''
+    voucherCode.value = ''
+    appliedVoucher.value = null
+    voucherMessage.value = ''
+    paymentMethod.value = 'TIEN_MAT'
+    cashReceived.value = 0
+    variants.value = []
+    selectedProduct.value = null
 
-await loadProducts()
+    await loadProducts()
   } catch (error) {
     alert(error.message)
   } finally {

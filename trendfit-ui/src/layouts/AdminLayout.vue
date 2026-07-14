@@ -5,32 +5,39 @@
 
       <nav class="nav flex-column p-2 flex-grow-1">
         <router-link v-if="role === 'ADMIN'" to="/admin/staff" class="nav-link text-white">
-          Quản lý Nhân viên
+          👤 Quản lý Nhân viên
         </router-link>
 
-        <router-link to="/admin/products" class="nav-link text-white">Quản lý Sản phẩm</router-link>
+        <router-link to="/admin/products" class="nav-link text-white"
+          >📦 Quản lý Sản phẩm</router-link
+        >
         <router-link to="/admin/categories" class="nav-link text-white"
-          >Quản lý Danh mục</router-link
+          >📑 Quản lý Danh mục</router-link
         >
         <router-link to="/admin/brands" class="nav-link text-white"
-          >Quản lý Thương hiệu</router-link
+          >🏷️ Quản lý Thương hiệu</router-link
         >
 
-        <router-link v-if="role === 'ADMIN'" to="/admin/orders" class="nav-link text-white">
-          Quản lý Đơn hàng
+        <!-- Đã gộp Kích cỡ + Màu sắc -->
+        <router-link to="/admin/sizes-colors" class="nav-link text-white">
+          📏🎨 Quản lý Kích cỡ & Màu sắc
         </router-link>
 
-        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white"
-          >Bán hàng tại quầy</router-link
-        >
+        <router-link v-if="role === 'ADMIN'" to="/admin/orders" class="nav-link text-white">
+          📋 Quản lý Đơn hàng
+        </router-link>
 
-        <router-link to="/admin/dashboard" class="nav-link text-white"
-          >Thống Kê Doanh Số</router-link
-        >
+        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white">
+          🛒 Bán hàng tại quầy
+        </router-link>
 
-        <router-link v-if="role === 'ADMIN'" to="/admin/vouchers" class="nav-link text-white"
-          >Quản lý Voucher</router-link
-        >
+        <router-link to="/admin/dashboard" class="nav-link text-white">
+          📊 Thống kê Doanh số
+        </router-link>
+
+        <router-link v-if="role === 'ADMIN'" to="/admin/vouchers" class="nav-link text-white">
+          🎟️ Quản lý Voucher
+        </router-link>
       </nav>
 
       <div class="sidebar-footer p-3 border-top border-secondary">
@@ -70,12 +77,8 @@ const fullName = computed(() => localStorage.getItem('full_name') || 'Nhân viê
 
 const dangXuat = () => {
   if (confirm('Bạn muốn đăng xuất?')) {
-    // 1. Xóa sạch mọi thứ
     localStorage.clear()
-
-    // 2. Thay vì dùng router.push, hãy dùng window.location.href
-    // để ép trình duyệt chuyển hướng hoàn toàn ra khỏi ứng dụng Vue
-    window.location.href = '/'
+    window.location.href = '/' // Ép reload hoàn toàn
   }
 }
 </script>
@@ -86,17 +89,29 @@ const dangXuat = () => {
   min-height: 100vh;
 }
 .sidebar {
-  width: 250px;
+  width: 260px;
   background: #1e293b;
   color: white;
 }
 .content {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   background-color: #f8fafc;
+  overflow-y: auto;
+}
+.nav-link {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  transition: all 0.2s;
 }
 .nav-link:hover {
   background: #334155;
+  color: white !important;
+}
+.nav-link.router-link-active {
+  background: #3b82f6;
+  font-weight: 500;
 }
 .sidebar-footer {
   background: #0f172a;

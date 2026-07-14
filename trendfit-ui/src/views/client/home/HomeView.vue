@@ -20,33 +20,6 @@
     </div>
 
     <div class="container-fluid px-4 px-md-5 pt-5">
-      <div class="card rounded-0 border-dark mb-5 shadow-sm bg-light">
-        <div class="card-body p-4 row g-3">
-          <div class="col-12 col-md-4">
-            <label class="form-label fw-bold text-dark small">PHÂN LOẠI DANH MỤC</label>
-            <select
-              v-model="filters.danhMucId"
-              @change="taiDanhSachSanPham"
-              class="form-select rounded-0 border-dark shadow-none"
-            >
-              <option value="">-- Tất cả danh mục --</option>
-              <option v-for="dm in listDanhMuc" :key="dm.id" :value="dm.id">{{ dm.ten }}</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label fw-bold text-dark small">BỘ SƯU TẬP THƯƠNG HIỆU</label>
-            <select
-              v-model="filters.thuongHieuId"
-              @change="taiDanhSachSanPham"
-              class="form-select rounded-0 border-dark shadow-none"
-            >
-              <option value="">-- Tất cả thương hiệu --</option>
-              <option v-for="th in listThuongHieu" :key="th.id" :value="th.id">{{ th.ten }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       <section class="row g-3 my-4">
         <div class="col-12 col-md-6 position-relative categories-block">
           <img
