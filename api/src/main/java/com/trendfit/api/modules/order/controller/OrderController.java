@@ -34,4 +34,17 @@ public ResponseEntity<?> getOrdersByUser(@PathVariable Integer userId) {
     return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
 }
 
+@PutMapping("/{id}/status")
+public ResponseEntity<?> updateOrderStatus(
+        @PathVariable Integer id,
+        @RequestParam String status) {
+
+    try {
+        orderService.capNhatTrangThaiDonHang(id, status);
+        return ResponseEntity.ok("Cập nhật trạng thái thành công!");
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}
+
 }

@@ -97,12 +97,13 @@ const loadOrders = async () => {
 const huyDonHang = async (id) => {
   if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) return
   try {
-    // Gọi API cập nhật trạng thái sang DA_HUY
-    await axios.put(`http://localhost:8080/api/admin/orders/${id}/status?status=DA_HUY`)
+    await axios.put(`http://localhost:8080/api/public/orders/${id}/status?status=DA_HUY`)
+
     alert('Đã hủy đơn hàng thành công!')
     loadOrders()
   } catch (e) {
-    alert('Không thể hủy đơn hàng')
+    console.error(e)
+    alert('Không thể hủy đơn hàng: ' + (e.response?.data || e.message))
   }
 }
 
