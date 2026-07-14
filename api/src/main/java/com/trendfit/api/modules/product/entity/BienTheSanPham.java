@@ -17,8 +17,15 @@ public class BienTheSanPham {
     @JoinColumn(name = "san_pham_id")
     private SanPham sanPham;
 
-    private String kichCoSize;
-    private String mauSac;
+    // Thay đổi: Liên kết qua bảng mới thay vì String
+    @ManyToOne
+    @JoinColumn(name = "kich_co_id")
+    private KichCo kichCo;
+
+    @ManyToOne
+    @JoinColumn(name = "mau_sac_id")
+    private MauSac mauSac;
+
     private BigDecimal gia;
     private BigDecimal giaSale;
     private BigDecimal giaNhap = BigDecimal.ZERO;
