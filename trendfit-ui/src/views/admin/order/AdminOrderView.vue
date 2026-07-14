@@ -91,12 +91,17 @@ const loading = ref(true)
 const fetchOrders = async (type = 'all') => {
   loading.value = true
   try {
-    // Gọi API tương ứng với tab Admin đã chọn
     let url = 'http://localhost:8080/api/admin/orders'
     if (type === 'null-user') {
       url = 'http://localhost:8080/api/admin/orders/null-user'
     }
-    const res = await axios.get(url)
+
+    const res = await axios.get(url, {
+      headers: {
+        'User-Role': 'ADMIN', // ← THÊM DÒNG NÀY
+      },
+    })
+
     danhSachDonHang.value = res.data
   } catch (err) {
     console.error('Lỗi tải đơn hàng:', err)
@@ -108,7 +113,15 @@ const fetchOrders = async (type = 'all') => {
 const capNhatTrangThai = async (id, status) => {
   if (!confirm('Bạn có chắc muốn chuyển trạng thái đơn hàng này?')) return
   try {
-    await axios.put(`http://localhost:8080/api/admin/orders/${id}/status?status=${status}`)
+    await axios.put(
+      `http://localhost:8080/api/admin/orders/${id}/status?status=${status}`,
+      {},
+      {
+        headers: {
+          'User-Role': 'ADMIN', // ← THÊM DÒNG NÀY
+        },
+      },
+    )
     alert('Cập nhật thành công!')
     fetchOrders()
   } catch (err) {
