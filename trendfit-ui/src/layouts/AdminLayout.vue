@@ -1,119 +1,166 @@
 <template>
-  <div class="admin-wrapper">
-    <aside class="sidebar d-flex flex-column">
-      <div class="p-3 fs-4 fw-bold text-white border-bottom border-secondary">TrendFit Admin</div>
+  <div class="admin-shell">
+    <button
+      v-if="sidebarOpen"
+      type="button"
+      class="admin-overlay d-lg-none"
+      aria-label="Đóng menu"
+      @click="sidebarOpen = false"
+    ></button>
 
-      <nav class="nav flex-column p-2 flex-grow-1">
-        <router-link v-if="role === 'ADMIN'" to="/admin/staff" class="nav-link text-white">
-          👤 Quản lý Nhân viên
+    <aside class="admin-sidebar" :class="{ 'is-open': sidebarOpen }">
+      <div class="admin-brand">
+        <router-link to="/admin/dashboard" class="admin-brand-link" @click="sidebarOpen = false">
+          <span class="admin-brand-mark">TF</span>
+          <span>
+            <strong>TrendFit</strong>
+            <small>ADMIN CENTER</small>
+          </span>
         </router-link>
 
-        <router-link to="/admin/products" class="nav-link text-white"
-          >📦 Quản lý Sản phẩm</router-link
+        <button
+          type="button"
+          class="admin-sidebar-close d-lg-none"
+          aria-label="Đóng menu"
+          @click="sidebarOpen = false"
         >
-        <router-link to="/admin/categories" class="nav-link text-white"
-          >📑 Quản lý Danh mục</router-link
+          ×
+        </button>
+      </div>
+
+      <div class="admin-user-card">
+        <div class="admin-avatar">{{ userInitial }}</div>
+        <div class="min-w-0">
+          <strong class="admin-user-name">{{ username }}</strong>
+          <span class="admin-role-badge">{{ roleLabel }}</span>
+        </div>
+      </div>
+
+      <nav class="admin-nav" aria-label="Điều hướng quản trị">
+        <p class="admin-nav-label">TỔNG QUAN</p>
+
+        <router-link
+          v-for="item in overviewItems"
+          :key="item.to"
+          :to="item.to"
+          class="admin-nav-link"
+          @click="sidebarOpen = false"
         >
-        <router-link to="/admin/brands" class="nav-link text-white"
-          >🏷️ Quản lý Thương hiệu</router-link
+          <span class="admin-nav-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </router-link>
+
+        <p class="admin-nav-label mt-3">QUẢN LÝ CỬA HÀNG</p>
+
+        <router-link
+          v-for="item in visibleManagementItems"
+          :key="item.to"
+          :to="item.to"
+          class="admin-nav-link"
+          @click="sidebarOpen = false"
         >
-
-        <!-- Đã gộp Kích cỡ + Màu sắc -->
-        <router-link to="/admin/sizes-colors" class="nav-link text-white">
-          📏🎨 Quản lý Kích cỡ & Màu sắc
-        </router-link>
-
-        <router-link v-if="role === 'ADMIN'" to="/admin/orders" class="nav-link text-white">
-          📋 Quản lý Đơn hàng
-        </router-link>
-
-        <router-link to="/admin/ban-hang-tai-quay" class="nav-link text-white">
-          🛒 Bán hàng tại quầy
-        </router-link>
-
-        <router-link to="/admin/dashboard" class="nav-link text-white">
-          📊 Thống kê Doanh số
-        </router-link>
-
-        <router-link v-if="role === 'ADMIN'" to="/admin/vouchers" class="nav-link text-white">
-          🎟️ Quản lý Voucher
+          <span class="admin-nav-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
         </router-link>
       </nav>
 
-      <div class="sidebar-footer p-3 border-top border-secondary">
-        <div class="user-info text-white mb-3">
-          <small class="text-secondary d-block">
-            Quyền:
-            <span class="badge" :class="role === 'ADMIN' ? 'bg-success' : 'bg-info'">
-              {{ role }}
-            </span>
-          </small>
-          <span class="fw-bold">{{ fullName }}</span>
-        </div>
-
-        <router-link to="/" class="btn btn-outline-light btn-sm w-100 mb-2">
-          <i class="bi bi-house"></i> Về trang chủ
+      <div class="admin-sidebar-footer">
+        <router-link to="/" class="admin-secondary-action" @click="sidebarOpen = false">
+          <span>⌂</span>
+          <span>Về trang chủ</span>
         </router-link>
 
-        <button @click="dangXuat" class="btn btn-danger btn-sm w-100">
-          <i class="bi bi-box-arrow-right"></i> Đăng xuất
+        <button type="button" class="admin-logout" @click="dangXuat">
+          <span>↪</span>
+          <span>Đăng xuất</span>
         </button>
       </div>
     </aside>
 
-    <main class="content">
-      <router-view />
-    </main>
+    <section class="admin-workspace">
+      <header class="admin-topbar">
+        <div class="d-flex align-items-center gap-3 min-w-0">
+          <button
+            type="button"
+            class="admin-menu-button d-lg-none"
+            aria-label="Mở menu"
+            @click="sidebarOpen = true"
+          >
+            ☰
+          </button>
+
+          <div class="min-w-0">
+            <p class="admin-breadcrumb mb-1">TREND FIT / QUẢN TRỊ</p>
+            <h1 class="admin-page-title mb-0">{{ currentPageTitle }}</h1>
+          </div>
+        </div>
+
+        <div class="admin-topbar-user d-none d-sm-flex">
+          <span class="admin-status-dot"></span>
+          <div>
+            <strong>{{ username }}</strong>
+            <small>{{ roleLabel }}</small>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <router-view />
+      </main>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
-const role = computed(() => localStorage.getItem('user_role') || 'GUEST')
-const fullName = computed(() => localStorage.getItem('full_name') || 'Nhân viên')
+const sidebarOpen = ref(false)
 
-const dangXuat = () => {
-  if (confirm('Bạn muốn đăng xuất?')) {
-    localStorage.clear()
-    window.location.href = '/' // Ép reload hoàn toàn
-  }
+const username = computed(() => localStorage.getItem('username') || 'Người dùng TrendFit')
+const userRole = computed(() => localStorage.getItem('user_role') || 'EMPLOYEE')
+const roleLabel = computed(() => (userRole.value === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên'))
+const userInitial = computed(() => username.value.trim().charAt(0).toUpperCase() || 'T')
+
+const overviewItems = [
+  { to: '/admin/dashboard', label: 'Thống kê doanh số', icon: '▦' },
+  { to: '/admin/ban-hang-tai-quay', label: 'Bán hàng tại quầy', icon: '◈' },
+]
+
+const managementItems = [
+  { to: '/admin/products', label: 'Sản phẩm', icon: '◆' },
+  { to: '/admin/categories', label: 'Danh mục', icon: '▤' },
+  { to: '/admin/brands', label: 'Thương hiệu', icon: '◉' },
+  { to: '/admin/sizes-colors', label: 'Kích cỡ & màu sắc', icon: '◐' },
+  { to: '/admin/orders', label: 'Đơn hàng', icon: '▧', roles: ['ADMIN'] },
+  { to: '/admin/vouchers', label: 'Phiếu giảm giá', icon: '◇', roles: ['ADMIN'] },
+  { to: '/admin/staff', label: 'Nhân viên', icon: '♙', roles: ['ADMIN'] },
+]
+
+const visibleManagementItems = computed(() =>
+  managementItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
+)
+
+const allItems = computed(() => [...overviewItems, ...visibleManagementItems.value])
+
+const currentPageTitle = computed(() => {
+  const currentItem = allItems.value.find((item) => route.path.startsWith(item.to))
+  return currentItem?.label || 'Trang quản trị'
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    sidebarOpen.value = false
+  },
+)
+
+function dangXuat() {
+  if (!window.confirm('Bạn muốn đăng xuất khỏi hệ thống?')) return
+
+  localStorage.clear()
+  router.replace('/')
 }
 </script>
-
-<style scoped>
-.admin-wrapper {
-  display: flex;
-  min-height: 100vh;
-}
-.sidebar {
-  width: 260px;
-  background: #1e293b;
-  color: white;
-}
-.content {
-  flex: 1;
-  padding: 24px;
-  background-color: #f8fafc;
-  overflow-y: auto;
-}
-.nav-link {
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  transition: all 0.2s;
-}
-.nav-link:hover {
-  background: #334155;
-  color: white !important;
-}
-.nav-link.router-link-active {
-  background: #3b82f6;
-  font-weight: 500;
-}
-.sidebar-footer {
-  background: #0f172a;
-}
-</style>
