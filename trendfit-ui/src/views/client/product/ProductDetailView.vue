@@ -269,23 +269,12 @@ const validVariants = computed(() => {
     const size = String(variant?.kichCo?.tenKichCo || '').trim()
     const stock = Number(variant?.soLuongTon || 0)
 
-    return (
-      color &&
-      size &&
-      stock > 0 &&
-      variant?.dangBan !== false
-    )
+    return color && size && stock > 0 && variant?.dangBan !== false
   })
 })
 
 const uniqueColors = computed(() => {
-  return [
-    ...new Set(
-      validVariants.value.map((variant) =>
-        String(variant.mauSac.tenMau).trim(),
-      ),
-    ),
-  ]
+  return [...new Set(validVariants.value.map((variant) => String(variant.mauSac.tenMau).trim()))]
 })
 
 const availableSizes = computed(() => {
@@ -296,13 +285,8 @@ const availableSizes = computed(() => {
   return [
     ...new Set(
       validVariants.value
-        .filter(
-          (variant) =>
-            String(variant.mauSac.tenMau).trim() === selectedColor.value,
-        )
-        .map((variant) =>
-          String(variant.kichCo.tenKichCo).trim(),
-        ),
+        .filter((variant) => String(variant.mauSac.tenMau).trim() === selectedColor.value)
+        .map((variant) => String(variant.kichCo.tenKichCo).trim()),
     ),
   ]
 })
@@ -343,14 +327,9 @@ const loadProduct = async () => {
     const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
     product.value = res.data
 
-    const images = Array.isArray(product.value?.anhSanPhams)
-      ? product.value.anhSanPhams
-      : []
+    const images = Array.isArray(product.value?.anhSanPhams) ? product.value.anhSanPhams : []
 
-    mainImage.value =
-      images.find((image) => image.laAnhChinh)?.urlAnh ||
-      images[0]?.urlAnh ||
-      ''
+    mainImage.value = images.find((image) => image.laAnhChinh)?.urlAnh || images[0]?.urlAnh || ''
 
     const firstVariant = validVariants.value[0]
 
@@ -482,7 +461,6 @@ const addToCart = () => {
   }
 
   let cart = JSON.parse(localStorage.getItem('cart') || '[]')
-
   const existingItem = cart.find((i) => i.bienTheId === cartItem.bienTheId)
 
   if (existingItem) {
@@ -492,7 +470,6 @@ const addToCart = () => {
   }
 
   localStorage.setItem('cart', JSON.stringify(cart))
-
   alert('Đã thêm sản phẩm vào giỏ hàng!')
 }
 
@@ -506,7 +483,6 @@ const initPage = async () => {
   await loadReviews()
   await checkCanReview()
 }
-
 
 watch(
   () => route.params.id,
@@ -635,5 +611,4 @@ watch(
   font-size: 15px;
   font-weight: 600;
 }
-
 </style>

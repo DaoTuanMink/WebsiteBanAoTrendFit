@@ -17,17 +17,12 @@ public class BanHangTaiQuayController {
     private OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<?> taoDonBanTaiQuay(
-            @RequestHeader(value = "X-Role", required = false) String role,
-            @RequestBody OrderRequestDTO dto
-    ) {
-        if (!"ADMIN".equals(role) && !"EMPLOYEE".equals(role)) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body("Bạn không có quyền bán hàng tại quầy");
+    public ResponseEntity<?> taoDonBanTaiQuay(@RequestBody OrderRequestDTO dto) {
+        try {
+            DonHang donHang = orderService.taoDonHangTaiQuay(dto);
+            return ResponseEntity.ok(donHang);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        DonHang donHang = orderService.taoDonHangTaiQuay(dto);
-        return ResponseEntity.ok(donHang);
     }
 }
