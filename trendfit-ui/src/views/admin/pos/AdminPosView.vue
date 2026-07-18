@@ -125,7 +125,7 @@
                     <div class="d-flex justify-content-between align-items-center gap-3">
                       <div>
                         <div class="fw-bold">
-                          {{ variant.kichCoSize }} - {{ variant.mauSac }}
+                          {{ variant.kichCo?.tenKichCo }} - {{ variant.mauSac?.tenMau }}
                         </div>
                         <div class="small text-secondary">SKU: {{ variant.maSku }}</div>
                         <div class="small text-secondary">Tồn kho: {{ variant.soLuongTon }}</div>
@@ -176,7 +176,7 @@
                       <td>
                         <div class="fw-semibold">{{ item.ten }}</div>
                         <small class="text-secondary">
-                          {{ item.kichCoSize }} - {{ item.mauSac }}
+                          {{ item.tenKichCo }} - {{ item.tenMau }}
                         </small>
                       </td>
 
@@ -552,7 +552,7 @@
                         <td>
                           {{ item.name }}
                           <br />
-                          <small class="text-secondary">{{ item.size }} - {{ item.color }}</small>
+                          <small class="text-secondary">{{ item.tenKichCo }} - {{ item.tenMau }}</small>
                         </td>
                         <td class="text-center">{{ item.qty }}</td>
                         <td class="text-end">{{ formatMoney(item.price) }}</td>
@@ -834,8 +834,8 @@ function addToCart(product, variant) {
   cart.value.push({
     bienTheId: variant.id,
     ten: product.ten,
-    kichCoSize: variant.kichCoSize,
-    mauSac: variant.mauSac,
+    tenKichCo: variant.kichCo?.tenKichCo || 'N/A',
+    tenMau: variant.mauSac?.tenMau || 'N/A',
     soLuongTon: variant.soLuongTon,
     quantity: 1,
     gia: getPrice(variant),
@@ -1171,8 +1171,8 @@ async function checkout() {
 
       items: cart.value.map((item) => ({
         name: item.ten,
-        size: item.kichCoSize,
-        color: item.mauSac,
+        tenKichCo: item.tenKichCo,
+        tenMau: item.tenMau,
         qty: item.quantity,
         price: item.gia,
         total: Number(item.gia || 0) * Number(item.quantity || 0),
