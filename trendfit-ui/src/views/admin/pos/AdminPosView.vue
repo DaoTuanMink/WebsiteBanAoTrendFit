@@ -794,24 +794,39 @@ async function loadVariants(product) {
   }
 }
 
-function getPrice(variant) {
-  return Number(variant.giaSale || variant.gia || 0)
-}
+const filteredProducts = computed(() => {
+  if (!products.value) return []
+  return products.value.filter((p) => p.ten?.toLowerCase().includes(keyword.value.toLowerCase()))
+})
 
 function addToCart(product, variant) {
   const existed = cart.value.find((i) => i.bienTheId === variant.id)
   if (existed) {
-    if (existed.quantity < variant.soLuongTon) existed.quantity++
-  } else {
-    cart.value.push({
-      bienTheId: variant.id,
-      ten: product.ten,
-      kichCoSize: variant.kichCo?.tenKichCo || 'N/A',
-      mauSac: variant.mauSac?.tenMau || 'N/A',
-      soLuongTon: variant.soLuongTon,
-      quantity: 1,
-      gia: variant.giaSale || variant.gia || 0,
-    })
+    if (existed.quantity < variant.soLuongTon) {
+      existed.quantity += 1
+    }
+
+    return
+  }
+
+  cart.value.push({
+    bienTheId: variant.id,
+    ten: product.ten,
+    kichCoSize: variant.kichCoSize,
+    mauSac: variant.mauSac,
+    soLuongTon: variant.soLuongTon,
+    quantity: 1,
+    gia: getPrice(variant),
+  })
+}
+
+function normalizeQuantity(item) {
+  if (!item.quantity || item.quantity < 1) {
+    item.quantity = 1
+  }
+
+  if (item.quantity > item.soLuongTon) {
+    item.quantity = item.soLuongTon
   }
 }
 
@@ -1063,6 +1078,8 @@ function validateAppliedVoucherAgain() {
 
   voucherMessage.value = `Đang áp dụng mã ${appliedVoucher.value.ma}, giảm ${formatMoney(discountAmount.value)}`
 }
+
+const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
 
 async function checkout() {
   if (!cart.value.length) return alert('Giỏ hàng trống')
