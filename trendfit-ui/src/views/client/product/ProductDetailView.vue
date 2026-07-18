@@ -250,28 +250,25 @@ const currentUserId = computed(() => {
   return id ? Number(id) : null
 })
 
-const uniqueColors = computed(() => [
-  ...new Set(product.value?.bienTheSanPhams?.map((v) => v.mauSac) || []),
-])
+const uniqueColors = computed(() => {
+  // Lấy danh sách tên màu, loại bỏ trùng lặp
+  const colors = product.value?.bienTheSanPhams?.map((v) => v.mauSac?.tenMau) || []
+  return [...new Set(colors.filter(Boolean))]
+})
 
 const availableSizes = computed(() => {
   return (
     product.value?.bienTheSanPhams
-      ?.filter((v) => v.mauSac === selectedColor.value)
-      ?.map((v) => v.kichCoSize) || []
+      ?.filter((v) => v.mauSac?.tenMau === selectedColor.value)
+      ?.map((v) => v.kichCo?.tenKichCo) || []
   )
 })
 
 const selectedPrice = computed(() => {
   const variant = product.value?.bienTheSanPhams?.find(
-    (v) => v.mauSac === selectedColor.value && v.kichCoSize === selectedSize.value,
+    (v) => v.mauSac?.tenMau === selectedColor.value && v.kichCo?.tenKichCo === selectedSize.value,
   )
-
-  if (variant) {
-    return variant.gia
-  }
-
-  return getMinPrice(product.value?.bienTheSanPhams)
+  return variant ? variant.gia : getMinPrice(product.value?.bienTheSanPhams)
 })
 
 const relatedProducts = computed(() => {
@@ -396,8 +393,9 @@ const addToCart = () => {
     return alert('Vui lòng chọn đầy đủ màu và size!')
   }
 
+  // Tìm biến thể khớp với tên màu và tên size
   const variant = product.value.bienTheSanPhams.find(
-    (v) => v.mauSac === selectedColor.value && v.kichCoSize === selectedSize.value,
+    (v) => v.mauSac?.tenMau === selectedColor.value && v.kichCo?.tenKichCo === selectedSize.value,
   )
 
   if (!variant) return alert('Sản phẩm không hợp lệ!')
@@ -406,15 +404,14 @@ const addToCart = () => {
     bienTheId: variant.id,
     ten: product.value.sanPham.ten,
     anhChinh: mainImage.value,
-    mauSac: selectedColor.value,
-    kichCoSize: selectedSize.value,
+    mauSac: selectedColor.value, // Đã là tên màu
+    kichCoSize: selectedSize.value, // Đã là tên size
     gia: variant.gia,
     maSku: variant.maSku,
     quantity: 1,
   }
 
   let cart = JSON.parse(localStorage.getItem('cart') || '[]')
-
   const existingItem = cart.find((i) => i.bienTheId === cartItem.bienTheId)
 
   if (existingItem) {
@@ -424,7 +421,6 @@ const addToCart = () => {
   }
 
   localStorage.setItem('cart', JSON.stringify(cart))
-
   alert('Đã thêm sản phẩm vào giỏ hàng!')
 }
 
