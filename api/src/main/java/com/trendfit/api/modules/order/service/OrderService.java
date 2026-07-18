@@ -182,89 +182,43 @@ public class OrderService {
         return result;
     }
 
-    @Transactional
-    public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new RuntimeException("Giỏ hàng đang trống");
-        }
+   @Transactional
+public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
+    // 1. Tạo đơn
+    DonHang dh = new DonHang();
+    dh.setMaDonHang("POS-" + System.currentTimeMillis());
+    dh.setTenNguoiNhan(dto.getHoTen() != null ? dto.getHoTen() : "Khách lẻ");
+    dh.setSoDienThoaiGiao(dto.getSdt());
+    dh.setTrangThai("DA_THANH_CONG");
+    dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
+    dh.setTongTienHang(dto.getTongTienHang());
+    dh.setTongThanhToan(dto.getTongThanhToan());
+    
+    DonHang savedOrder = donHangRepository.save(dh);
 
-        DonHang donHang = new DonHang();
+    // 2. Xử lý chi tiết và trừ tồn
+    for (OrderItemDTO item : dto.getItems()) {
+        BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
+            .orElseThrow(() -> new RuntimeException("Biến thể không tồn tại"));
 
-        donHang.setTenNguoiNhan(dto.getHoTen() == null || dto.getHoTen().trim().isEmpty() ? "Khách lẻ" : dto.getHoTen().trim());
-        donHang.setSoDienThoaiGiao(dto.getSdt());
-        donHang.setDiaChiGiao("Bán tại quầy");
-        donHang.setPhiVanChuyen(BigDecimal.ZERO);
-        donHang.setTienGiam(dto.getTienGiam() == null ? BigDecimal.ZERO : dto.getTienGiam());
-        donHang.setTongTienHang(BigDecimal.ZERO);
-        donHang.setTongThanhToan(BigDecimal.ZERO);
-        donHang.setTrangThai("DA_THANH_CONG");
-        donHang.setPhuongThucThanhToan(dto.getPhuongThucThanhToan() == null ? "TIEN_MAT" : dto.getPhuongThucThanhToan());
-        donHang.setGhiChu("Đơn bán tại quầy");
-        donHang.setNgayDat(LocalDateTime.now());
+        if (bt.getSoLuongTon() < item.getQuantity()) 
+            throw new RuntimeException("Hết hàng: " + bt.getMaSku());
 
-        DonHang savedOrder = donHangRepository.save(donHang);
-        BigDecimal tongTienHang = BigDecimal.ZERO;
+        // Trừ tồn kho
+        bt.setSoLuongTon(bt.getSoLuongTon() - item.getQuantity());
+        bienTheRepository.save(bt);
 
-        for (OrderItemDTO item : dto.getItems()) {
-            BienTheSanPham bienThe = bienTheRepository.findById(item.getBienTheId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
-
-            int soLuongMua = item.getQuantity() == null ? 0 : item.getQuantity();
-            int tonKho = bienThe.getSoLuongTon() == null ? 0 : bienThe.getSoLuongTon();
-
-            if (soLuongMua <= 0) throw new RuntimeException("Số lượng mua không hợp lệ");
-            if (tonKho < soLuongMua) throw new RuntimeException("Sản phẩm không đủ tồn kho");
-
-            BigDecimal donGia = item.getGia() != null ? item.getGia() :
-                    (bienThe.getGiaSale() != null ? bienThe.getGiaSale() : bienThe.getGia());
-
-            BigDecimal thanhTien = donGia.multiply(BigDecimal.valueOf(soLuongMua));
-
-            ChiTietDonHang chiTiet = new ChiTietDonHang();
-            chiTiet.setDonHang(savedOrder);
-            chiTiet.setBienTheSanPham(bienThe);
-            chiTiet.setSoLuong(soLuongMua);
-            chiTiet.setDonGia(donGia);
-            chiTiet.setThanhTien(thanhTien);
-            chiTiet.setTenSanPham(item.getTen());
-            chiTiet.setMaSku(bienThe.getMaSku());
-
-            // SỬA Ở ĐÂY
-            chiTiet.setKichCoSize(bienThe.getKichCo() != null ? bienThe.getKichCo().getTenKichCo() : null);  // ← SỬA
-chiTiet.setMauSac(bienThe.getMauSac() != null ? bienThe.getMauSac().getTenMau() : null);
-
-            chiTietDonHangRepository.save(chiTiet);
-
-            bienThe.setSoLuongTon(tonKho - soLuongMua);
-            bienThe.setSoLuongDaBan((bienThe.getSoLuongDaBan() == null ? 0 : bienThe.getSoLuongDaBan()) + soLuongMua);
-            bienTheRepository.save(bienThe);
-
-            tongTienHang = tongTienHang.add(thanhTien);
-        }
-
-        // Phần tính tiền thanh toán giữ nguyên
-        BigDecimal tienGiam = dto.getTienGiam() == null ? BigDecimal.ZERO : dto.getTienGiam();
-        BigDecimal tongThanhToan = tongTienHang.subtract(tienGiam);
-        if (tongThanhToan.compareTo(BigDecimal.ZERO) < 0) tongThanhToan = BigDecimal.ZERO;
-
-        BigDecimal tienKhachDua = dto.getTienKhachDua() == null ? BigDecimal.ZERO : dto.getTienKhachDua();
-        String phuongThuc = savedOrder.getPhuongThucThanhToan();
-
-        if ("TIEN_MAT".equals(phuongThuc)) {
-            if (tienKhachDua.compareTo(tongThanhToan) < 0) {
-                throw new RuntimeException("Tiền khách đưa chưa đủ");
-            }
-            savedOrder.setTienKhachDua(tienKhachDua);
-            savedOrder.setTienThua(tienKhachDua.subtract(tongThanhToan));
-        } else {
-            savedOrder.setTienKhachDua(tongThanhToan);
-            savedOrder.setTienThua(BigDecimal.ZERO);
-        }
-
-        savedOrder.setTongTienHang(tongTienHang);
-        savedOrder.setTienGiam(tienGiam);
-        savedOrder.setTongThanhToan(tongThanhToan);
-
-        return donHangRepository.save(savedOrder);
+        // Lưu chi tiết
+        ChiTietDonHang ct = new ChiTietDonHang();
+        ct.setDonHang(savedOrder);
+        ct.setBienTheSanPham(bt);
+        ct.setSoLuong(item.getQuantity());
+        ct.setDonGia(item.getGia());
+        ct.setTenSanPham(item.getTen());
+        ct.setKichCoSize(bt.getKichCo().getTenKichCo());
+        ct.setMauSac(bt.getMauSac().getTenMau());
+        chiTietDonHangRepository.save(ct);
     }
+    return savedOrder;
+}
 }

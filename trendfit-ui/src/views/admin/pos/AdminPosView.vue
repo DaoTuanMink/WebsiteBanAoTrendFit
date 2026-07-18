@@ -609,7 +609,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const API_BASE = 'http://localhost:8080/api'
 
@@ -816,13 +816,13 @@ async function loadVariants(product) {
   }
 }
 
-function getPrice(variant) {
-  return Number(variant.giaSale || variant.gia || 0)
-}
+const filteredProducts = computed(() => {
+  if (!products.value) return []
+  return products.value.filter((p) => p.ten?.toLowerCase().includes(keyword.value.toLowerCase()))
+})
 
 function addToCart(product, variant) {
-  const existed = cart.value.find((item) => item.bienTheId === variant.id)
-
+  const existed = cart.value.find((i) => i.bienTheId === variant.id)
   if (existed) {
     if (existed.quantity < variant.soLuongTon) {
       existed.quantity += 1
@@ -1099,214 +1099,62 @@ function validateAppliedVoucherAgain() {
   voucherMessage.value = `Đang áp dụng mã ${appliedVoucher.value.ma}, giảm ${formatMoney(discountAmount.value)}`
 }
 
+const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
+
 async function checkout() {
-  if (!cart.value.length) {
-    alert('Vui lòng thêm sản phẩm vào giỏ hàng')
-    return
-  }
-
-  const role = localStorage.getItem('user_role')
-
-  if (role !== 'ADMIN' && role !== 'EMPLOYEE') {
-    alert('Bạn không có quyền bán hàng tại quầy')
-    return
-  }
-
-  if (paymentMethod.value === 'TIEN_MAT' && Number(cashReceived.value || 0) < totalPayable.value) {
-    alert('Tiền khách đưa chưa đủ')
-    return
-  }
+  if (!cart.value.length) return alert('Giỏ hàng trống')
 
   const payload = {
     hoTen: customerName.value || 'Khách lẻ',
-    sdt: customerPhone.value || '',
+    sdt: customerPhone.value || '0000000000',
     diaChi: 'Bán tại quầy',
-    phuongThucThanhToan: paymentMethod.value,
-
-    tongTienHang: totalAmount.value,
-    tienGiam: discountAmount.value,
-    tongThanhToan: totalPayable.value,
-
-    tienKhachDua:
-      paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
-
-    tienThua: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
-
+    phuongThucThanhToan: paymentMethod.value || 'TIEN_MAT',
+    // Đảm bảo ép kiểu Number cho các trường BigDecimal
+    tongTienHang: Number(totalAmount.value),
+    tienGiam: Number(discountAmount.value || 0),
+    tongThanhToan: Number(totalPayable.value),
+    tienKhachDua: Number(cashReceived.value || 0),
+    tienThua: Number(changeAmount.value || 0),
     voucherId: appliedVoucher.value?.id || null,
     maVoucher: appliedVoucher.value?.ma || null,
-
-    items: cart.value.map((item) => ({
-      bienTheId: item.bienTheId,
-      quantity: item.quantity,
-      ten: item.ten,
-      gia: item.gia,
+    userId: null,
+    creatorId: 1, // Nên lấy từ localStorage.getItem('user_id')
+    items: cart.value.map((i) => ({
+      bienTheId: Number(i.bienTheId),
+      quantity: Number(i.quantity),
+      ten: i.ten,
+      gia: Number(i.gia),
     })),
   }
 
   try {
-    isSubmitting.value = true
-
-    const response = await fetch(`${API_BASE}/admin/pos-orders`, {
+    const res = await fetch(`${API_BASE}/admin/pos-orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Role': role,
+        Authorization: 'Bearer ' + localStorage.getItem('token'), // Nếu có bảo mật
       },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText || 'Thanh toán thất bại')
+    if (res.ok) {
+      alert('Thanh toán thành công!')
+      cart.value = []
+    } else {
+      const errorText = await res.text()
+      alert('Lỗi: ' + errorText) // Xem lỗi cụ thể từ Backend trả về
     }
-
-    const createdOrder = await response.json()
-
-    invoiceData.value = {
-      code: createdOrder.id || 'POS',
-      date: new Date().toLocaleString('vi-VN'),
-      customer: customerName.value || 'Khách lẻ',
-      phone: customerPhone.value || '',
-      paymentMethod: paymentMethod.value === 'TIEN_MAT' ? 'Tiền mặt' : 'Chuyển khoản',
-
-      items: cart.value.map((item) => ({
-        name: item.ten,
-        size: item.kichCoSize,
-        color: item.mauSac,
-        qty: item.quantity,
-        price: item.gia,
-        total: Number(item.gia || 0) * Number(item.quantity || 0),
-      })),
-
-      totalAmount: totalAmount.value,
-      discount: discountAmount.value,
-      payable: totalPayable.value,
-      paid:
-        paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
-      change: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
-    }
-
-    showInvoice.value = true
-
-    alert('Thanh toán thành công')
-
-    cart.value = []
-    customerName.value = ''
-    customerPhone.value = ''
-    voucherCode.value = ''
-    appliedVoucher.value = null
-    voucherMessage.value = ''
-    paymentMethod.value = 'TIEN_MAT'
-    cashReceived.value = 0
-    variants.value = []
-    selectedProduct.value = null
-
-    await loadProducts()
-  } catch (error) {
-    alert(error.message)
-  } finally {
-    isSubmitting.value = false
+  } catch (err) {
+    console.error(err)
+    alert('Không thể kết nối tới server')
   }
 }
-function printInvoice() {
-  const invoiceElement = document.querySelector('.invoice-paper')
 
-  if (!invoiceElement) {
-    alert('Không tìm thấy nội dung hóa đơn để in')
-    return
-  }
-
-  const printWindow = window.open('', '_blank', 'width=800,height=600')
-
-  if (!printWindow) {
-    alert('Trình duyệt đang chặn cửa sổ in. Vui lòng cho phép popup.')
-    return
-  }
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Hóa đơn bán hàng</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            color: #000;
-          }
-
-          h2 {
-            text-align: center;
-            margin-bottom: 20px;
-          }
-
-          p {
-            margin: 6px 0;
-            font-size: 14px;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 14px;
-          }
-
-          th,
-          td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            font-size: 14px;
-          }
-
-          th {
-            background: #f3f4f6;
-          }
-
-          small {
-            color: #555;
-          }
-
-          .invoice-summary {
-            margin-top: 14px;
-            border-top: 1px dashed #999;
-            padding-top: 12px;
-            font-weight: bold;
-          }
-
-          .invoice-thanks {
-            text-align: center;
-            margin-top: 18px;
-            font-weight: bold;
-          }
-
-          @media print {
-            body {
-              width: 80mm;
-              margin: 0 auto;
-              padding: 10px;
-            }
-          }
-        </style>
-      </head>
-
-      <body>
-        ${invoiceElement.innerHTML}
-      </body>
-    </html>
-  `)
-
-  printWindow.document.close()
-  printWindow.focus()
-
-  setTimeout(() => {
-    printWindow.print()
-    printWindow.close()
-  }, 300)
+function formatMoney(v) {
+  return Number(v).toLocaleString('vi-VN') + ' đ'
 }
 
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' đ'
-}
+onMounted(loadProducts)
 </script>
 
 <style scoped>

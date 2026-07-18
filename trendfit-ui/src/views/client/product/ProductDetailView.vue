@@ -482,7 +482,6 @@ const addToCart = () => {
   }
 
   let cart = JSON.parse(localStorage.getItem('cart') || '[]')
-
   const existingItem = cart.find((i) => i.bienTheId === cartItem.bienTheId)
 
   if (existingItem) {
@@ -492,7 +491,6 @@ const addToCart = () => {
   }
 
   localStorage.setItem('cart', JSON.stringify(cart))
-
   alert('Đã thêm sản phẩm vào giỏ hàng!')
 }
 

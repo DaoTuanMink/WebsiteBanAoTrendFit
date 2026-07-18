@@ -146,19 +146,11 @@ public class SanPhamService {
         return listDto;
     }
 
-    public List<ProductDetailDTO> getAllPublicProducts() {
-        List<SanPham> list = sanPhamRepository.findAll();
-        List<ProductDetailDTO> result = new ArrayList<>();
-
-        for (SanPham sp : list) {
-            ProductDetailDTO dto = new ProductDetailDTO();
-            dto.setSanPham(sp);
-            dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
-            dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
-            result.add(dto);
-        }
-        return result;
-    }
+    // Trong SanPhamService.java
+public List<SanPham> getAllPublicProducts() {
+    List<SanPham> list = sanPhamRepository.findAll();
+    return list != null ? list : new ArrayList<>(); // Đảm bảo luôn trả về List rỗng nếu không có dữ liệu
+}
 
     public ProductDetailDTO findByIdFull(Integer id) {
         SanPham sp = sanPhamRepository.findById(id)
