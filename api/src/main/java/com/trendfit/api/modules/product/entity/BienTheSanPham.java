@@ -18,11 +18,11 @@ public class BienTheSanPham {
     private SanPham sanPham;
 
     // Thay đổi: Liên kết qua bảng mới thay vì String
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "kich_co_id")
     private KichCo kichCo;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "mau_sac_id")
     private MauSac mauSac;
 

@@ -121,7 +121,9 @@
                   <div v-for="variant in variants" :key="variant.id" class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center gap-3">
                       <div>
-                        <div class="fw-bold">{{ variant.kichCoSize }} - {{ variant.mauSac }}</div>
+                        <div class="fw-bold">
+                          {{ variant.kichCo?.tenKichCo }} - {{ variant.mauSac?.tenMau }}
+                        </div>
                         <div class="small text-secondary">SKU: {{ variant.maSku }}</div>
                         <div class="small text-secondary">Tồn kho: {{ variant.soLuongTon }}</div>
                         <div class="fw-semibold text-primary">
@@ -169,7 +171,7 @@
                       <td>
                         <div class="fw-semibold">{{ item.ten }}</div>
                         <small class="text-secondary">
-                          {{ item.kichCoSize }} - {{ item.mauSac }}
+                          {{ item.tenKichCo }} - {{ item.tenMau }}
                         </small>
                       </td>
 
@@ -544,7 +546,7 @@
                         <td>
                           {{ item.name }}
                           <br />
-                          <small class="text-secondary">{{ item.size }} - {{ item.color }}</small>
+                          <small class="text-secondary">{{ item.tenKichCo }} - {{ item.tenMau }}</small>
                         </td>
                         <td class="text-center">{{ item.qty }}</td>
                         <td class="text-end">{{ formatMoney(item.price) }}</td>
@@ -812,8 +814,8 @@ function addToCart(product, variant) {
   cart.value.push({
     bienTheId: variant.id,
     ten: product.ten,
-    kichCoSize: variant.kichCoSize,
-    mauSac: variant.mauSac,
+    tenKichCo: variant.kichCo?.tenKichCo || 'N/A',
+    tenMau: variant.mauSac?.tenMau || 'N/A',
     soLuongTon: variant.soLuongTon,
     quantity: 1,
     gia: getPrice(variant),
@@ -1117,12 +1119,35 @@ async function checkout() {
       body: JSON.stringify(payload),
     })
 
-    if (res.ok) {
-      alert('Thanh toán thành công!')
-      cart.value = []
-    } else {
-      const errorText = await res.text()
-      alert('Lỗi: ' + errorText) // Xem lỗi cụ thể từ Backend trả về
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Thanh toán thất bại')
+    }
+
+    const createdOrder = await response.json()
+
+    invoiceData.value = {
+      code: createdOrder.id || 'POS',
+      date: new Date().toLocaleString('vi-VN'),
+      customer: customerName.value || 'Khách lẻ',
+      phone: customerPhone.value || '',
+      paymentMethod: paymentMethod.value === 'TIEN_MAT' ? 'Tiền mặt' : 'Chuyển khoản',
+
+      items: cart.value.map((item) => ({
+        name: item.ten,
+        tenKichCo: item.tenKichCo,
+        tenMau: item.tenMau,
+        qty: item.quantity,
+        price: item.gia,
+        total: Number(item.gia || 0) * Number(item.quantity || 0),
+      })),
+
+      totalAmount: totalAmount.value,
+      discount: discountAmount.value,
+      payable: totalPayable.value,
+      paid:
+        paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
+      change: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
     }
   } catch (err) {
     console.error(err)
