@@ -12,6 +12,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AuthInterceptor authInterceptor;
 
+    
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // Áp dụng Interceptor cho các đường dẫn quản lý đơn hàng

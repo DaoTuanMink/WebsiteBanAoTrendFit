@@ -62,6 +62,7 @@
               <button
                 v-for="color in uniqueColors"
                 :key="color"
+                type="button"
                 @click="selectColor(color)"
                 class="btn"
                 :class="selectedColor === color ? 'btn-dark' : 'btn-outline-dark'"
@@ -80,6 +81,7 @@
               <button
                 v-for="size in availableSizes"
                 :key="size"
+                type="button"
                 @click="selectedSize = size"
                 class="btn"
                 :class="selectedSize === size ? 'btn-dark' : 'btn-outline-dark'"
@@ -89,7 +91,12 @@
             </div>
           </div>
 
-          <button @click="addToCart" class="btn btn-dark btn-lg w-100 py-3 text-uppercase">
+          <button
+            type="button"
+            @click="addToCart"
+            class="btn btn-dark btn-lg w-100 py-3 text-uppercase"
+            :disabled="!selectedVariant"
+          >
             Thêm vào giỏ hàng
           </button>
         </div>
@@ -217,7 +224,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import LayoutHeader from '@/components/LayoutHeader.vue'
@@ -250,25 +257,57 @@ const currentUserId = computed(() => {
   return id ? Number(id) : null
 })
 
+const validVariants = computed(() => {
+  const variants = product.value?.bienTheSanPhams
+
+  if (!Array.isArray(variants)) {
+    return []
+  }
+
+  return variants.filter((variant) => {
+    const color = String(variant?.mauSac?.tenMau || '').trim()
+    const size = String(variant?.kichCo?.tenKichCo || '').trim()
+    const stock = Number(variant?.soLuongTon || 0)
+
+    return color && size && stock > 0 && variant?.dangBan !== false
+  })
+})
+
 const uniqueColors = computed(() => {
-  // Lấy danh sách tên màu, loại bỏ trùng lặp
-  const colors = product.value?.bienTheSanPhams?.map((v) => v.mauSac?.tenMau) || []
-  return [...new Set(colors.filter(Boolean))]
+  return [...new Set(validVariants.value.map((variant) => String(variant.mauSac.tenMau).trim()))]
 })
 
 const availableSizes = computed(() => {
-  return (
-    product.value?.bienTheSanPhams
-      ?.filter((v) => v.mauSac?.tenMau === selectedColor.value)
-      ?.map((v) => v.kichCo?.tenKichCo) || []
-  )
+  if (!selectedColor.value) {
+    return []
+  }
+
+  return [
+    ...new Set(
+      validVariants.value
+        .filter((variant) => String(variant.mauSac.tenMau).trim() === selectedColor.value)
+        .map((variant) => String(variant.kichCo.tenKichCo).trim()),
+    ),
+  ]
+})
+
+const selectedVariant = computed(() => {
+  return validVariants.value.find((variant) => {
+    return (
+      String(variant.mauSac.tenMau).trim() === selectedColor.value &&
+      String(variant.kichCo.tenKichCo).trim() === selectedSize.value
+    )
+  })
 })
 
 const selectedPrice = computed(() => {
-  const variant = product.value?.bienTheSanPhams?.find(
-    (v) => v.mauSac?.tenMau === selectedColor.value && v.kichCo?.tenKichCo === selectedSize.value,
-  )
-  return variant ? variant.gia : getMinPrice(product.value?.bienTheSanPhams)
+  const variant = selectedVariant.value
+
+  if (variant) {
+    return Number(variant.giaSale ?? variant.gia ?? 0)
+  }
+
+  return getMinPrice(validVariants.value)
 })
 
 const relatedProducts = computed(() => {
@@ -287,9 +326,22 @@ const loadProduct = async () => {
   try {
     const res = await axios.get(`http://localhost:8080/api/public/products/${id}`)
     product.value = res.data
-    // ... code xử lý ảnh ...
+
+    const images = Array.isArray(product.value?.anhSanPhams) ? product.value.anhSanPhams : []
+
+    mainImage.value = images.find((image) => image.laAnhChinh)?.urlAnh || images[0]?.urlAnh || ''
+
+    const firstVariant = validVariants.value[0]
+
+    if (firstVariant) {
+      selectedColor.value = String(firstVariant.mauSac.tenMau).trim()
+      selectedSize.value = String(firstVariant.kichCo.tenKichCo).trim()
+    } else {
+      selectedColor.value = null
+      selectedSize.value = null
+    }
   } catch (error) {
-    console.error(error)
+    console.error('Lỗi tải sản phẩm:', error)
   }
 }
 
@@ -344,13 +396,13 @@ const submitReview = async () => {
 
 const selectColor = (color) => {
   selectedColor.value = color
-  selectedSize.value = null
+  selectedSize.value = availableSizes.value[0] || null
 }
 
 const getMinPrice = (variants) => {
   if (!variants || variants.length === 0) return 0
 
-  const prices = variants.map((v) => Number(v.gia || 0)).filter((v) => v > 0)
+  const prices = variants.map((v) => Number(v.giaSale ?? v.gia ?? 0)).filter((v) => v > 0)
 
   if (prices.length === 0) return 0
 
@@ -393,10 +445,7 @@ const addToCart = () => {
     return alert('Vui lòng chọn đầy đủ màu và size!')
   }
 
-  // Tìm biến thể khớp với tên màu và tên size
-  const variant = product.value.bienTheSanPhams.find(
-    (v) => v.mauSac?.tenMau === selectedColor.value && v.kichCo?.tenKichCo === selectedSize.value,
-  )
+  const variant = selectedVariant.value
 
   if (!variant) return alert('Sản phẩm không hợp lệ!')
 
@@ -404,9 +453,9 @@ const addToCart = () => {
     bienTheId: variant.id,
     ten: product.value.sanPham.ten,
     anhChinh: mainImage.value,
-    mauSac: selectedColor.value, // Đã là tên màu
-    kichCoSize: selectedSize.value, // Đã là tên size
-    gia: variant.gia,
+    mauSac: variant.mauSac.tenMau,
+    kichCoSize: variant.kichCo.tenKichCo,
+    gia: Number(variant.giaSale ?? variant.gia ?? 0),
     maSku: variant.maSku,
     quantity: 1,
   }
@@ -425,14 +474,15 @@ const addToCart = () => {
 }
 
 const initPage = async () => {
-  // Bọc vào try catch để đảm bảo an toàn, lỗi hàm này không ảnh hưởng hàm khác
-  product.value = null // Reset trạng thái loading khi chuyển trang hoàn toàn
+  product.value = null
+  selectedColor.value = null
+  selectedSize.value = null
+  mainImage.value = ''
+
   await loadProduct()
   await loadReviews()
   await checkCanReview()
 }
-
-onMounted(initPage)
 
 watch(
   () => route.params.id,
@@ -546,5 +596,19 @@ watch(
 .btn.active {
   background-color: #000;
   color: #fff;
+}
+
+.variant-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.variant-options .btn {
+  min-width: 72px;
+  min-height: 42px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 600;
 }
 </style>
