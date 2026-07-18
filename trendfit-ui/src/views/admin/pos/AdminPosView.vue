@@ -7,9 +7,7 @@
         <p class="text-secondary mb-0">Tạo đơn trực tiếp cho khách mua tại cửa hàng</p>
       </div>
 
-      <button type="button" class="btn btn-primary" @click="loadProducts">
-        Tải lại sản phẩm
-      </button>
+      <button type="button" class="btn btn-primary" @click="loadProducts">Tải lại sản phẩm</button>
     </div>
 
     <div class="row g-4 align-items-start">
@@ -111,22 +109,19 @@
                   type="button"
                   class="btn-close"
                   aria-label="Đóng"
-                  @click="selectedProduct = null; variants = []"
+                  @click="
+                    selectedProduct = null
+                    variants = []
+                  "
                 ></button>
               </div>
 
               <div class="card-body">
                 <div v-if="variants.length" class="list-group">
-                  <div
-                    v-for="variant in variants"
-                    :key="variant.id"
-                    class="list-group-item"
-                  >
+                  <div v-for="variant in variants" :key="variant.id" class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center gap-3">
                       <div>
-                        <div class="fw-bold">
-                          {{ variant.kichCoSize }} - {{ variant.mauSac }}
-                        </div>
+                        <div class="fw-bold">{{ variant.kichCoSize }} - {{ variant.mauSac }}</div>
                         <div class="small text-secondary">SKU: {{ variant.maSku }}</div>
                         <div class="small text-secondary">Tồn kho: {{ variant.soLuongTon }}</div>
                         <div class="fw-semibold text-primary">
@@ -146,9 +141,7 @@
                   </div>
                 </div>
 
-                <div v-else class="alert alert-warning mb-0">
-                  Sản phẩm này chưa có biến thể.
-                </div>
+                <div v-else class="alert alert-warning mb-0">Sản phẩm này chưa có biến thể.</div>
               </div>
             </div>
 
@@ -258,12 +251,7 @@
                       Áp dụng
                     </button>
 
-                    <button
-                      v-else
-                      type="button"
-                      class="btn btn-danger"
-                      @click="removeVoucher"
-                    >
+                    <button v-else type="button" class="btn btn-danger" @click="removeVoucher">
                       Hủy mã
                     </button>
                   </div>
@@ -348,7 +336,9 @@
                           <button
                             type="button"
                             class="btn btn-sm text-nowrap"
-                            :class="voucher.eligible ? 'btn-outline-primary' : 'btn-outline-secondary'"
+                            :class="
+                              voucher.eligible ? 'btn-outline-primary' : 'btn-outline-secondary'
+                            "
                             :disabled="!voucher.eligible || !!appliedVoucher"
                             @click="applySuggestedVoucher(voucher)"
                           >
@@ -375,7 +365,9 @@
                       <button
                         type="button"
                         class="btn w-100"
-                        :class="paymentMethod === 'TIEN_MAT' ? 'btn-primary' : 'btn-outline-primary'"
+                        :class="
+                          paymentMethod === 'TIEN_MAT' ? 'btn-primary' : 'btn-outline-primary'
+                        "
                         @click="paymentMethod = 'TIEN_MAT'"
                       >
                         Tiền mặt
@@ -386,7 +378,9 @@
                       <button
                         type="button"
                         class="btn w-100"
-                        :class="paymentMethod === 'CHUYEN_KHOAN' ? 'btn-primary' : 'btn-outline-primary'"
+                        :class="
+                          paymentMethod === 'CHUYEN_KHOAN' ? 'btn-primary' : 'btn-outline-primary'
+                        "
                         @click="paymentMethod = 'CHUYEN_KHOAN'"
                       >
                         Chuyển khoản
@@ -530,9 +524,7 @@
 
                   <div class="col-12 col-md-6">
                     <p class="mb-1"><strong>Số điện thoại:</strong> {{ invoiceData.phone }}</p>
-                    <p class="mb-1">
-                      <strong>Thanh toán:</strong> {{ invoiceData.paymentMethod }}
-                    </p>
+                    <p class="mb-1"><strong>Thanh toán:</strong> {{ invoiceData.paymentMethod }}</p>
                   </div>
                 </div>
 
@@ -693,7 +685,6 @@ const changeAmount = computed(() => {
   return Math.max(Number(cashReceived.value || 0) - totalPayable.value, 0)
 })
 
-
 const suggestedVouchers = computed(() => {
   if (!cart.value.length) {
     return []
@@ -740,18 +731,8 @@ function normalizeProduct(item) {
 
   return {
     ...source,
-    id:
-      source.id ??
-      source.sanPhamId ??
-      source.maSanPham ??
-      item?.id ??
-      item?.sanPhamId ??
-      null,
-    ten:
-      source.ten ??
-      source.tenSanPham ??
-      source.name ??
-      'Sản phẩm chưa có tên',
+    id: source.id ?? source.sanPhamId ?? source.maSanPham ?? item?.id ?? item?.sanPhamId ?? null,
+    ten: source.ten ?? source.tenSanPham ?? source.name ?? 'Sản phẩm chưa có tên',
     danhMuc: source.danhMuc ?? source.category ?? null,
     _variants: item?.bienTheSanPhams ?? item?.variants ?? null,
   }
@@ -780,8 +761,7 @@ async function loadProducts() {
 }
 
 async function loadVariants(product) {
-  const productId =
-    product?.id ?? product?.sanPhamId ?? product?.maSanPham ?? null
+  const productId = product?.id ?? product?.sanPhamId ?? product?.maSanPham ?? null
 
   if (!productId) {
     console.error('Sản phẩm không có ID:', product)
@@ -798,9 +778,7 @@ async function loadVariants(product) {
       return
     }
 
-    const response = await fetch(
-      `${API_BASE}/admin/products/${productId}/variants`,
-    )
+    const response = await fetch(`${API_BASE}/admin/products/${productId}/variants`)
 
     if (!response.ok) {
       const message = await response.text()
@@ -886,9 +864,13 @@ function normalizeVoucher(voucher = {}) {
   return {
     ...voucher,
     id: voucher.id ?? null,
-    ma: String(voucher.ma || '').trim().toUpperCase(),
+    ma: String(voucher.ma || '')
+      .trim()
+      .toUpperCase(),
     ten: voucher.ten || '',
-    loai: String(voucher.loai || '').trim().toUpperCase(),
+    loai: String(voucher.loai || '')
+      .trim()
+      .toUpperCase(),
     giaTriGiam: Number(voucher.giaTriGiam || 0),
     giaTriToiDa:
       voucher.giaTriToiDa === null || voucher.giaTriToiDa === undefined
@@ -913,9 +895,7 @@ function evaluateVoucher(rawVoucher) {
   const endDate = voucher.ngayKetThuc ? new Date(`${voucher.ngayKetThuc}T23:59:59`) : null
 
   const remainingUses =
-    voucher.gioiHanSuDung === null
-      ? null
-      : Math.max(voucher.gioiHanSuDung - voucher.soLanDaDung, 0)
+    voucher.gioiHanSuDung === null ? null : Math.max(voucher.gioiHanSuDung - voucher.soLanDaDung, 0)
 
   const minimumOrder = Number(voucher.donHangToiThieu || 0)
   const missingAmount = Math.max(minimumOrder - totalAmount.value, 0)
@@ -1167,7 +1147,10 @@ onMounted(loadProducts)
   border: 1px solid #dfe7f2;
   border-radius: 12px;
   background: #ffffff;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
 .voucher-suggestion:hover {
