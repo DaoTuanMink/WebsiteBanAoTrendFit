@@ -68,7 +68,7 @@
               <th>Màu</th>
               <th>Số lượng tồn</th>
               <th>Giá gốc</th>
-              <th>Giá sale</th>
+
               <th></th>
             </tr>
           </thead>
@@ -100,13 +100,7 @@
               <td>
                 <input v-model.number="v.gia" type="number" class="form-control form-control-sm" />
               </td>
-              <td>
-                <input
-                  v-model.number="v.giaSale"
-                  type="number"
-                  class="form-control form-control-sm"
-                />
-              </td>
+
               <td>
                 <button
                   @click="formData.bienTheSanPhams.splice(idx, 1)"
@@ -268,7 +262,6 @@ const themBienTheMoi = () => {
     mauSac: null,
     soLuongTon: 0,
     gia: 0,
-    giaSale: null,
   })
 }
 
