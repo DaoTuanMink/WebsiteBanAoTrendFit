@@ -115,9 +115,21 @@ const formatPrice = (v) => {
 }
 
 const getAnhChinh = (anhList) => {
-  if (anhList && anhList.length > 0) {
-    const anh = anhList.find((a) => a.laAnhChinh === true) || anhList[0]
-    return anh.urlAnh
+  if (anhList && Array.isArray(anhList) && anhList.length > 0) {
+    // Tìm bức ảnh được đánh dấu là ảnh chính (hỗ trợ cả true / 1)
+    const anhChinh = anhList.find(
+      (a) =>
+        a.laAnhChinh === true ||
+        a.laAnhChinh === 1 ||
+        a.la_anh_chinh === true ||
+        a.la_anh_chinh === 1,
+    )
+    // Nếu tìm thấy trả về urlAnh, nếu không lấy tấm đầu tiên làm mặc định
+    return (
+      anhChinh?.urlAnh ||
+      anhList[0]?.urlAnh ||
+      'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
+    )
   }
   return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
 }

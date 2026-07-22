@@ -40,6 +40,9 @@ public class OrderService {
     public void taoDonHang(OrderRequestDTO dto) {
         DonHang dh = new DonHang();
 
+        // 0. BẮT BUỘC: Sinh mã đơn hàng duy nhất để tránh lỗi null cột mã đơn
+        dh.setMaDonHang("HD-" + System.currentTimeMillis());
+
         // 1. Gán người dùng
         if (dto.getUserId() != null) {
             NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
@@ -57,6 +60,7 @@ public class OrderService {
         dh.setTienGiam(dto.getTienGiam());
         dh.setTongThanhToan(dto.getTongThanhToan());
         dh.setTrangThai("CHO_XAC_NHAN");
+        dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
 
         // 3. Gán Voucher
         if (dto.getVoucherId() != null) {
@@ -70,24 +74,40 @@ public class OrderService {
 
         donHangRepository.save(dh);
 
-        // 4. LƯU CHI TIẾT ĐƠN HÀNG
+        // 4. LƯU CHI TIẾT ĐƠN HÀNG VÀ TRỪ TỒN KHO NGAY LẬP TỨC
         if (dto.getItems() != null) {
             for (OrderItemDTO item : dto.getItems()) {
+                BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm ID: " + item.getBienTheId()));
+
+                int soLuongMua = item.getQuantity() == null ? 0 : item.getQuantity();
+                int tonKhoHienTai = bt.getSoLuongTon() == null ? 0 : bt.getSoLuongTon();
+
+                // Kiểm tra số lượng mua hợp lệ và đủ tồn kho không
+                if (soLuongMua <= 0) {
+                    throw new RuntimeException("Số lượng mua không hợp lệ");
+                }
+                if (tonKhoHienTai < soLuongMua) {
+                    throw new RuntimeException("Sản phẩm " + (bt.getMaSku() != null ? bt.getMaSku() : item.getTen()) + " không đủ tồn kho!");
+                }
+
                 ChiTietDonHang ct = new ChiTietDonHang();
                 ct.setDonHang(dh);
                 ct.setTenSanPham(item.getTen());
-                ct.setSoLuong(item.getQuantity());
+                ct.setSoLuong(soLuongMua);
                 ct.setDonGia(item.getGia());
-
-                BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId()).orElse(null);
-                if (bt != null) {
-                    ct.setBienTheSanPham(bt);
-                    // SỬA Ở ĐÂY - Lấy từ entity
-                    ct.setKichCoSize(bt.getKichCo() != null ? bt.getKichCo().getTenKichCo() : null);  // ← SỬA
-    ct.setMauSac(bt.getMauSac() != null ? bt.getMauSac().getTenMau() : null);
-                }
+                ct.setBienTheSanPham(bt);
+                ct.setKichCoSize(bt.getKichCo() != null ? bt.getKichCo().getTenKichCo() : null);
+                ct.setMauSac(bt.getMauSac() != null ? bt.getMauSac().getTenMau() : null);
 
                 chiTietDonHangRepository.save(ct);
+
+                // --- TRỪ TỒN KHO VÀ CẬP NHẬT SỐ LƯỢNG ĐÃ BÁN ---
+                bt.setSoLuongTon(tonKhoHienTai - soLuongMua);
+                int daBanHienTai = bt.getSoLuongDaBan() == null ? 0 : bt.getSoLuongDaBan();
+                bt.setSoLuongDaBan(daBanHienTai + soLuongMua);
+
+                bienTheRepository.save(bt);
             }
         }
     }
@@ -99,14 +119,15 @@ public class OrderService {
 
         String trangThaiCu = donHang.getTrangThai();
 
-        if ("DA_THANH_CONG".equals(trangThai) && !"DA_THANH_CONG".equals(trangThaiCu)) {
-            xuLyTonKho(donHang, -1);
-        }
-
-        if ("DA_HUY".equals(trangThai) && "DA_THANH_CONG".equals(trangThaiCu)) {
+        // Nếu đơn hàng chuyển sang trạng thái DA_HUY 
+        // VÀ trước đó nó KHÔNG PHẢI là DA_HUY (nghĩa là kho đã từng bị trừ lúc đặt)
+        if ("DA_HUY".equals(trangThai) && !"DA_HUY".equals(trangThaiCu)) {
+            
+            // Gọi xuLyTonKho với factor = 1 để cộng trả lại số lượng tồn và giảm số lượng đã bán
             xuLyTonKho(donHang, 1);
         }
 
+        // Cập nhật trạng thái mới cho đơn hàng
         donHang.setTrangThai(trangThai);
         donHangRepository.save(donHang);
     }
