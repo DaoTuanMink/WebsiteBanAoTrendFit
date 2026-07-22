@@ -5,7 +5,9 @@ import com.trendfit.api.modules.order.entity.ChiTietGioHang;
 import com.trendfit.api.modules.order.entity.GioHang;
 import com.trendfit.api.modules.order.repository.ChiTietGioHangRepository;
 import com.trendfit.api.modules.order.repository.GioHangRepository;
+import com.trendfit.api.modules.product.entity.AnhSanPham;
 import com.trendfit.api.modules.product.entity.BienTheSanPham;
+import com.trendfit.api.modules.product.repository.AnhSanPhamRepository; // <-- Thêm import này
 import com.trendfit.api.modules.product.repository.BienTheSanPhamRepository;
 import com.trendfit.api.modules.user.entity.NguoiDung;
 import com.trendfit.api.modules.user.repository.NguoiDungRepository;
@@ -25,6 +27,7 @@ public class CartService {
     @Autowired private ChiTietGioHangRepository chiTietGioHangRepository;
     @Autowired private BienTheSanPhamRepository bienTheRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
+    @Autowired private AnhSanPhamRepository anhSanPhamRepository; // <-- Autowired repository ảnh
 
     // 1. Lấy giỏ hàng theo User ID để trả về cho Frontend
     public List<Map<String, Object>> getCartByUserId(Integer userId) {
@@ -45,6 +48,22 @@ public class CartService {
                 map.put("gia", bt.getGiaSale() != null ? bt.getGiaSale() : bt.getGia());
                 map.put("quantity", item.getSoLuong());
                 map.put("soLuongTon", bt.getSoLuongTon());
+
+                // --- BỔ SUNG LẤY ẢNH CHÍNH CHO GIỎ HÀNG ---
+                String urlAnh = "https://via.placeholder.com/50";
+                if (bt.getSanPham() != null && bt.getSanPham().getId() != null) {
+                    List<AnhSanPham> listAnh = anhSanPhamRepository.findBySanPham_Id(bt.getSanPham().getId());
+                    if (listAnh != null && !listAnh.isEmpty()) {
+                        AnhSanPham anhChinh = listAnh.stream()
+                                .filter(a -> Boolean.TRUE.equals(a.getLaAnhChinh()))
+                                .findFirst()
+                                .orElse(listAnh.get(0));
+                        urlAnh = anhChinh.getUrlAnh();
+                    }
+                }
+                map.put("anhChinh", urlAnh);
+                // ------------------------------------------
+
                 result.add(map);
             }
         }
