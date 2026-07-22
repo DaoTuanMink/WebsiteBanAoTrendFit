@@ -25,7 +25,11 @@
             <tr v-for="(item, index) in cart" :key="index">
               <td>
                 <div class="d-flex align-items-center">
-                  <img :src="item.anhChinh" width="50" class="me-2" />
+                  <img
+                    :src="item.anhChinh || 'https://via.placeholder.com/50'"
+                    width="50"
+                    class="me-2 rounded"
+                  />
                   <span>{{ item.ten }}</span>
                 </div>
               </td>
@@ -36,7 +40,7 @@
                   <button @click="updateQuantity(index, -1)" class="btn btn-outline-secondary">
                     -
                   </button>
-                  <span class="px-3 border">{{ item.quantity }}</span>
+                  <span class="px-3 border d-flex align-items-center">{{ item.quantity }}</span>
                   <button @click="updateQuantity(index, 1)" class="btn btn-outline-secondary">
                     +
                   </button>
@@ -54,13 +58,13 @@
       </div>
 
       <div class="col-md-4">
-        <div class="card p-4 shadow-sm">
+        <div class="card p-4 shadow-sm border-0 bg-light">
           <h5 class="mb-3">Tổng thanh toán</h5>
-          <div class="d-flex justify-content-between mb-2">
+          <div class="d-flex justify-content-between mb-3 fw-bold h5">
             <span>Tạm tính:</span>
-            <span>{{ formatPrice(totalPrice) }}</span>
+            <span class="text-danger">{{ formatPrice(totalPrice) }}</span>
           </div>
-          <button @click="$router.push('/checkout')" class="btn btn-dark w-100 py-2">
+          <button @click="proceedToCheckout" class="btn btn-dark w-100 py-3 text-uppercase fw-bold">
             THANH TOÁN
           </button>
         </div>
@@ -72,20 +76,60 @@
 <script setup>
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const cart = ref([])
+const userId = localStorage.getItem('user_id') // Lấy ID tài khoản đang đăng nhập
 
-onMounted(() => {
-  cart.value = JSON.parse(localStorage.getItem('cart') || '[]')
+// 1. Khi load trang: ưu tiên lấy từ Database nếu có tài khoản, nếu không thì lấy LocalStorage
+onMounted(async () => {
+  if (userId) {
+    try {
+      const res = await axios.get(`http://localhost:8080/api/public/cart/${userId}`)
+      cart.value = res.data
+    } catch (err) {
+      console.error('Lỗi tải giỏ hàng từ server:', err)
+      // Fallback về localStorage nếu lỗi mạng
+      cart.value = JSON.parse(localStorage.getItem('cart') || '[]')
+    }
+  } else {
+    cart.value = JSON.parse(localStorage.getItem('cart') || '[]')
+  }
 })
 
+// 2. Hàm lưu giỏ hàng: Đồng thời lưu LocalStorage và đẩy lên Database nếu có tài khoản
+const saveCart = async () => {
+  // Luôn lưu bản sao vào localStorage để dự phòng
+  localStorage.setItem('cart', JSON.stringify(cart.value))
+
+  // Nếu người dùng có tài khoản, đồng bộ ngầm lên Database
+  if (userId) {
+    const payload = {
+      userId: Number(userId),
+      items: cart.value.map((i) => ({
+        bienTheId: i.bienTheId,
+        quantity: i.quantity,
+      })),
+    }
+    try {
+      await axios.post('http://localhost:8080/api/public/cart/sync', payload)
+    } catch (err) {
+      console.error('Lỗi đồng bộ giỏ hàng lên server:', err)
+    }
+  }
+}
+
 const totalPrice = computed(() =>
-  cart.value.reduce((sum, item) => sum + item.gia * item.quantity, 0),
+  cart.value.reduce((sum, item) => sum + Number(item.gia) * Number(item.quantity), 0),
 )
 
 const updateQuantity = (index, delta) => {
   cart.value[index].quantity += delta
-  if (cart.value[index].quantity < 1) cart.value[index].quantity = 1
+  if (cart.value[index].quantity < 1) {
+    cart.value[index].quantity = 1
+  }
   saveCart()
 }
 
@@ -94,8 +138,10 @@ const removeItem = (index) => {
   saveCart()
 }
 
-const saveCart = () => {
-  localStorage.setItem('cart', JSON.stringify(cart.value))
+const proceedToCheckout = () => {
+  // Trước khi sang trang thanh toán, đảm bảo giỏ hàng mới nhất đã được lưu
+  saveCart()
+  router.push('/checkout')
 }
 
 const formatPrice = (v) =>
