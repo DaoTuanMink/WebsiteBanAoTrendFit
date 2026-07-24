@@ -603,16 +603,12 @@
 </template>
 
 <script setup>
-<<<<<<< HEAD
 // Trang "Bán hàng tại quầy" (POS) — dùng chung được bởi ADMIN và EMPLOYEE.
 // File này gọi API bằng fetch() (thay vì axios), nên PHẢI tự gắn header xác
 // thực thủ công vào từng lệnh fetch bằng getAuthHeaders() — khác với các
 // trang khác dùng axios có thể tự động gắn qua interceptor.
 import { computed, onMounted, ref, watch } from 'vue'
 import { getAuthHeaders } from '@/utils/adminAuth'
-=======
-import { computed, onMounted, ref } from 'vue'
->>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
 
 const API_BASE = 'http://localhost:8080/api'
 
@@ -791,14 +787,10 @@ async function loadVariants(product) {
       return
     }
 
-<<<<<<< HEAD
     const response = await fetch(
       `${API_BASE}/admin/products/${productId}/variants`,
       { headers: getAuthHeaders() },
     )
-=======
-    const response = await fetch(`${API_BASE}/admin/products/${productId}/variants`)
->>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
 
     if (!response.ok) {
       const message = await response.text()
@@ -1139,12 +1131,8 @@ async function checkout() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-<<<<<<< HEAD
         'X-Role': role, // Header riêng mà BanHangTaiQuayController đọc để biết vai trò
         ...getAuthHeaders(), // Header "User-Role"/"NhanVien-ID" mà AuthInterceptor yêu cầu
-=======
-        Authorization: 'Bearer ' + localStorage.getItem('token'), // Nếu có bảo mật
->>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
       },
       body: JSON.stringify(payload),
     })
