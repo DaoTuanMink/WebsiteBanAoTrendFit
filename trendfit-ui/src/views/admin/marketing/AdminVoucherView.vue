@@ -85,10 +85,20 @@
 </template>
 
 <script setup>
+// Quản lý Voucher/Mã giảm giá — CHỈ dành cho ADMIN (nằm trong ADMIN_ONLY_PATHS
+// của AuthInterceptor). Dùng axios instance riêng tự gắn header xác thực.
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { getAuthHeaders } from '@/utils/adminAuth'
 
 const API = 'http://localhost:8080/api/admin/vouchers'
+
+const apiAdmin = axios.create()
+apiAdmin.interceptors.request.use((config) => {
+  config.headers = { ...config.headers, ...getAuthHeaders() }
+  return config
+})
+
 const vouchers = ref([])
 const showForm = ref(false)
 const editMode = ref(false)
@@ -99,8 +109,12 @@ const formatCurrency = (val) => {
 }
 
 const loadVouchers = async () => {
-  const res = await axios.get(API)
-  vouchers.value = res.data
+  try {
+    const res = await apiAdmin.get(API)
+    vouchers.value = res.data
+  } catch (err) {
+    alert('Không thể tải danh sách voucher: ' + (err.response?.data || err.message))
+  }
 }
 
 const moFormMoi = () => {
@@ -111,8 +125,12 @@ const moFormMoi = () => {
 
 const xoaVoucher = async (id) => {
   if (confirm('Xóa voucher này?')) {
-    await axios.delete(`${API}/${id}`)
-    loadVouchers()
+    try {
+      await apiAdmin.delete(`${API}/${id}`)
+      loadVouchers()
+    } catch (err) {
+      alert('Xóa thất bại: ' + (err.response?.data || err.message))
+    }
   }
 }
 
@@ -134,9 +152,9 @@ const saveVoucher = async () => {
 
   try {
     if (editMode.value) {
-      await axios.put(`${API}/${form.value.id}`, form.value)
+      await apiAdmin.put(`${API}/${form.value.id}`, form.value)
     } else {
-      await axios.post(API, form.value)
+      await apiAdmin.post(API, form.value)
     }
     alert('Lưu thành công!')
     showForm.value = false

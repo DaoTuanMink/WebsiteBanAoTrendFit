@@ -210,13 +210,30 @@
 </template>
 
 <script setup>
+// Trang quản lý sản phẩm (CRUD sản phẩm + biến thể + ảnh).
+// Dùng RIÊNG 1 axios instance "apiAdmin" có tự động gắn header xác thực
+// (User-Role/NhanVien-ID) cho MỌI request gọi tới backend "/api/admin/products/**"
+// (đã được AuthInterceptor bảo vệ). Axios "trần" (import axios) chỉ dùng để
+// gọi Cloudinary (upload ảnh) - không nên gửi kèm header nội bộ của mình cho
+// bên thứ 3.
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { getAuthHeaders } from '@/utils/adminAuth'
 
 const CLOUD_NAME = 'dqciew3rk' // ← Thay bằng Cloud Name thật của bạn
 const UPLOAD_PRESET = 'trendfit_preset' // ← Thay bằng Preset thật của bạn
 
 const API_BASE = 'http://localhost:8080/api/admin/products'
+
+// axios instance riêng cho API quản trị sản phẩm: mọi request qua đây đều tự
+// động có header "User-Role"/"NhanVien-ID" lấy từ localStorage tại THỜI ĐIỂM
+// gọi (không phải lúc tạo instance), nên vẫn đúng ngay cả khi người dùng
+// đăng xuất/đăng nhập lại tài khoản khác trong cùng 1 tab.
+const apiAdmin = axios.create()
+apiAdmin.interceptors.request.use((config) => {
+  config.headers = { ...config.headers, ...getAuthHeaders() }
+  return config
+})
 
 const danhSachSanPham = ref([])
 const metadata = ref({ danhMucs: [], thuongHieus: [], kichCos: [], mauSacs: [] })
@@ -232,8 +249,8 @@ const formData = ref({
 const loadData = async () => {
   try {
     const [resSp, resMeta] = await Promise.all([
-      axios.get(API_BASE),
-      axios.get(`${API_BASE}/metadata`),
+      apiAdmin.get(API_BASE),
+      apiAdmin.get(`${API_BASE}/metadata`),
     ])
     danhSachSanPham.value = resSp.data
     metadata.value = resMeta.data
@@ -251,6 +268,8 @@ const handleImageUpload = async (event, idx) => {
   uploadForm.append('upload_preset', UPLOAD_PRESET)
 
   try {
+    // Gọi thẳng Cloudinary bằng axios "trần" (không qua apiAdmin) vì đây là
+    // dịch vụ bên thứ 3, không cần và không nên gửi header nội bộ của ta.
     const res = await axios.post(
       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
       uploadForm,
@@ -279,9 +298,9 @@ const themAnhMoi = () => {
 const saveFullProduct = async () => {
   try {
     if (dangSua.value) {
-      await axios.put(`${API_BASE}/full`, formData.value)
+      await apiAdmin.put(`${API_BASE}/full`, formData.value)
     } else {
-      await axios.post(`${API_BASE}/full`, formData.value)
+      await apiAdmin.post(`${API_BASE}/full`, formData.value)
     }
     alert('✅ Lưu thành công!')
     hienThiForm.value = false
@@ -297,8 +316,8 @@ const kichHoatSuaForm = async (sp) => {
 
   try {
     const [resVariants, resImages] = await Promise.all([
-      axios.get(`${API_BASE}/${sp.id}/variants`),
-      axios.get(`${API_BASE}/${sp.id}/images`),
+      apiAdmin.get(`${API_BASE}/${sp.id}/variants`),
+      apiAdmin.get(`${API_BASE}/${sp.id}/images`),
     ])
 
     formData.value = {
@@ -333,7 +352,7 @@ const moFormThemMoi = () => {
 const deleteProduct = async (id) => {
   if (!confirm('Xóa sản phẩm này?')) return
   try {
-    await axios.delete(`${API_BASE}/${id}`)
+    await apiAdmin.delete(`${API_BASE}/${id}`)
     alert('✅ Xóa thành công!')
     loadData()
   } catch (err) {

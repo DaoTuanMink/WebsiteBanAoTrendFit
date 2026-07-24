@@ -8,6 +8,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * API tạo đơn hàng bán tại quầy (trang POS). Dùng chung được bởi ADMIN và
+ * EMPLOYEE (không nằm trong ADMIN_ONLY_PATHS của AuthInterceptor) vì đây
+ * chính là công việc thu ngân hàng ngày của nhân viên.
+ */
 @RestController
 @RequestMapping("/api/admin/pos-orders")
 @CrossOrigin("*")

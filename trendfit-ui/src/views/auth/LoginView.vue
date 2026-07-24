@@ -21,13 +21,18 @@ const xuLyDangNhap = async () => {
 
     const data = response.data
     if (data.status === 'success') {
-      // 1. Lưu thông tin xác thực vào LocalStorage của trình duyệt
-      localStorage.setItem('user_id', data.id) // <--- THÊM DÒNG NÀY
+      // Lưu thông tin phiên đăng nhập vào localStorage của trình duyệt.
+      // 3 giá trị này được dùng lại ở khắp nơi:
+      //   - user_id   : gắn vào header "NhanVien-ID" (main.js) để backend ghi log "ai thao tác"
+      //   - user_role : quyết định vào được /admin hay không (router/index.js)
+      //                 và gắn vào header "User-Role" để AuthInterceptor phân quyền
+      //   - username  : chỉ để hiển thị lời chào
+      localStorage.setItem('user_id', data.id)
       localStorage.setItem('user_role', data.vaiTro)
-      localStorage.setItem('user_token', data.token)
       localStorage.setItem('username', data.username)
 
-      // 2. Thuật toán điều hướng Actor đi đúng vùng không gian làm việc
+      // Điều hướng theo vai trò: ADMIN/EMPLOYEE vào khu vực quản trị,
+      // CUSTOMER (khách hàng) ở lại trang mua sắm.
       if (data.vaiTro === 'ADMIN' || data.vaiTro === 'EMPLOYEE') {
         alert(`Xin chào ${data.username}! Hệ thống đang chuyển hướng vào Trang quản trị...`)
         router.push('/admin/products') // Chuyển hướng thẳng vào trang quản lý kho đồ

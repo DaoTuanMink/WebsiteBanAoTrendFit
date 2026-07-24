@@ -609,7 +609,12 @@
 </template>
 
 <script setup>
+// Trang "Bán hàng tại quầy" (POS) — dùng chung được bởi ADMIN và EMPLOYEE.
+// File này gọi API bằng fetch() (thay vì axios), nên PHẢI tự gắn header xác
+// thực thủ công vào từng lệnh fetch bằng getAuthHeaders() — khác với các
+// trang khác dùng axios có thể tự động gắn qua interceptor.
 import { computed, onMounted, ref, watch } from 'vue'
+import { getAuthHeaders } from '@/utils/adminAuth'
 
 const API_BASE = 'http://localhost:8080/api'
 
@@ -759,7 +764,9 @@ function normalizeProduct(item) {
 
 async function loadProducts() {
   try {
-    const response = await fetch(`${API_BASE}/admin/products`)
+    const response = await fetch(`${API_BASE}/admin/products`, {
+      headers: getAuthHeaders(),
+    })
 
     if (!response.ok) {
       const message = await response.text()
@@ -800,6 +807,7 @@ async function loadVariants(product) {
 
     const response = await fetch(
       `${API_BASE}/admin/products/${productId}/variants`,
+      { headers: getAuthHeaders() },
     )
 
     if (!response.ok) {
@@ -865,7 +873,9 @@ async function loadVoucherSuggestions() {
   try {
     isLoadingVouchers.value = true
 
-    const response = await fetch(`${API_BASE}/admin/vouchers`)
+    const response = await fetch(`${API_BASE}/admin/vouchers`, {
+      headers: getAuthHeaders(),
+    })
 
     if (!response.ok) {
       const message = await response.text()
@@ -1010,6 +1020,7 @@ async function requestVoucherCheck() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     body: JSON.stringify({
       ma: voucherCode.value.trim().toUpperCase(),
@@ -1021,7 +1032,11 @@ async function requestVoucherCheck() {
 
   // Repo gốc đặt API kiểm tra voucher ở /api/public/vouchers/check.
   // Fallback này giúp trang POS chạy được với cả hai cấu hình backend.
-  if (response.status === 404 || response.status === 405) {
+  // Đồng thời "/api/admin/vouchers" chỉ dành cho ADMIN (xem AuthInterceptor),
+  // nên khi người đang bán hàng là NHÂN VIÊN (EMPLOYEE) sẽ bị từ chối
+  // (401/403) — lúc đó cũng chuyển sang endpoint public để họ vẫn áp được
+  // mã giảm giá khi thu ngân.
+  if ([404, 405, 401, 403].includes(response.status)) {
     response = await fetch(`${API_BASE}/public/vouchers/check`, requestOptions)
   }
 
@@ -1150,7 +1165,8 @@ async function checkout() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Role': role,
+        'X-Role': role, // Header riêng mà BanHangTaiQuayController đọc để biết vai trò
+        ...getAuthHeaders(), // Header "User-Role"/"NhanVien-ID" mà AuthInterceptor yêu cầu
       },
       body: JSON.stringify(payload),
     })

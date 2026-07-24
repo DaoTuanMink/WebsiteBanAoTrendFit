@@ -2,6 +2,8 @@
   <div class="container-fluid py-4">
     <h2 class="mb-4">Quản lý Kích cỡ & Màu sắc</h2>
 
+    <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
+
     <div class="row">
       <!-- Quản lý Kích cỡ -->
       <div class="col-lg-6">
@@ -91,8 +93,12 @@
 </template>
 
 <script setup>
+// Trang CRUD Kích cỡ & Màu sắc, dùng chung được bởi ADMIN và EMPLOYEE.
+// Mọi request đều phải gắn header xác thực (getAuthHeaders) vì
+// "/api/admin/**" đã được AuthInterceptor bảo vệ toàn bộ.
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { getAuthHeaders } from '@/utils/adminAuth'
 
 const API_BASE = 'http://localhost:8080/api/admin'
 
@@ -100,42 +106,79 @@ const sizes = ref([])
 const colors = ref([])
 const newSize = ref('')
 const newColor = ref('')
+const errorMsg = ref('')
+
+const layThongBaoLoi = (err, macDinh) => {
+  const data = err?.response?.data
+  if (typeof data === 'string' && data.trim()) return data
+  return macDinh + (err?.message ? `: ${err.message}` : '')
+}
 
 const loadSizes = async () => {
-  const res = await axios.get(`${API_BASE}/products/sizes`)
-  sizes.value = res.data
+  try {
+    const res = await axios.get(`${API_BASE}/products/sizes`, { headers: getAuthHeaders() })
+    sizes.value = res.data
+  } catch (err) {
+    errorMsg.value = layThongBaoLoi(err, 'Không thể tải danh sách kích cỡ')
+  }
 }
 
 const loadColors = async () => {
-  const res = await axios.get(`${API_BASE}/products/colors`)
-  colors.value = res.data
+  try {
+    const res = await axios.get(`${API_BASE}/products/colors`, { headers: getAuthHeaders() })
+    colors.value = res.data
+  } catch (err) {
+    errorMsg.value = layThongBaoLoi(err, 'Không thể tải danh sách màu sắc')
+  }
 }
 
 const addSize = async () => {
   if (!newSize.value) return
-  await axios.post(`${API_BASE}/products/sizes`, { tenKichCo: newSize.value })
-  newSize.value = ''
-  loadSizes()
+  try {
+    await axios.post(
+      `${API_BASE}/products/sizes`,
+      { tenKichCo: newSize.value },
+      { headers: getAuthHeaders() },
+    )
+    newSize.value = ''
+    loadSizes()
+  } catch (err) {
+    alert(layThongBaoLoi(err, 'Thêm kích cỡ thất bại'))
+  }
 }
 
 const addColor = async () => {
   if (!newColor.value) return
-  await axios.post(`${API_BASE}/products/colors`, { tenMau: newColor.value })
-  newColor.value = ''
-  loadColors()
+  try {
+    await axios.post(
+      `${API_BASE}/products/colors`,
+      { tenMau: newColor.value },
+      { headers: getAuthHeaders() },
+    )
+    newColor.value = ''
+    loadColors()
+  } catch (err) {
+    alert(layThongBaoLoi(err, 'Thêm màu sắc thất bại'))
+  }
 }
 
 const deleteSize = async (id) => {
-  if (confirm('Xóa kích cỡ này?')) {
-    await axios.delete(`${API_BASE}/products/sizes/${id}`)
+  if (!confirm('Xóa kích cỡ này?')) return
+  try {
+    await axios.delete(`${API_BASE}/products/sizes/${id}`, { headers: getAuthHeaders() })
     loadSizes()
+  } catch (err) {
+    alert(layThongBaoLoi(err, 'Xóa thất bại'))
   }
 }
 
 const deleteColor = async (id) => {
-  if (confirm('Xóa màu này?')) {
-    await axios.delete(`${API_BASE}/products/colors/${id}`)
+  if (!confirm('Xóa màu này?')) return
+  try {
+    await axios.delete(`${API_BASE}/products/colors/${id}`, { headers: getAuthHeaders() })
     loadColors()
+  } catch (err) {
+    alert(layThongBaoLoi(err, 'Xóa thất bại'))
   }
 }
 

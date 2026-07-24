@@ -12,6 +12,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * API quản trị Voucher/Mã giảm giá — nằm trong ADMIN_ONLY_PATHS của
+ * AuthInterceptor, nên CHỈ ADMIN mới tạo/sửa/xóa được. Riêng 2 API sau được
+ * mở thêm cho EMPLOYEE (xem AuthInterceptor.preHandle, mục 6) để phục vụ màn
+ * hình "Bán hàng tại quầy":
+ *   - GET  /api/admin/vouchers        (xem danh sách voucher đang chạy)
+ *   - POST /api/admin/vouchers/check  (kiểm tra 1 mã có áp dụng được không)
+ */
 @RestController
 @RequestMapping("/api/admin/vouchers")
 @CrossOrigin

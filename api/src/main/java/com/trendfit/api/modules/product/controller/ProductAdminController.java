@@ -15,6 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * API quản trị Sản phẩm / Danh mục / Thương hiệu / Kích cỡ / Màu sắc.
+ * Dùng chung được bởi ADMIN và EMPLOYEE (không nằm trong ADMIN_ONLY_PATHS
+ * của AuthInterceptor) - vì đây là công việc vận hành hàng ngày (nhập hàng,
+ * cập nhật tồn kho...) mà nhân viên bán hàng cũng cần thao tác.
+ */
 @RestController
 @RequestMapping("/api/admin/products")
 @CrossOrigin("*")
