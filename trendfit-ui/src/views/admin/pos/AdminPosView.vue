@@ -7,9 +7,7 @@
         <p class="text-secondary mb-0">Tạo đơn trực tiếp cho khách mua tại cửa hàng</p>
       </div>
 
-      <button type="button" class="btn btn-primary" @click="loadProducts">
-        Tải lại sản phẩm
-      </button>
+      <button type="button" class="btn btn-primary" @click="loadProducts">Tải lại sản phẩm</button>
     </div>
 
     <div class="row g-4 align-items-start">
@@ -111,17 +109,16 @@
                   type="button"
                   class="btn-close"
                   aria-label="Đóng"
-                  @click="selectedProduct = null; variants = []"
+                  @click="
+                    selectedProduct = null
+                    variants = []
+                  "
                 ></button>
               </div>
 
               <div class="card-body">
                 <div v-if="variants.length" class="list-group">
-                  <div
-                    v-for="variant in variants"
-                    :key="variant.id"
-                    class="list-group-item"
-                  >
+                  <div v-for="variant in variants" :key="variant.id" class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center gap-3">
                       <div>
                         <div class="fw-bold">
@@ -146,9 +143,7 @@
                   </div>
                 </div>
 
-                <div v-else class="alert alert-warning mb-0">
-                  Sản phẩm này chưa có biến thể.
-                </div>
+                <div v-else class="alert alert-warning mb-0">Sản phẩm này chưa có biến thể.</div>
               </div>
             </div>
 
@@ -258,12 +253,7 @@
                       Áp dụng
                     </button>
 
-                    <button
-                      v-else
-                      type="button"
-                      class="btn btn-danger"
-                      @click="removeVoucher"
-                    >
+                    <button v-else type="button" class="btn btn-danger" @click="removeVoucher">
                       Hủy mã
                     </button>
                   </div>
@@ -348,7 +338,9 @@
                           <button
                             type="button"
                             class="btn btn-sm text-nowrap"
-                            :class="voucher.eligible ? 'btn-outline-primary' : 'btn-outline-secondary'"
+                            :class="
+                              voucher.eligible ? 'btn-outline-primary' : 'btn-outline-secondary'
+                            "
                             :disabled="!voucher.eligible || !!appliedVoucher"
                             @click="applySuggestedVoucher(voucher)"
                           >
@@ -375,7 +367,9 @@
                       <button
                         type="button"
                         class="btn w-100"
-                        :class="paymentMethod === 'TIEN_MAT' ? 'btn-primary' : 'btn-outline-primary'"
+                        :class="
+                          paymentMethod === 'TIEN_MAT' ? 'btn-primary' : 'btn-outline-primary'
+                        "
                         @click="paymentMethod = 'TIEN_MAT'"
                       >
                         Tiền mặt
@@ -386,7 +380,9 @@
                       <button
                         type="button"
                         class="btn w-100"
-                        :class="paymentMethod === 'CHUYEN_KHOAN' ? 'btn-primary' : 'btn-outline-primary'"
+                        :class="
+                          paymentMethod === 'CHUYEN_KHOAN' ? 'btn-primary' : 'btn-outline-primary'
+                        "
                         @click="paymentMethod = 'CHUYEN_KHOAN'"
                       >
                         Chuyển khoản
@@ -530,9 +526,7 @@
 
                   <div class="col-12 col-md-6">
                     <p class="mb-1"><strong>Số điện thoại:</strong> {{ invoiceData.phone }}</p>
-                    <p class="mb-1">
-                      <strong>Thanh toán:</strong> {{ invoiceData.paymentMethod }}
-                    </p>
+                    <p class="mb-1"><strong>Thanh toán:</strong> {{ invoiceData.paymentMethod }}</p>
                   </div>
                 </div>
 
@@ -609,12 +603,16 @@
 </template>
 
 <script setup>
+<<<<<<< HEAD
 // Trang "Bán hàng tại quầy" (POS) — dùng chung được bởi ADMIN và EMPLOYEE.
 // File này gọi API bằng fetch() (thay vì axios), nên PHẢI tự gắn header xác
 // thực thủ công vào từng lệnh fetch bằng getAuthHeaders() — khác với các
 // trang khác dùng axios có thể tự động gắn qua interceptor.
 import { computed, onMounted, ref, watch } from 'vue'
 import { getAuthHeaders } from '@/utils/adminAuth'
+=======
+import { computed, onMounted, ref } from 'vue'
+>>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
 
 const API_BASE = 'http://localhost:8080/api'
 
@@ -698,7 +696,6 @@ const changeAmount = computed(() => {
   return Math.max(Number(cashReceived.value || 0) - totalPayable.value, 0)
 })
 
-
 const suggestedVouchers = computed(() => {
   if (!cart.value.length) {
     return []
@@ -745,18 +742,8 @@ function normalizeProduct(item) {
 
   return {
     ...source,
-    id:
-      source.id ??
-      source.sanPhamId ??
-      source.maSanPham ??
-      item?.id ??
-      item?.sanPhamId ??
-      null,
-    ten:
-      source.ten ??
-      source.tenSanPham ??
-      source.name ??
-      'Sản phẩm chưa có tên',
+    id: source.id ?? source.sanPhamId ?? source.maSanPham ?? item?.id ?? item?.sanPhamId ?? null,
+    ten: source.ten ?? source.tenSanPham ?? source.name ?? 'Sản phẩm chưa có tên',
     danhMuc: source.danhMuc ?? source.category ?? null,
     _variants: item?.bienTheSanPhams ?? item?.variants ?? null,
   }
@@ -787,8 +774,7 @@ async function loadProducts() {
 }
 
 async function loadVariants(product) {
-  const productId =
-    product?.id ?? product?.sanPhamId ?? product?.maSanPham ?? null
+  const productId = product?.id ?? product?.sanPhamId ?? product?.maSanPham ?? null
 
   if (!productId) {
     console.error('Sản phẩm không có ID:', product)
@@ -805,10 +791,14 @@ async function loadVariants(product) {
       return
     }
 
+<<<<<<< HEAD
     const response = await fetch(
       `${API_BASE}/admin/products/${productId}/variants`,
       { headers: getAuthHeaders() },
     )
+=======
+    const response = await fetch(`${API_BASE}/admin/products/${productId}/variants`)
+>>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
 
     if (!response.ok) {
       const message = await response.text()
@@ -824,13 +814,13 @@ async function loadVariants(product) {
   }
 }
 
-function getPrice(variant) {
-  return Number(variant.giaSale || variant.gia || 0)
-}
+const filteredProducts = computed(() => {
+  if (!products.value) return []
+  return products.value.filter((p) => p.ten?.toLowerCase().includes(keyword.value.toLowerCase()))
+})
 
 function addToCart(product, variant) {
-  const existed = cart.value.find((item) => item.bienTheId === variant.id)
-
+  const existed = cart.value.find((i) => i.bienTheId === variant.id)
   if (existed) {
     if (existed.quantity < variant.soLuongTon) {
       existed.quantity += 1
@@ -896,9 +886,13 @@ function normalizeVoucher(voucher = {}) {
   return {
     ...voucher,
     id: voucher.id ?? null,
-    ma: String(voucher.ma || '').trim().toUpperCase(),
+    ma: String(voucher.ma || '')
+      .trim()
+      .toUpperCase(),
     ten: voucher.ten || '',
-    loai: String(voucher.loai || '').trim().toUpperCase(),
+    loai: String(voucher.loai || '')
+      .trim()
+      .toUpperCase(),
     giaTriGiam: Number(voucher.giaTriGiam || 0),
     giaTriToiDa:
       voucher.giaTriToiDa === null || voucher.giaTriToiDa === undefined
@@ -923,9 +917,7 @@ function evaluateVoucher(rawVoucher) {
   const endDate = voucher.ngayKetThuc ? new Date(`${voucher.ngayKetThuc}T23:59:59`) : null
 
   const remainingUses =
-    voucher.gioiHanSuDung === null
-      ? null
-      : Math.max(voucher.gioiHanSuDung - voucher.soLanDaDung, 0)
+    voucher.gioiHanSuDung === null ? null : Math.max(voucher.gioiHanSuDung - voucher.soLanDaDung, 0)
 
   const minimumOrder = Number(voucher.donHangToiThieu || 0)
   const missingAmount = Math.max(minimumOrder - totalAmount.value, 0)
@@ -1114,59 +1106,45 @@ function validateAppliedVoucherAgain() {
   voucherMessage.value = `Đang áp dụng mã ${appliedVoucher.value.ma}, giảm ${formatMoney(discountAmount.value)}`
 }
 
+const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
+
 async function checkout() {
-  if (!cart.value.length) {
-    alert('Vui lòng thêm sản phẩm vào giỏ hàng')
-    return
-  }
-
-  const role = localStorage.getItem('user_role')
-
-  if (role !== 'ADMIN' && role !== 'EMPLOYEE') {
-    alert('Bạn không có quyền bán hàng tại quầy')
-    return
-  }
-
-  if (paymentMethod.value === 'TIEN_MAT' && Number(cashReceived.value || 0) < totalPayable.value) {
-    alert('Tiền khách đưa chưa đủ')
-    return
-  }
+  if (!cart.value.length) return alert('Giỏ hàng trống')
 
   const payload = {
     hoTen: customerName.value || 'Khách lẻ',
-    sdt: customerPhone.value || '',
+    sdt: customerPhone.value || '0000000000',
     diaChi: 'Bán tại quầy',
-    phuongThucThanhToan: paymentMethod.value,
-
-    tongTienHang: totalAmount.value,
-    tienGiam: discountAmount.value,
-    tongThanhToan: totalPayable.value,
-
-    tienKhachDua:
-      paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
-
-    tienThua: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
-
+    phuongThucThanhToan: paymentMethod.value || 'TIEN_MAT',
+    // Đảm bảo ép kiểu Number cho các trường BigDecimal
+    tongTienHang: Number(totalAmount.value),
+    tienGiam: Number(discountAmount.value || 0),
+    tongThanhToan: Number(totalPayable.value),
+    tienKhachDua: Number(cashReceived.value || 0),
+    tienThua: Number(changeAmount.value || 0),
     voucherId: appliedVoucher.value?.id || null,
     maVoucher: appliedVoucher.value?.ma || null,
-
-    items: cart.value.map((item) => ({
-      bienTheId: item.bienTheId,
-      quantity: item.quantity,
-      ten: item.ten,
-      gia: item.gia,
+    userId: null,
+    creatorId: 1, // Nên lấy từ localStorage.getItem('user_id')
+    items: cart.value.map((i) => ({
+      bienTheId: Number(i.bienTheId),
+      quantity: Number(i.quantity),
+      ten: i.ten,
+      gia: Number(i.gia),
     })),
   }
 
   try {
-    isSubmitting.value = true
-
-    const response = await fetch(`${API_BASE}/admin/pos-orders`, {
+    const res = await fetch(`${API_BASE}/admin/pos-orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+<<<<<<< HEAD
         'X-Role': role, // Header riêng mà BanHangTaiQuayController đọc để biết vai trò
         ...getAuthHeaders(), // Header "User-Role"/"NhanVien-ID" mà AuthInterceptor yêu cầu
+=======
+        Authorization: 'Bearer ' + localStorage.getItem('token'), // Nếu có bảo mật
+>>>>>>> 3d6771a9338bfa64a13734eee9c13acfd1597fb1
       },
       body: JSON.stringify(payload),
     })
@@ -1201,128 +1179,17 @@ async function checkout() {
         paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
       change: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
     }
-
-    showInvoice.value = true
-
-    alert('Thanh toán thành công')
-
-    cart.value = []
-    customerName.value = ''
-    customerPhone.value = ''
-    voucherCode.value = ''
-    appliedVoucher.value = null
-    voucherMessage.value = ''
-    paymentMethod.value = 'TIEN_MAT'
-    cashReceived.value = 0
-    variants.value = []
-    selectedProduct.value = null
-
-    await loadProducts()
-  } catch (error) {
-    alert(error.message)
-  } finally {
-    isSubmitting.value = false
+  } catch (err) {
+    console.error(err)
+    alert('Không thể kết nối tới server')
   }
 }
-function printInvoice() {
-  const invoiceElement = document.querySelector('.invoice-paper')
 
-  if (!invoiceElement) {
-    alert('Không tìm thấy nội dung hóa đơn để in')
-    return
-  }
-
-  const printWindow = window.open('', '_blank', 'width=800,height=600')
-
-  if (!printWindow) {
-    alert('Trình duyệt đang chặn cửa sổ in. Vui lòng cho phép popup.')
-    return
-  }
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Hóa đơn bán hàng</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            color: #000;
-          }
-
-          h2 {
-            text-align: center;
-            margin-bottom: 20px;
-          }
-
-          p {
-            margin: 6px 0;
-            font-size: 14px;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 14px;
-          }
-
-          th,
-          td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            font-size: 14px;
-          }
-
-          th {
-            background: #f3f4f6;
-          }
-
-          small {
-            color: #555;
-          }
-
-          .invoice-summary {
-            margin-top: 14px;
-            border-top: 1px dashed #999;
-            padding-top: 12px;
-            font-weight: bold;
-          }
-
-          .invoice-thanks {
-            text-align: center;
-            margin-top: 18px;
-            font-weight: bold;
-          }
-
-          @media print {
-            body {
-              width: 80mm;
-              margin: 0 auto;
-              padding: 10px;
-            }
-          }
-        </style>
-      </head>
-
-      <body>
-        ${invoiceElement.innerHTML}
-      </body>
-    </html>
-  `)
-
-  printWindow.document.close()
-  printWindow.focus()
-
-  setTimeout(() => {
-    printWindow.print()
-    printWindow.close()
-  }, 300)
+function formatMoney(v) {
+  return Number(v).toLocaleString('vi-VN') + ' đ'
 }
 
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString('vi-VN') + ' đ'
-}
+onMounted(loadProducts)
 </script>
 
 <style scoped>
@@ -1335,7 +1202,10 @@ function formatMoney(value) {
   border: 1px solid #dfe7f2;
   border-radius: 12px;
   background: #ffffff;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
 .voucher-suggestion:hover {

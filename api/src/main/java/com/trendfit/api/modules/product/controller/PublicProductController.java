@@ -16,16 +16,16 @@ public class PublicProductController {
     private SanPhamRepository sanPhamRepository;
     @Autowired private SanPhamService sanPhamService;
 
+    // Đường dẫn thực tế: GET http://localhost:8080/api/public/products
     @GetMapping
     public ResponseEntity<?> getAllPublic() {
-        // Gọi hàm getAllPublicProducts() mà tôi đã hướng dẫn bạn thêm vào Service
         return ResponseEntity.ok(sanPhamService.getAllPublicProducts());
     }
 
+    // Đường dẫn thực tế: GET http://localhost:8080/api/public/products/{id}
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductDetail(@PathVariable Integer id) {
         try {
-            // Bây giờ sanPhamService đã được tiêm vào, sẽ không còn lỗi null nữa
             return ResponseEntity.ok(sanPhamService.findByIdFull(id));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
