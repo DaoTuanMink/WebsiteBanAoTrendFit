@@ -806,10 +806,10 @@ async function loadVariants(product) {
   }
 }
 
-const filteredProducts = computed(() => {
-  if (!products.value) return []
-  return products.value.filter((p) => p.ten?.toLowerCase().includes(keyword.value.toLowerCase()))
-})
+// const filteredProducts = computed(() => {
+//   if (!products.value) return []
+//   return products.value.filter((p) => p.ten?.toLowerCase().includes(keyword.value.toLowerCase()))
+// })
 
 function addToCart(product, variant) {
   const existed = cart.value.find((i) => i.bienTheId === variant.id)
@@ -1098,7 +1098,7 @@ function validateAppliedVoucherAgain() {
   voucherMessage.value = `Đang áp dụng mã ${appliedVoucher.value.ma}, giảm ${formatMoney(discountAmount.value)}`
 }
 
-const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
+// const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
 
 async function checkout() {
   if (!cart.value.length) return alert('Giỏ hàng trống')
