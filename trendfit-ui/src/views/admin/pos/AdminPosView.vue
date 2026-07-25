@@ -109,10 +109,10 @@
                   type="button"
                   class="btn-close"
                   aria-label="Đóng"
-                  @click="
-                    selectedProduct = null
-                    variants = []
-                  "
+                 @click="() => {
+  selectedProduct = null;
+  variants = [];
+}"
                 ></button>
               </div>
 
