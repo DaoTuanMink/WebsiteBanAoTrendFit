@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // Import các component chính
 import HomeView from '@/views/client/home/HomeView.vue'
 import LoginView from '@/views/auth/LoginView.vue'
+import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const router = createRouter({
@@ -35,6 +36,7 @@ const router = createRouter({
 
     // ==================== AUTH ====================
     { path: '/login', name: 'login', component: LoginView },
+    { path: '/quen-mat-khau', name: 'forgot-password', component: ForgotPasswordView },
     {
       path: '/register',
       name: 'register',
@@ -102,26 +104,49 @@ const router = createRouter({
 })
 
 // ==================== NAVIGATION GUARD ====================
+// Bảo vệ khu vực "/admin" ở phía Frontend. Đây chỉ là lớp bảo vệ TRẢI NGHIỆM
+// (UX) - ẩn đi các trang người dùng không có quyền xem; lớp bảo vệ THẬT SỰ
+// (bắt buộc) nằm ở Backend trong AuthInterceptor, vì Frontend luôn có thể bị
+// vượt qua (sửa localStorage bằng tay). Cả 2 lớp phải khớp logic với nhau:
+//   - ADMIN    : vào được TẤT CẢ route trong /admin
+//   - EMPLOYEE : vào được các route "vận hành" (sản phẩm, danh mục, POS...)
+//                nhưng KHÔNG vào được route có meta.requiresAdmin = true
+//                (đơn hàng, nhân viên, voucher) — khớp với ADMIN_ONLY_PATHS
+//                bên AuthInterceptor.java
+//   - CUSTOMER (hoặc chưa đăng nhập) : không vào được /admin dưới bất kỳ hình thức nào
 router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem('user_role')
   const isLoggedIn = !!localStorage.getItem('user_id')
 
   if (to.path.startsWith('/admin')) {
+    // Chưa đăng nhập -> bắt buộc đăng nhập trước
     if (!isLoggedIn) {
       next('/login')
       return
     }
 
-    // Chỉ ADMIN mới vào được các route nhạy cảm
+    // Khách hàng (CUSTOMER) hoặc vai trò lạ -> không có cửa vào khu vực quản trị
+    if (userRole !== 'ADMIN' && userRole !== 'EMPLOYEE') {
+      alert('Bạn không có quyền truy cập khu vực quản trị!')
+      next('/')
+      return
+    }
+
+    // Nhân viên (EMPLOYEE) cố vào route chỉ dành cho ADMIN -> chặn lại
     if (to.meta.requiresAdmin && userRole !== 'ADMIN') {
-      alert('Bạn không có quyền truy cập khu vực này!')
+      alert('Chức năng này chỉ dành cho Quản trị viên (ADMIN)!')
       next('/admin/dashboard')
       return
     }
 
     next()
   } else if (to.path === '/login' && isLoggedIn) {
-    next('/admin/dashboard')
+    // Đã đăng nhập rồi mà cố vào lại trang login: đưa về đúng khu vực của họ
+    if (userRole === 'ADMIN' || userRole === 'EMPLOYEE') {
+      next('/admin/dashboard')
+    } else {
+      next('/')
+    }
   } else {
     next()
   }

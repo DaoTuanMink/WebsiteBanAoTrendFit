@@ -6,6 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * API quản trị Đơn hàng — CHỈ dành cho ADMIN (nằm trong ADMIN_ONLY_PATHS của
+ * AuthInterceptor). Đây là nghiệp vụ nhạy cảm (duyệt/hủy đơn ảnh hưởng trực
+ * tiếp tới tiền và tồn kho) nên không mở cho EMPLOYEE.
+ */
 @RestController
 @RequestMapping("/api/admin/orders")
 @CrossOrigin("*")
@@ -19,14 +24,17 @@ public class OrderAdminController {
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(
             @PathVariable Integer id, 
-            @RequestParam String status) {
+            @RequestParam String status,
+            // Header do FE tự động gắn (xem main.js), chứa id của người đang đăng nhập
+            // (nhân viên/admin) -> dùng để ghi lại "ai đã duyệt đơn hàng" (yêu cầu Thành)
+            @RequestHeader(value = "NhanVien-ID", required = false) Integer nguoiThucHienId) {
         
         // Kiểm tra tính hợp lệ của trạng thái
         if (!status.matches("CHO_XAC_NHAN|DA_XAC_NHAN|DANG_VAN_CHUYEN|DA_THANH_CONG|DA_HUY")) {
             return ResponseEntity.badRequest().body("Trạng thái không hợp lệ");
         }
         
-        orderService.capNhatTrangThaiDonHang(id, status);
+        orderService.capNhatTrangThaiDonHang(id, status, nguoiThucHienId);
         return ResponseEntity.ok("Cập nhật trạng thái thành công!");
     }
 
@@ -41,5 +49,10 @@ public ResponseEntity<?> getOrdersWithNullUser() {
     return ResponseEntity.ok(orderService.findOrdersWithNullUser());
 }
 
+// Xem lịch sử ai đã duyệt / đổi trạng thái của 1 đơn hàng (yêu cầu Thành)
+@GetMapping("/{id}/history")
+public ResponseEntity<?> getOrderHistory(@PathVariable Integer id) {
+    return ResponseEntity.ok(orderService.getLichSuDonHang(id));
+}
 
 }

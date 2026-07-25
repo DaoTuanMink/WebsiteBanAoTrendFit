@@ -2,13 +2,16 @@ package com.trendfit.api.modules.order.service;
 
 import com.trendfit.api.modules.marketing.entity.MaGiamGia;
 import com.trendfit.api.modules.marketing.repository.MaGiamGiaRepository;
+import com.trendfit.api.modules.order.dto.LichSuDonHangDTO;
 import com.trendfit.api.modules.order.dto.OrderItemDTO;
 import com.trendfit.api.modules.order.dto.OrderRequestDTO;
 import com.trendfit.api.modules.order.dto.OrderResponseDTO;
 import com.trendfit.api.modules.order.entity.ChiTietDonHang;
 import com.trendfit.api.modules.order.entity.DonHang;
+import com.trendfit.api.modules.order.entity.LichSuDonHang;
 import com.trendfit.api.modules.order.repository.ChiTietDonHangRepository;
 import com.trendfit.api.modules.order.repository.DonHangRepository;
+import com.trendfit.api.modules.order.repository.LichSuDonHangRepository;
 import com.trendfit.api.modules.product.entity.BienTheSanPham;
 import com.trendfit.api.modules.product.repository.BienTheSanPhamRepository;
 import com.trendfit.api.modules.user.entity.NguoiDung;
@@ -30,6 +33,7 @@ public class OrderService {
     @Autowired private ChiTietDonHangRepository chiTietDonHangRepository;
     @Autowired private BienTheSanPhamRepository bienTheRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
+    @Autowired private LichSuDonHangRepository lichSuDonHangRepository;
 
     // Constructor (giữ nguyên)
     OrderService(MaGiamGiaRepository maGiamGiaRepository) {
@@ -114,22 +118,75 @@ public class OrderService {
 
     @Transactional
     public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
+        capNhatTrangThaiDonHang(id, trangThai, null);
+    }
+
+    /**
+     * Cập nhật trạng thái đơn hàng, đồng thời ghi lại lịch sử ai đã duyệt/
+     * thay đổi trạng thái (yêu cầu của Thành). nguoiThucHienId là id của
+     * NguoiDung (nhân viên/admin) đang đăng nhập, được FE gửi lên qua header
+     * "NhanVien-ID". Nếu không xác định được (null) thì vẫn ghi log nhưng
+     * để trống người thực hiện.
+     */
+    @Transactional
+    public void capNhatTrangThaiDonHang(Integer id, String trangThai, Integer nguoiThucHienId) {
         DonHang donHang = donHangRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
         String trangThaiCu = donHang.getTrangThai();
 
-        // Nếu đơn hàng chuyển sang trạng thái DA_HUY 
-        // VÀ trước đó nó KHÔNG PHẢI là DA_HUY (nghĩa là kho đã từng bị trừ lúc đặt)
+        // Không có gì thay đổi thì không cần ghi log
+        if (trangThai.equals(trangThaiCu)) {
+            return;
+        }
+
+        // Kho đã bị trừ NGAY LÚC ĐẶT HÀNG (xem taoDonHang()), nên khi đơn
+        // chuyển sang DA_HUY (từ bất kỳ trạng thái nào KHÁC DA_HUY), phải
+        // cộng trả lại tồn kho + giảm số lượng đã bán tương ứng.
         if ("DA_HUY".equals(trangThai) && !"DA_HUY".equals(trangThaiCu)) {
-            
-            // Gọi xuLyTonKho với factor = 1 để cộng trả lại số lượng tồn và giảm số lượng đã bán
             xuLyTonKho(donHang, 1);
         }
 
         // Cập nhật trạng thái mới cho đơn hàng
         donHang.setTrangThai(trangThai);
         donHangRepository.save(donHang);
+
+        // Ghi lại lịch sử: ai đã duyệt / đổi trạng thái, từ trạng thái nào sang trạng thái nào
+        LichSuDonHang lichSu = new LichSuDonHang();
+        lichSu.setDonHang(donHang);
+        lichSu.setTrangThaiCu(trangThaiCu);
+        lichSu.setTrangThaiMoi(trangThai);
+
+        if (nguoiThucHienId != null) {
+            NguoiDung nguoiThucHien = nguoiDungRepository.findById(nguoiThucHienId).orElse(null);
+            lichSu.setNguoiThucHien(nguoiThucHien);
+        }
+
+        lichSuDonHangRepository.save(lichSu);
+    }
+
+    /**
+     * Trả về toàn bộ lịch sử duyệt/thay đổi trạng thái của 1 đơn hàng,
+     * mới nhất hiển thị trước, kèm tên người đã thực hiện.
+     */
+    @Transactional(readOnly = true)
+    public List<LichSuDonHangDTO> getLichSuDonHang(Integer donHangId) {
+        List<LichSuDonHang> list = lichSuDonHangRepository.findByDonHang_IdOrderByNgayThayDoiDesc(donHangId);
+        List<LichSuDonHangDTO> result = new ArrayList<>();
+
+        for (LichSuDonHang ls : list) {
+            LichSuDonHangDTO dto = new LichSuDonHangDTO();
+            dto.setId(ls.getId());
+            dto.setTrangThaiCu(ls.getTrangThaiCu());
+            dto.setTrangThaiMoi(ls.getTrangThaiMoi());
+            dto.setGhiChu(ls.getGhiChu());
+            dto.setNgayThayDoi(ls.getNgayThayDoi());
+            dto.setTenNguoiThucHien(
+                    ls.getNguoiThucHien() != null ? ls.getNguoiThucHien().getHoTen() : "Hệ thống"
+            );
+            result.add(dto);
+        }
+        return result;
     }
 
     private void xuLyTonKho(DonHang dh, int factor) {

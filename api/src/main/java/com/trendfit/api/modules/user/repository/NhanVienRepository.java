@@ -14,4 +14,7 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
     // Tìm kiếm nhân viên có mã chứa chuỗi truyền vào (không phân biệt hoa thường nếu cấu hình đúng)
     // Containing tương đương với toán tử LIKE '%...%' trong SQL
     List<NhanVien> findByMaNhanVienContaining(String maNhanVien);
+
+    // Tìm CHÍNH XÁC theo mã nhân viên - dùng để kiểm tra trùng lặp trước khi tạo mới
+    NhanVien findByMaNhanVien(String maNhanVien);
 }

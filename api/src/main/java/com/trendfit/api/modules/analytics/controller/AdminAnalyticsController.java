@@ -11,9 +11,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * API thống kê doanh số (trang "Thống kê doanh số"). Dùng chung được bởi
+ * ADMIN và EMPLOYEE (không nằm trong ADMIN_ONLY_PATHS của AuthInterceptor).
+ *
+ * LƯU Ý VỀ CORS: @CrossOrigin ở đây khai báo origin cụ thể + allowCredentials.
+ * Nếu Frontend chạy ở cổng khác (ví dụ Vite đổi từ 5173 sang 5174 khi cổng cũ
+ * đang bận), request sẽ bị trình duyệt chặn với thông báo tưởng như "CORS
+ * error" nhưng thực chất là do origin không khớp danh sách cho phép — hãy
+ * thêm cổng mới vào mảng "origins" bên dưới nếu gặp lỗi này.
+ */
 @RestController
 @RequestMapping("/api/admin/analytics")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:3000"}, allowCredentials = "true")
 public class AdminAnalyticsController {
 
     private final JdbcTemplate jdbcTemplate;
@@ -22,7 +32,7 @@ public class AdminAnalyticsController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /*hihihihihihihiggg
+    /*
      * API kiểm tra xem controller đã hoạt động chưa.
      * Mở trình duyệt:
      * http://localhost:8080/api/admin/analytics/test
@@ -49,75 +59,67 @@ public class AdminAnalyticsController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to
     ) {
-        LocalDate today = LocalDate.now();
+        try {
+            LocalDate today = LocalDate.now();
 
-        if (from == null) {
-            from = LocalDate.of(today.getYear(), 1, 1);
+            if (from == null) {
+                from = LocalDate.of(today.getYear(), 1, 1);
+            }
+
+            if (to == null) {
+                to = LocalDate.of(today.getYear(), 12, 31);
+            }
+
+            LocalDateTime fromDate = from.atStartOfDay();
+            LocalDateTime toDate = to.plusDays(1).atStartOfDay();
+
+            BigDecimal totalRevenue = getTotalRevenue(fromDate, toDate);
+            BigDecimal totalImportCost = getTotalImportCost(fromDate, toDate);
+            BigDecimal grossProfit = totalRevenue.subtract(totalImportCost);
+
+            BigDecimal profitRate = BigDecimal.ZERO;
+            if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+                profitRate = grossProfit
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(totalRevenue, 2, java.math.RoundingMode.HALF_UP);
+            }
+
+            Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
+            Long totalFailedOrders = countFailedOrders(fromDate, toDate);
+
+            List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
+            List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
+            List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalRevenue", totalRevenue);
+            result.put("totalImportCost", totalImportCost);
+            result.put("grossProfit", grossProfit);
+            result.put("profitRate", profitRate);
+            result.put("totalSuccessOrders", totalSuccessOrders);
+            result.put("totalFailedOrders", totalFailedOrders);
+            result.put("revenueChart", revenueChart);
+            result.put("orderStatusChart", orderStatusChart);
+            result.put("topProducts", topProducts);
+
+            return result;
+        } catch (Exception e) {
+            System.err.println("Lỗi trong getDashboard: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", e.getMessage());
+            errorResult.put("totalRevenue", BigDecimal.ZERO);
+            errorResult.put("totalImportCost", BigDecimal.ZERO);
+            errorResult.put("grossProfit", BigDecimal.ZERO);
+            errorResult.put("profitRate", BigDecimal.ZERO);
+            errorResult.put("totalSuccessOrders", 0L);
+            errorResult.put("totalFailedOrders", 0L);
+            errorResult.put("revenueChart", List.of());
+            errorResult.put("orderStatusChart", List.of());
+            errorResult.put("topProducts", List.of());
+            return errorResult;
         }
-
-        if (to == null) {
-            to = LocalDate.of(today.getYear(), 12, 31);
-        }
-
-        LocalDateTime fromDate = from.atStartOfDay();
-
-        // Cộng thêm 1 ngày để lấy hết dữ liệu của ngày kết thúc
-        LocalDateTime toDate = to.plusDays(1).atStartOfDay();
-
-        // BigDecimal totalRevenue = getTotalRevenue(fromDate, toDate);
-        // Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
-        // Long totalFailedOrders = countFailedOrders(fromDate, toDate);
-
-        // List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
-        // List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
-        // List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
-
-        // Map<String, Object> result = new HashMap<>();
-        // result.put("totalRevenue", totalRevenue);
-        // result.put("totalSuccessOrders", totalSuccessOrders);
-        // result.put("totalFailedOrders", totalFailedOrders);
-        // result.put("revenueChart", revenueChart);
-        // result.put("orderStatusChart", orderStatusChart);
-        // result.put("topProducts", topProducts);
-
-        BigDecimal totalRevenue = getTotalRevenue(fromDate, toDate);
-
-BigDecimal totalImportCost = getTotalImportCost(fromDate, toDate);
-
-BigDecimal grossProfit = totalRevenue.subtract(totalImportCost);
-
-BigDecimal profitRate = BigDecimal.ZERO;
-
-if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
-    profitRate = grossProfit
-            .multiply(BigDecimal.valueOf(100))
-            .divide(totalRevenue, 2, java.math.RoundingMode.HALF_UP);
-}
-
-Long totalSuccessOrders = countSuccessOrders(fromDate, toDate);
-
-Long totalFailedOrders = countFailedOrders(fromDate, toDate);
-
-List<Map<String, Object>> revenueChart = getRevenueChart(type, fromDate, toDate);
-
-List<Map<String, Object>> orderStatusChart = getOrderStatusChart(fromDate, toDate);
-
-List<Map<String, Object>> topProducts = getTopProducts(fromDate, toDate);
-
-Map<String, Object> result = new HashMap<>();
-
-result.put("totalRevenue", totalRevenue);
-result.put("totalImportCost", totalImportCost);
-result.put("grossProfit", grossProfit);
-result.put("profitRate", profitRate);
-
-result.put("totalSuccessOrders", totalSuccessOrders);
-result.put("totalFailedOrders", totalFailedOrders);
-result.put("revenueChart", revenueChart);
-result.put("orderStatusChart", orderStatusChart);
-result.put("topProducts", topProducts);
-
-        return result;
     }
 
     /*
@@ -125,54 +127,72 @@ result.put("topProducts", topProducts);
      * Chỉ tính các đơn đã giao / hoàn thành / thành công.
      */
     private BigDecimal getTotalImportCost(LocalDateTime fromDate, LocalDateTime toDate) {
-    String sql = """
-            SELECT COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0)
-            FROM chi_tiet_don_hang ctdh
-            JOIN don_hang dh ON dh.id = ctdh.don_hang_id
-            JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
-            WHERE UPPER(dh.trang_thai) IN (
-                'DA_GIAO',
-                'HOAN_THANH',
-                'THANH_CONG',
-                'DA_THANH_CONG',
-                'SUCCESS',
-                'COMPLETED'
-            )
-            AND dh.ngay_dat >= ?
-            AND dh.ngay_dat < ?
-            """;
+        try {
+            String sql = """
+                    SELECT COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0)
+                    FROM chi_tiet_don_hang ctdh
+                    JOIN don_hang dh ON dh.id = ctdh.don_hang_id
+                    JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
+                    WHERE UPPER(dh.trang_thai) IN (
+                        'DA_GIAO',
+                        'HOAN_THANH',
+                        'THANH_CONG',
+                        'DA_THANH_CONG',
+                        'SUCCESS',
+                        'COMPLETED'
+                    )
+                    AND dh.ngay_dat >= ?
+                    AND dh.ngay_dat < ?
+                    """;
 
-    return jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
-}
+            BigDecimal result = jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
+            return result != null ? result : BigDecimal.ZERO;
+        } catch (Exception e) {
+            System.err.println("Error in getTotalImportCost: " + e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
 
     /*
      * Đếm số đơn hàng thành công.
      */
     private Long countSuccessOrders(LocalDateTime fromDate, LocalDateTime toDate) {
-        String sql = """
-                SELECT COUNT(*)
-                FROM don_hang dh
-                WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG',               'SUCCESS', 'COMPLETED')
-                  AND dh.ngay_dat >= ?
-                  AND dh.ngay_dat < ?
-                """;
+        try {
+            String sql = """
+                    SELECT COUNT(*)
+                    FROM don_hang dh
+                    WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_CONG', 'SUCCESS', 'COMPLETED')
+                      AND dh.ngay_dat >= ?
+                      AND dh.ngay_dat < ?
+                    """;
 
-        return jdbcTemplate.queryForObject(sql, Long.class, fromDate, toDate);
+            Long result = jdbcTemplate.queryForObject(sql, Long.class, fromDate, toDate);
+            return result != null ? result : 0L;
+        } catch (Exception e) {
+            System.err.println("Error in countSuccessOrders: " + e.getMessage());
+            return 0L;
+        }
     }
 
     /*
      * Đếm số đơn hàng thất bại hoặc bị hủy.
      */
     private Long countFailedOrders(LocalDateTime fromDate, LocalDateTime toDate) {
-        String sql = """
-                SELECT COUNT(*)
-                FROM don_hang dh
-                WHERE UPPER(dh.trang_thai) IN ('DA_HUY', 'HUY', 'THAT_BAI', 'FAILED', 'CANCELLED', 'CANCELED')
-                  AND dh.ngay_dat >= ?
-                  AND dh.ngay_dat < ?
-                """;
+        try {
+            String sql = """
+                    SELECT COUNT(*)
+                    FROM don_hang dh
+                    WHERE UPPER(dh.trang_thai) IN ('DA_HUY', 'HUY', 'THAT_BAI', 'FAILED', 'CANCELLED', 'CANCELED')
+                      AND dh.ngay_dat >= ?
+                      AND dh.ngay_dat < ?
+                    """;
 
-        return jdbcTemplate.queryForObject(sql, Long.class, fromDate, toDate);
+            Long result = jdbcTemplate.queryForObject(sql, Long.class, fromDate, toDate);
+            return result != null ? result : 0L;
+        } catch (Exception e) {
+            System.err.println("Error in countFailedOrders: " + e.getMessage());
+            return 0L;
+        }
     }
 
     /*
@@ -271,52 +291,67 @@ WHERE UPPER(dh.trang_thai) IN ('DA_GIAO', 'HOAN_THANH', 'THANH_CONG', 'DA_THANH_
     //             LIMIT 5
     //             """;
 
-    //     return jdbcTemplate.queryForList(sql, fromDate, toDate);
+    /*
+     * Lấy top 5 sản phẩm bán chạy nhất.
+     * Chỉ lấy từ những đơn hàng đã thành công.
+     */
     private List<Map<String, Object>> getTopProducts(LocalDateTime fromDate, LocalDateTime toDate) {
-    String sql = """
-            SELECT
-                ctdh.ten_san_pham AS productName,
-                SUM(ctdh.so_luong) AS quantitySold,
-                COALESCE(SUM(ctdh.thanh_tien), 0) AS revenue,
-                COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS importCost,
-                COALESCE(SUM(ctdh.thanh_tien), 0)
-                    - COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS profit
-            FROM chi_tiet_don_hang ctdh
-            JOIN don_hang dh ON dh.id = ctdh.don_hang_id
-            JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
-            WHERE UPPER(dh.trang_thai) IN (
-                'DA_GIAO',
-                'HOAN_THANH',
-                'THANH_CONG',
-                'DA_THANH_CONG',
-                'SUCCESS',
-                'COMPLETED'
-            )
-            AND dh.ngay_dat >= ?
-            AND dh.ngay_dat < ?
-            GROUP BY ctdh.ten_san_pham
-            ORDER BY quantitySold DESC
-            LIMIT 5
-            """;
+        try {
+            String sql = """
+                    SELECT
+                        ctdh.ten_san_pham AS productName,
+                        SUM(ctdh.so_luong) AS quantitySold,
+                        COALESCE(SUM(ctdh.thanh_tien), 0) AS revenue,
+                        COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS importCost,
+                        COALESCE(SUM(ctdh.thanh_tien), 0)
+                            - COALESCE(SUM(ctdh.so_luong * COALESCE(bt.gia_nhap, 0)), 0) AS profit
+                    FROM chi_tiet_don_hang ctdh
+                    JOIN don_hang dh ON dh.id = ctdh.don_hang_id
+                    JOIN bien_the_san_pham bt ON bt.id = ctdh.bien_the_id
+                    WHERE UPPER(dh.trang_thai) IN (
+                        'DA_GIAO',
+                        'HOAN_THANH',
+                        'THANH_CONG',
+                        'DA_THANH_CONG',
+                        'SUCCESS',
+                        'COMPLETED'
+                    )
+                    AND dh.ngay_dat >= ?
+                    AND dh.ngay_dat < ?
+                    GROUP BY ctdh.ten_san_pham
+                    ORDER BY quantitySold DESC
+                    LIMIT 5
+                    """;
 
-    return jdbcTemplate.queryForList(sql, fromDate, toDate);
-}
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, fromDate, toDate);
+            return result != null ? result : List.of();
+        } catch (Exception e) {
+            System.err.println("Error in getTopProducts: " + e.getMessage());
+            return List.of();
+        }
+    }
     private BigDecimal getTotalRevenue(LocalDateTime fromDate, LocalDateTime toDate) {
-    String sql = """
-            SELECT COALESCE(SUM(dh.tong_thanh_toan), 0)
-            FROM don_hang dh
-            WHERE UPPER(dh.trang_thai) IN (
-                'DA_GIAO',
-                'HOAN_THANH',
-                'THANH_CONG',
-                'DA_THANH_CONG',
-                'SUCCESS',
-                'COMPLETED'
-            )
-            AND dh.ngay_dat >= ?
-            AND dh.ngay_dat < ?
-            """;
+        try {
+            String sql = """
+                    SELECT COALESCE(SUM(dh.tong_thanh_toan), 0)
+                    FROM don_hang dh
+                    WHERE UPPER(dh.trang_thai) IN (
+                        'DA_GIAO',
+                        'HOAN_THANH',
+                        'THANH_CONG',
+                        'DA_THANH_CONG',
+                        'SUCCESS',
+                        'COMPLETED'
+                    )
+                    AND dh.ngay_dat >= ?
+                    AND dh.ngay_dat < ?
+                    """;
 
-    return jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
-}
+            BigDecimal result = jdbcTemplate.queryForObject(sql, BigDecimal.class, fromDate, toDate);
+            return result != null ? result : BigDecimal.ZERO;
+        } catch (Exception e) {
+            System.err.println("Error in getTotalRevenue: " + e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
 }

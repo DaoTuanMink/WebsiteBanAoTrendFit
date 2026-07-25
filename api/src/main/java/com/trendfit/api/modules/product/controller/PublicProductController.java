@@ -22,7 +22,7 @@ public class PublicProductController {
         return ResponseEntity.ok(sanPhamService.getAllPublicProducts());
     }
 
-    // GET http://localhost:8080/api/public/products/{id}
+    // Đường dẫn thực tế: GET http://localhost:8080/api/public/products/{id}
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductDetail(@PathVariable Integer id) {
         try {

@@ -29,6 +29,19 @@ public class NguoiDung {
     private LocalDateTime ngayTao;
     private LocalDateTime ngayCapNhat;
 
+    /**
+     * Phục vụ chức năng "Quên mật khẩu": khi người dùng yêu cầu, hệ thống sinh
+     * 1 mã gồm 6 chữ số, lưu tạm ở đây kèm thời điểm hết hạn (5 phút), gửi qua
+     * email (xem EmailService.sendVerificationCode). Khi người dùng nhập đúng
+     * mã còn hạn ở bước đặt lại mật khẩu, 2 field này được xóa về null.
+     * Xem PasswordResetController để biết luồng đầy đủ.
+     */
+    @Column(name = "reset_code")
+    private String resetCode;
+
+    @Column(name = "reset_code_het_han")
+    private LocalDateTime resetCodeHetHan;
+
     @PrePersist
     protected void onCreate() {
         ngayTao = LocalDateTime.now();
