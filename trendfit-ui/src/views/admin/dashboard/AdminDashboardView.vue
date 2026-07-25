@@ -214,8 +214,14 @@
 </template>
 
 <script setup>
+// Trang "Thống kê doanh số" — gọi API /api/admin/analytics/dashboard.
+// API này nằm dưới "/api/admin/**" nên đã được AuthInterceptor yêu cầu phải
+// có header "User-Role" hợp lệ (ADMIN hoặc EMPLOYEE), nếu không sẽ luôn
+// nhận lỗi 401 (và trình duyệt sẽ hiển thị nhầm thành lỗi CORS vì response
+// lỗi không đi qua @CrossOrigin của controller).
 import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
+import { getAuthHeaders } from '@/utils/adminAuth'
 
 const loading = ref(false)
 
@@ -250,13 +256,22 @@ const loadDashboard = async () => {
   try {
     loading.value = true
 
+    console.log('Tải dashboard với params:', {
+      type: filter.value.type,
+      from: filter.value.from,
+      to: filter.value.to,
+    })
+
     const res = await axios.get('http://localhost:8080/api/admin/analytics/dashboard', {
       params: {
         type: filter.value.type,
         from: filter.value.from,
         to: filter.value.to,
       },
+      headers: getAuthHeaders(),
     })
+
+    console.log('Dashboard data:', res.data)
 
     dashboard.value = {
       totalRevenue: res.data.totalRevenue || 0,
@@ -270,8 +285,18 @@ const loadDashboard = async () => {
       topProducts: res.data.topProducts || [],
     }
   } catch (error) {
-    console.error('Không tải được dữ liệu dashboard:', error)
-    alert('Không tải được dữ liệu thống kê')
+    console.error('Chi tiết lỗi:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+    })
+    alert(
+      error.response?.data?.message ||
+        error.message ||
+        'Không tải được dữ liệu thống kê. Vui lòng thử lại!'
+    )
   } finally {
     loading.value = false
   }

@@ -3,12 +3,16 @@ package com.trendfit.api.modules.product.service;
 import com.trendfit.api.modules.order.repository.ChiTietDonHangRepository;
 import com.trendfit.api.modules.product.dto.ProductDetailDTO;
 import com.trendfit.api.modules.product.dto.ProductSaveDTO;
+import com.trendfit.api.modules.product.dto.RelatedProductDTO;
 import com.trendfit.api.modules.product.entity.*;
 import com.trendfit.api.modules.product.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -168,7 +172,52 @@ public List<ProductDetailDTO> getAllPublicProducts() {
         dto.setSanPham(sp);
         dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(id));
         dto.setAnhSanPhams(anhRepository.findBySanPham_Id(id));
+        dto.setSanPhamLienQuan(timSanPhamLienQuan(sp));
         return dto;
+    }
+
+    /**
+     * Xây danh sách "Sản phẩm liên quan" cho trang chi tiết sản phẩm.
+     * Dựa trên DanhMuc hoặc ThuongHieu của sản phẩm đang xem (yêu cầu của Đạt).
+     */
+    private List<RelatedProductDTO> timSanPhamLienQuan(SanPham sp) {
+        Integer danhMucId = sp.getDanhMuc() != null ? sp.getDanhMuc().getId() : null;
+        Integer thuongHieuId = sp.getThuongHieu() != null ? sp.getThuongHieu().getId() : null;
+
+        // Không có danh mục lẫn thương hiệu thì không có cơ sở để gợi ý
+        if (danhMucId == null && thuongHieuId == null) {
+            return new ArrayList<>();
+        }
+
+        Pageable top8 = PageRequest.of(0, 8);
+        List<SanPham> lienQuan = sanPhamRepository.timSanPhamLienQuan(sp.getId(), danhMucId, thuongHieuId, top8);
+
+        List<RelatedProductDTO> result = new ArrayList<>();
+        for (SanPham item : lienQuan) {
+            List<AnhSanPham> anhList = anhRepository.findBySanPham_Id(item.getId());
+            String anhChinh = anhList.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getLaAnhChinh()))
+                    .map(AnhSanPham::getUrlAnh)
+                    .findFirst()
+                    .orElse(anhList.isEmpty() ? null : anhList.get(0).getUrlAnh());
+
+            List<BienTheSanPham> bienTheList = bienTheRepository.findBySanPham_Id(item.getId());
+            BigDecimal giaTu = bienTheList.stream()
+                    .map(bt -> bt.getGiaSale() != null ? bt.getGiaSale() : bt.getGia())
+                    .filter(Objects::nonNull)
+                    .min(Comparator.naturalOrder())
+                    .orElse(null);
+
+            result.add(new RelatedProductDTO(
+                    item.getId(),
+                    item.getTen(),
+                    item.getDanhGiaTrungBinh(),
+                    item.getTongLuotDanhGia(),
+                    anhChinh,
+                    giaTu
+            ));
+        }
+        return result;
     }
 
     public List<BienTheSanPham> findBySanPhamId(Integer id) {
