@@ -5,12 +5,12 @@ import java.util.List;
 
 @Data
 public class CartSyncDTO {
-    private Integer userId;
-    private List<CartItemDTO> items;
+    private Integer userId; // Phải khớp chữ 'userId'
+    private List<CartItemDTO> items; // Phải khớp chữ 'items'
 
     @Data
     public static class CartItemDTO {
-        private Integer bienTheId;
-        private Integer quantity;
+        private Integer bienTheId; // Phải khớp chữ 'bienTheId'
+        private Integer quantity;  // Phải khớp chữ 'quantity'
     }
 }
