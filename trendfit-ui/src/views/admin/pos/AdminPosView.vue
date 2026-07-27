@@ -109,10 +109,12 @@
                   type="button"
                   class="btn-close"
                   aria-label="Đóng"
-                 @click="() => {
-  selectedProduct = null;
-  variants = [];
-}"
+                  @click="
+                    () => {
+                      selectedProduct = null
+                      variants = []
+                    }
+                  "
                 ></button>
               </div>
 
@@ -789,10 +791,9 @@ async function loadVariants(product) {
       return
     }
 
-    const response = await fetch(
-      `${API_BASE}/admin/products/${productId}/variants`,
-      { headers: getAuthHeaders() },
-    )
+    const response = await fetch(`${API_BASE}/admin/products/${productId}/variants`, {
+      headers: getAuthHeaders(),
+    })
 
     if (!response.ok) {
       const message = await response.text()
@@ -1134,22 +1135,28 @@ async function checkout() {
   }
 
   try {
+    // Lấy role và user_id từ localStorage để gửi kèm request
+    const userRole = localStorage.getItem('role') || localStorage.getItem('vaiTro') || 'ADMIN'
+    const userId = localStorage.getItem('user_id') || 1
+
+    payload.creatorId = Number(userId)
+
     const res = await fetch(`${API_BASE}/admin/pos-orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Role': role, // Header riêng mà BanHangTaiQuayController đọc để biết vai trò
-        ...getAuthHeaders(), // Header "User-Role"/"NhanVien-ID" mà AuthInterceptor yêu cầu
+        'X-Role': userRole, // Sử dụng biến userRole đã định nghĩa
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!res.ok) {
+      const errorText = await res.text()
       throw new Error(errorText || 'Thanh toán thất bại')
     }
 
-    const createdOrder = await response.json()
+    const createdOrder = await res.json()
 
     invoiceData.value = {
       code: createdOrder.id || 'POS',
@@ -1174,6 +1181,13 @@ async function checkout() {
         paymentMethod.value === 'TIEN_MAT' ? Number(cashReceived.value || 0) : totalPayable.value,
       change: paymentMethod.value === 'TIEN_MAT' ? changeAmount.value : 0,
     }
+
+    showInvoice.value = true
+
+    cart.value = []
+    appliedVoucher.value = null
+    voucherCode.value = ''
+    cashReceived.value = 0
   } catch (err) {
     console.error(err)
     alert('Không thể kết nối tới server')
@@ -1182,6 +1196,97 @@ async function checkout() {
 
 function formatMoney(v) {
   return Number(v).toLocaleString('vi-VN') + ' đ'
+}
+
+function getPrice(variant) {
+  if (!variant) return 0
+  return Number(variant.giaSale ?? variant.gia ?? 0)
+}
+
+function printInvoice() {
+  if (!invoiceData.value) {
+    alert('Không có thông tin hóa đơn để in!')
+    return
+  }
+
+  const data = invoiceData.value
+
+  const rows = data.items
+    .map(
+      (d) =>
+        `<tr>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.name}</td>
+      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.tenKichCo} / ${d.tenMau}</td>
+      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.qty}</td>
+      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatMoney(d.price)}</td>
+      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatMoney(d.total)}</td>
+    </tr>`,
+    )
+    .join('')
+
+  const printContent = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto;">
+      <h1 style="text-align: center;">HÓA ĐƠN BÁN HÀNG</h1>
+      <hr style="border: 0; border-top: 1px solid #ccc; margin: 15px 0;">
+      
+      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+          <p style="margin: 4px 0;"><strong>Khách hàng:</strong> ${data.customer}</p>
+          <p style="margin: 4px 0;"><strong>SĐT:</strong> ${data.phone || 'Không có'}</p>
+          <p style="margin: 4px 0;"><strong>Địa chỉ:</strong> Bán tại quầy</p>
+        </div>
+        <div>
+          <p style="margin: 4px 0;"><strong>Mã đơn:</strong> #${data.code}</p>
+          <p style="margin: 4px 0;"><strong>Ngày đặt:</strong> ${data.date}</p>
+          <p style="margin: 4px 0;"><strong>Thanh toán:</strong> ${data.paymentMethod}</p>
+        </div>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead style="background: #eee;">
+          <tr>
+            <th style="text-align: left; padding: 8px;">Sản phẩm</th>
+            <th style="text-align: center; padding: 8px;">Size/Màu</th>
+            <th style="text-align: center; padding: 8px;">SL</th>
+            <th style="text-align: right; padding: 8px;">Đơn giá</th>
+            <th style="text-align: right; padding: 8px;">Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div style="margin-top: 20px; text-align: right; line-height: 1.6;">
+        <p style="margin: 4px 0;">Tạm tính: ${formatMoney(data.totalAmount)}</p>
+        <p style="margin: 4px 0;">Giảm giá: ${formatMoney(data.discount)}</p>
+        <p style="margin: 4px 0;">Khách đưa: ${formatMoney(data.paid)}</p>
+        <p style="margin: 4px 0;">Tiền thừa: ${formatMoney(data.change)}</p>
+        <h2 style="color: red; margin: 10px 0;">Tổng thanh toán: ${formatMoney(data.payable)}</h2>
+      </div>
+
+      <p style="margin-top: 40px; text-align: center; font-style: italic; font-weight: bold; color: #4f46e5;">
+        Cảm ơn quý khách đã mua hàng tại TrendFit!
+      </p>
+    </div>
+  `
+
+  const printWindow = window.open('', '_blank', 'width=900,height=650')
+  if (printWindow) {
+    printWindow.document.write(
+      '<html><head><title>Hóa đơn #' +
+        data.code +
+        '</title></head><body>' +
+        printContent +
+        '</body></html>',
+    )
+    printWindow.document.close()
+    printWindow.focus()
+
+    // Kích hoạt lệnh in trực tiếp từ cửa sổ chính, tránh lỗi cú pháp script bên trong
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 500)
+  }
 }
 
 onMounted(loadProducts)
