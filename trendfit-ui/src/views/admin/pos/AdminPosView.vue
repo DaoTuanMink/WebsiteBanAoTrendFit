@@ -65,8 +65,35 @@
       <!-- CỘT GIỎ HÀNG VÀ THANH TOÁN -->
       <div class="col-12 col-xl-7">
         <section class="card border-0 shadow-sm">
-          <div class="card-header bg-white py-3">
+          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="fw-bold mb-0">Giỏ hàng tại quầy</h5>
+
+            <div class="d-flex gap-2">
+              <!-- Nút mở danh sách "Hóa đơn chờ" - hiển thị số lượng đang treo -->
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm position-relative"
+                @click="moModalHoaDonCho"
+              >
+                Hóa đơn chờ
+                <span
+                  v-if="danhSachHoaDonCho.length > 0"
+                  class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                >
+                  {{ danhSachHoaDonCho.length }}
+                </span>
+              </button>
+
+              <!-- Nút tạm lưu giỏ hàng hiện tại thành hóa đơn chờ -->
+              <button
+                type="button"
+                class="btn btn-outline-warning btn-sm"
+                :disabled="!cart.length || dangLuuTam"
+                @click="luuHoaDonCho"
+              >
+                {{ dangLuuTam ? 'Đang lưu...' : '⏸ Lưu tạm' }}
+              </button>
+            </div>
           </div>
 
           <div class="card-body">
@@ -444,6 +471,24 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- ===================== QR THANH TOÁN (VietQR) ===================== -->
+                  <div v-else-if="paymentMethod === 'CHUYEN_KHOAN'" class="text-center py-2">
+                    <p class="text-muted small mb-2">
+                      Khách quét mã QR bên dưới bằng app ngân hàng để chuyển khoản
+                    </p>
+                    <img
+                      :src="vietQrUrl"
+                      alt="Mã QR chuyển khoản"
+                      class="img-fluid border rounded"
+                      style="max-width: 260px"
+                    />
+                    <p class="fw-bold fs-5 mt-2 mb-0 text-primary">
+                      {{ formatMoney(totalPayable) }}
+                    </p>
+                    <p class="small text-muted mb-0">Nội dung CK: {{ noiDungChuyenKhoan }}</p>
+                  </div>
+                  <!-- ===================================================================== -->
                 </div>
               </div>
 
@@ -500,6 +545,85 @@
       </div>
     </div>
 
+    <!-- ===================== MODAL DANH SÁCH "HÓA ĐƠN CHỜ" ===================== -->
+    <template v-if="showHoaDonChoModal">
+      <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title fw-bold">Danh sách hóa đơn chờ</h5>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Đóng"
+                @click="showHoaDonChoModal = false"
+              ></button>
+            </div>
+
+            <div class="modal-body">
+              <div v-if="dangTaiHoaDonCho" class="text-center py-4">
+                <div class="spinner-border" role="status"></div>
+              </div>
+
+              <div v-else-if="danhSachHoaDonCho.length === 0" class="text-muted text-center py-4">
+                Chưa có hóa đơn chờ nào. Bấm "Lưu tạm" ở giỏ hàng để cất lại 1 đơn đang dở dang.
+              </div>
+
+              <table v-else class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Khách hàng</th>
+                    <th>Số SP</th>
+                    <th>Tổng tiền</th>
+                    <th>Ghi chú</th>
+                    <th>Thời gian lưu</th>
+                    <th>Người lưu</th>
+                    <th class="text-end">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="hd in danhSachHoaDonCho" :key="hd.id">
+                    <td>
+                      <div class="fw-semibold">{{ hd.tenKhachHang || 'Khách lẻ' }}</div>
+                      <div class="small text-muted">{{ hd.soDienThoai || '—' }}</div>
+                    </td>
+                    <td>{{ hd.soLuongSanPham }}</td>
+                    <td class="fw-semibold">{{ formatMoney(hd.tongTien) }}</td>
+                    <td class="small text-muted">{{ hd.ghiChu || '—' }}</td>
+                    <td class="small">{{ new Date(hd.ngayTao).toLocaleString('vi-VN') }}</td>
+                    <td class="small">{{ hd.tenNguoiTao }}</td>
+                    <td class="text-end">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-success me-2"
+                        @click="goiLaiHoaDonCho(hd.id)"
+                      >
+                        Gọi lại
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        @click="xoaHoaDonCho(hd.id)"
+                      >
+                        Xóa
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div v-if="cart.length > 0" class="alert alert-warning small mb-0">
+                Lưu ý: giỏ hàng hiện tại đang có {{ cart.length }} sản phẩm. Nếu bạn "Gọi lại" 1
+                hóa đơn chờ, giỏ hàng hiện tại sẽ bị thay thế hoàn toàn.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show"></div>
+    </template>
+    <!-- =========================================================================== -->
+
     <!-- MODAL HÓA ĐƠN -->
     <template v-if="showInvoice && invoiceData">
       <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
@@ -536,6 +660,8 @@
                   <table class="invoice-table table table-bordered align-middle">
                     <thead class="table-light">
                       <tr>
+                        <th class="text-center">STT</th>
+                        <th>Mã SP</th>
                         <th>Sản phẩm</th>
                         <th class="text-center">SL</th>
                         <th class="text-end">Giá</th>
@@ -545,6 +671,8 @@
 
                     <tbody>
                       <tr v-for="(item, index) in invoiceData.items" :key="index">
+                        <td class="text-center">{{ index + 1 }}</td>
+                        <td>{{ item.maSku || '—' }}</td>
                         <td>
                           {{ item.name }}
                           <br />
@@ -634,6 +762,37 @@ const isLoadingVouchers = ref(false)
 
 const paymentMethod = ref('TIEN_MAT')
 const cashReceived = ref(0)
+
+// ===================== QR THANH TOÁN (VietQR) =====================
+// TRƯỚC ĐÂY: chọn "Chuyển khoản" không hiển thị mã QR nào cả - thu ngân
+// phải tự đọc số tài khoản cho khách chuyển thủ công, dễ nhầm số tiền.
+//
+// Dùng dịch vụ công khai VietQR.io để tạo ảnh QR động theo ĐÚNG số tiền cần
+// thu của đơn hiện tại - không cần gọi API riêng, không cần đăng ký API key,
+// chỉ cần build 1 URL ảnh theo chuẩn của họ. Tài liệu:
+// https://www.vietqr.io/danh-sach-api/link-tao-ma-nhanh/
+//
+// ⚠️ THAY 3 GIÁ TRỊ DƯỚI ĐÂY BẰNG THÔNG TIN TÀI KHOẢN NGÂN HÀNG THẬT CỦA CỬA
+// HÀNG trước khi dùng trong thực tế (hiện đang là giá trị mẫu để demo):
+const BANK_CODE = 'VCB' // Mã ngân hàng viết tắt theo chuẩn VietQR (VD: VCB, TCB, MB, ACB, BIDV...)
+const BANK_ACCOUNT_NO = '0123456789' // Số tài khoản nhận tiền của cửa hàng
+const BANK_ACCOUNT_NAME = 'CUA HANG TRENDFIT' // Tên chủ tài khoản, KHÔNG dấu
+
+// Nội dung chuyển khoản: giúp đối soát - nhìn vào lịch sử biến động số dư,
+// nhân viên biết ngay giao dịch nào tương ứng với khách nào.
+const noiDungChuyenKhoan = computed(() => {
+  const soDienThoai = customerPhone.value?.trim()
+  return soDienThoai ? `TrendFit ${soDienThoai}` : 'Thanh toan TrendFit'
+})
+
+// URL ảnh QR, tự cập nhật lại mỗi khi tổng tiền cần trả thay đổi (nhờ computed)
+const vietQrUrl = computed(() => {
+  const amount = Math.max(0, Math.round(totalPayable.value || 0))
+  const noiDung = encodeURIComponent(noiDungChuyenKhoan.value)
+  const ten = encodeURIComponent(BANK_ACCOUNT_NAME)
+  return `https://img.vietqr.io/image/${BANK_CODE}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${noiDung}&accountName=${ten}`
+})
+// =====================================================================
 
 const isSubmitting = ref(false)
 
@@ -827,6 +986,10 @@ function addToCart(product, variant) {
   cart.value.push({
     bienTheId: variant.id,
     ten: product.ten,
+    // Mã SKU của biến thể - TRƯỚC ĐÂY bị bỏ sót khi thêm vào giỏ, khiến hóa
+    // đơn in ra không thể hiển thị mã sản phẩm dù dữ liệu này đã có sẵn ở
+    // bước chọn biến thể (xem cột "SKU: ..." lúc chọn size/màu).
+    maSku: variant.maSku || '',
     tenKichCo: variant.kichCo?.tenKichCo || 'N/A',
     tenMau: variant.mauSac?.tenMau || 'N/A',
     soLuongTon: variant.soLuongTon,
@@ -1103,6 +1266,172 @@ function validateAppliedVoucherAgain() {
 
 // const totalAmount = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
 
+// ===================== HÓA ĐƠN CHỜ (đơn tạm / treo giỏ hàng) =====================
+// Cho phép thu ngân "cất" giỏ hàng đang dở dang sang một chỗ để phục vụ ngay
+// khách tiếp theo, rồi gọi lại đúng đơn đó sau. Xem chú thích chi tiết ở
+// backend: HoaDonCho.java (entity) + HoaDonChoService.java.
+const showHoaDonChoModal = ref(false)
+const danhSachHoaDonCho = ref([])
+const dangTaiHoaDonCho = ref(false)
+const dangLuuTam = ref(false)
+
+// Tải danh sách hóa đơn chờ hiện có (gọi ngay lúc mở trang để biết có bao
+// nhiêu đơn đang treo, và mỗi lần mở modal để cập nhật mới nhất).
+async function taiDanhSachHoaDonCho() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/hoa-don-cho`, {
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    danhSachHoaDonCho.value = await res.json()
+  } catch (err) {
+    console.error('Lỗi tải danh sách hóa đơn chờ:', err)
+  }
+}
+
+function moModalHoaDonCho() {
+  showHoaDonChoModal.value = true
+  dangTaiHoaDonCho.value = true
+  taiDanhSachHoaDonCho().finally(() => {
+    dangTaiHoaDonCho.value = false
+  })
+}
+
+// Lưu giỏ hàng hiện tại thành 1 "Hóa đơn chờ" mới, sau đó dọn trống giỏ hàng
+// và thông tin khách hàng để màn hình sẵn sàng phục vụ khách tiếp theo ngay.
+async function luuHoaDonCho() {
+  if (!cart.value.length) {
+    alert('Giỏ hàng đang trống, không có gì để lưu tạm!')
+    return
+  }
+
+  const ghiChu = prompt('Ghi chú cho hóa đơn chờ này (không bắt buộc), ví dụ "khách đi thử size":', '')
+  // Người dùng bấm Cancel ở prompt -> ghiChu === null -> hủy thao tác lưu tạm
+  if (ghiChu === null) return
+
+  dangLuuTam.value = true
+  try {
+    const payload = {
+      tenKhachHang: customerName.value,
+      soDienThoai: customerPhone.value,
+      phuongThucThanhToan: paymentMethod.value,
+      maVoucher: appliedVoucher.value?.ma || null,
+      voucherId: appliedVoucher.value?.id || null,
+      ghiChu: ghiChu,
+      items: cart.value.map((i) => ({
+        bienTheId: Number(i.bienTheId),
+        ten: i.ten,
+        maSku: i.maSku || '',
+        tenKichCo: i.tenKichCo,
+        tenMau: i.tenMau,
+        quantity: Number(i.quantity),
+        gia: Number(i.gia),
+        soLuongTon: Number(i.soLuongTon),
+      })),
+    }
+
+    const res = await fetch(`${API_BASE}/admin/hoa-don-cho`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) throw new Error(await res.text())
+
+    alert('Đã lưu tạm hóa đơn! Giỏ hàng đã được dọn trống để phục vụ khách tiếp theo.')
+
+    // Dọn trống giỏ hàng + thông tin khách hàng + voucher đang áp dụng,
+    // giống hệt trạng thái sau khi thanh toán xong 1 đơn.
+    cart.value = []
+    customerName.value = ''
+    customerPhone.value = ''
+    appliedVoucher.value = null
+    voucherCode.value = ''
+    voucherMessage.value = ''
+
+    // Cập nhật lại số lượng hiển thị trên badge "Hóa đơn chờ"
+    taiDanhSachHoaDonCho()
+  } catch (err) {
+    alert('Lưu tạm thất bại: ' + err.message)
+  } finally {
+    dangLuuTam.value = false
+  }
+}
+
+// Gọi lại 1 hóa đơn chờ: nạp lại đúng giỏ hàng/khách hàng/voucher đã lưu vào
+// màn hình hiện tại để tiếp tục thanh toán, sau đó xóa bản nháp này đi (vì
+// nó đã được "kích hoạt" lại thành giỏ hàng đang xử lý, không còn "chờ" nữa).
+async function goiLaiHoaDonCho(id) {
+  if (
+    cart.value.length > 0 &&
+    !confirm('Giỏ hàng hiện tại sẽ bị THAY THẾ hoàn toàn bởi hóa đơn chờ này. Tiếp tục?')
+  ) {
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    const chiTiet = await res.json()
+
+    // Khôi phục lại toàn bộ trạng thái giỏ hàng như lúc tạm lưu
+    customerName.value = chiTiet.tenKhachHang || ''
+    customerPhone.value = chiTiet.soDienThoai || ''
+    paymentMethod.value = chiTiet.phuongThucThanhToan || 'TIEN_MAT'
+    cart.value = (chiTiet.items || []).map((i) => ({
+      bienTheId: i.bienTheId,
+      ten: i.ten,
+      maSku: i.maSku || '',
+      tenKichCo: i.tenKichCo,
+      tenMau: i.tenMau,
+      quantity: i.quantity,
+      gia: i.gia,
+      soLuongTon: i.soLuongTon,
+    }))
+
+    if (chiTiet.maVoucher) {
+      // Voucher đã áp trước đó có thể đã hết hạn/hết lượt trong lúc chờ, nên
+      // không tự phục hồi appliedVoucher trực tiếp mà điền lại mã để nhân
+      // viên bấm "Áp dụng" kiểm tra lại cho chắc chắn.
+      voucherCode.value = chiTiet.maVoucher
+      voucherMessage.value = 'Vui lòng bấm "Áp dụng" lại để kiểm tra mã giảm giá này còn hiệu lực không.'
+    }
+
+    // Xóa bản nháp trên server vì đã được gọi lại vào giỏ hàng đang xử lý
+    await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+
+    showHoaDonChoModal.value = false
+    taiDanhSachHoaDonCho()
+  } catch (err) {
+    alert('Gọi lại hóa đơn chờ thất bại: ' + err.message)
+  }
+}
+
+// Xóa hẳn 1 hóa đơn chờ (thu ngân chủ động hủy, không cần giữ nữa)
+async function xoaHoaDonCho(id) {
+  if (!confirm('Xóa hẳn hóa đơn chờ này? Thao tác này không thể hoàn tác.')) return
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    taiDanhSachHoaDonCho()
+  } catch (err) {
+    alert('Xóa thất bại: ' + err.message)
+  }
+}
+// ===================================================================================
+
 async function checkout() {
   if (!cart.value.length) return alert('Giỏ hàng trống')
 
@@ -1118,6 +1447,11 @@ async function checkout() {
     phuongThucThanhToan: paymentMethod.value || 'TIEN_MAT',
     // Đảm bảo ép kiểu Number cho các trường BigDecimal
     tongTienHang: Number(totalAmount.value),
+    // Bán tại quầy (offline): khách nhận hàng ngay tại chỗ, KHÔNG phát sinh
+    // phí vận chuyển. Backend cũng tự ép cứng về 0 (xem
+    // OrderService.taoDonHangTaiQuay) - gửi tường minh ở đây để code rõ ràng,
+    // tránh gây hiểu nhầm là bị bỏ sót.
+    phiVanChuyen: 0,
     tienGiam: Number(discountAmount.value || 0),
     tongThanhToan: Number(totalPayable.value),
     tienKhachDua: Number(cashReceived.value || 0),
@@ -1125,7 +1459,11 @@ async function checkout() {
     voucherId: appliedVoucher.value?.id || null,
     maVoucher: appliedVoucher.value?.ma || null,
     userId: null,
-    creatorId: 1, // Nên lấy từ localStorage.getItem('user_id')
+    // TRƯỚC ĐÂY: hardcode cứng creatorId = 1, khiến MỌI đơn bán tại quầy đều
+    // bị gán cho đúng 1 tài khoản bất kể ai thực sự đang đăng nhập thao tác
+    // - sai lệch hoàn toàn việc truy vết "ai đã bán đơn này". Giờ lấy đúng
+    // từ tài khoản đang đăng nhập (được lưu lúc login, xem LoginView.vue).
+    creatorId: Number(localStorage.getItem('user_id')) || null,
     items: cart.value.map((i) => ({
       bienTheId: Number(i.bienTheId),
       quantity: Number(i.quantity),
@@ -1167,6 +1505,7 @@ async function checkout() {
 
       items: cart.value.map((item) => ({
         name: item.ten,
+        maSku: item.maSku || '',
         tenKichCo: item.tenKichCo,
         tenMau: item.tenMau,
         qty: item.quantity,
@@ -1213,8 +1552,10 @@ function printInvoice() {
 
   const rows = data.items
     .map(
-      (d) =>
+      (d, index) =>
         `<tr>
+      <td style="text-align: center; padding: 8px; border-bottom: 1px solid #ddd;">${index + 1}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.maSku || '—'}</td>
       <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.name}</td>
       <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.tenKichCo} / ${d.tenMau}</td>
       <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.qty}</td>
@@ -1245,6 +1586,8 @@ function printInvoice() {
       <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <thead style="background: #eee;">
           <tr>
+            <th style="text-align: center; padding: 8px;">STT</th>
+            <th style="text-align: left; padding: 8px;">Mã SP</th>
             <th style="text-align: left; padding: 8px;">Sản phẩm</th>
             <th style="text-align: center; padding: 8px;">Size/Màu</th>
             <th style="text-align: center; padding: 8px;">SL</th>
@@ -1289,7 +1632,10 @@ function printInvoice() {
   }
 }
 
-onMounted(loadProducts)
+onMounted(() => {
+  loadProducts()
+  taiDanhSachHoaDonCho()
+})
 </script>
 
 <style scoped>
