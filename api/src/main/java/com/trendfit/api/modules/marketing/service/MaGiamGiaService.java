@@ -38,8 +38,17 @@ public class MaGiamGiaService {
     if (tongDon.compareTo(toiThieu) < 0) 
         throw new RuntimeException("Đơn hàng chưa đạt giá trị tối thiểu là " + toiThieu + "đ!");
 
-    if (mg.getSoLanDaDung() != null && mg.getSoLanDaDung() >= mg.getGioiHanSuDung()) 
-        throw new RuntimeException("Mã đã hết lượt sử dụng!");
+    // Chỉ kiểm tra giới hạn số lượt dùng NẾU voucher có đặt giới hạn
+    // (gioiHanSuDung == null nghĩa là "không giới hạn số lượt dùng").
+    // TRƯỚC ĐÂY: so sánh trực tiếp soLanDaDung >= gioiHanSuDung khi
+    // gioiHanSuDung null sẽ ném NullPointerException (Integer null bị
+    // auto-unbox sang int) -> API trả về lỗi 500 mỗi khi áp voucher không
+    // đặt giới hạn dùng.
+    if (mg.getGioiHanSuDung() != null) {
+        int daDung = mg.getSoLanDaDung() != null ? mg.getSoLanDaDung() : 0;
+        if (daDung >= mg.getGioiHanSuDung())
+            throw new RuntimeException("Mã đã hết lượt sử dụng!");
+    }
         
     return mg;
 }

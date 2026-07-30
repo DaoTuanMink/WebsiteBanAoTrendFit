@@ -440,7 +440,7 @@ const renderStars = (value) => {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
 
-const addToCart = () => {
+const addToCart = async () => {
   if (!selectedColor.value || !selectedSize.value) {
     return alert('Vui lòng chọn đầy đủ màu và size!')
   }
@@ -469,7 +469,26 @@ const addToCart = () => {
     cart.push(cartItem)
   }
 
+  // 1. Lưu bản sao vào localStorage để dự phòng
   localStorage.setItem('cart', JSON.stringify(cart))
+
+  // 2. NẾU ĐÃ ĐĂNG NHẬP (có user_id) -> ĐỒNG BỘ NGAY LẬP TỨC LÊN DATABASE
+  const userId = localStorage.getItem('user_id')
+  if (userId) {
+    try {
+      const payload = {
+        userId: Number(userId),
+        items: cart.map((i) => ({
+          bienTheId: i.bienTheId,
+          quantity: i.quantity,
+        })),
+      }
+      await axios.post('http://localhost:8080/api/public/cart/sync', payload)
+    } catch (err) {
+      console.error('Lỗi đồng bộ giỏ hàng lên server:', err)
+    }
+  }
+
   alert('Đã thêm sản phẩm vào giỏ hàng!')
 }
 

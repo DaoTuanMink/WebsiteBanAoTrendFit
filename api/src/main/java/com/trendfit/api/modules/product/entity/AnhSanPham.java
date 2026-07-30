@@ -19,7 +19,6 @@ public class AnhSanPham {
     private String urlAnh;
     private String altText;
     private Boolean laAnhChinh = false;
-    private Integer thuTu = 0;
     private LocalDateTime ngayTao;
 
     @PrePersist

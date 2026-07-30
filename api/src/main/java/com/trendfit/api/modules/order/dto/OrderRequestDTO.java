@@ -21,6 +21,10 @@ public class OrderRequestDTO {
 
     private BigDecimal tongTienHang;
 
+    // Phí vận chuyển - chỉ áp dụng cho đơn ĐẶT ONLINE (khách tự nhập địa chỉ
+    // giao hàng). Đơn BÁN TẠI QUẦY luôn gửi lên 0 (xem AdminPosView.vue).
+    private BigDecimal phiVanChuyen;
+
     private BigDecimal tienGiam;
 
     private BigDecimal tongThanhToan;

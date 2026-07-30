@@ -37,4 +37,6 @@ public ResponseEntity<?> getAllProducts() {
     // Gọi phương thức mới thay vì findAll() cũ
     return ResponseEntity.ok(sanPhamService.getAllPublicProducts());
 }
+
+
 }

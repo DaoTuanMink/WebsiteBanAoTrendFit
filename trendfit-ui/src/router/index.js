@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // Import các component chính
 import HomeView from '@/views/client/home/HomeView.vue'
 import LoginView from '@/views/auth/LoginView.vue'
+import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const router = createRouter({
@@ -35,6 +36,7 @@ const router = createRouter({
 
     // ==================== AUTH ====================
     { path: '/login', name: 'login', component: LoginView },
+    { path: '/quen-mat-khau', name: 'forgot-password', component: ForgotPasswordView },
     {
       path: '/register',
       name: 'register',

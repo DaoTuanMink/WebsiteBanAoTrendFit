@@ -2,84 +2,183 @@
   <div class="ao-view bg-white text-start">
     <LayoutHeader />
 
-    <div class="container py-5">
-      <section class="mb-5 mt-5">
-        <h3 class="text-center mb-4 fw-bold">SẢN PHẨM MỚI</h3>
-
-        <!-- ===================== THANH TÌM KIẾM & BỘ LỌC (client-side) ===================== -->
-        <div class="filter-bar bg-light border rounded-3 p-3 mb-4">
-          <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-4">
-              <label class="form-label small fw-bold mb-1">Tìm theo tên sản phẩm</label>
-              <input
-                v-model.trim="filters.keyword"
-                type="text"
-                class="form-control"
-                placeholder="Ví dụ: áo thun, hoodie..."
-              />
+    <div class="container py-5 mt-4">
+      <div class="row">
+        <!-- CỘT BÊN TRÁI: BỘ LỌC CHUẨN GIAO DIỆN -->
+        <div class="col-lg-3 mb-4">
+          <div class="filter-sidebar border rounded-3 p-3 bg-white shadow-sm">
+            <!-- TIÊU ĐỀ BỘ LỌC -->
+            <div
+              class="filter-header d-flex justify-content-between align-items-center py-2 border-bottom cursor-pointer"
+              @click="toggleSection('all')"
+            >
+              <span class="fw-bold text-uppercase fs-6">Bộ lọc</span>
+              <i class="ri-arrow-up-s-line fs-5" :class="{ 'rotate-180': !sections.all }"></i>
             </div>
 
-            <div class="col-6 col-md-3">
-              <label class="form-label small fw-bold mb-1">Khoảng giá</label>
-              <select v-model="filters.priceRange" class="form-select">
-                <option value="all">Tất cả mức giá</option>
-                <option value="0-200000">Dưới 200.000đ</option>
-                <option value="200000-500000">200.000đ - 500.000đ</option>
-                <option value="500000-1000000">500.000đ - 1.000.000đ</option>
-                <option value="1000000-999999999">Trên 1.000.000đ</option>
-              </select>
-            </div>
+            <div v-show="sections.all">
+              <!-- 1. Danh mục -->
+              <div class="filter-section border-bottom py-3">
+                <div
+                  class="d-flex justify-content-between align-items-center cursor-pointer"
+                  @click="toggleSection('category')"
+                >
+                  <span class="fw-semibold text-dark">Danh mục</span>
+                  <i :class="sections.category ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+                <!-- Đảm bảo toàn bộ danh sách nằm gọn trong v-show này -->
+                <div v-show="sections.category" class="mt-3 ps-1">
+                  <div v-for="cat in categories" :key="cat.id" class="form-check mb-2">
+                    <input
+                      type="checkbox"
+                      class="form-check-input custom-checkbox"
+                      :id="'cat-' + cat.id"
+                      :value="cat.id"
+                      v-model="selectedCategories"
+                    />
+                    <label
+                      class="form-check-label cursor-pointer text-muted small"
+                      :for="'cat-' + cat.id"
+                    >
+                      {{ cat.ten }}
+                    </label>
+                  </div>
+                </div>
+              </div>
 
-            <div class="col-6 col-md-2">
-              <label class="form-label small fw-bold mb-1">Kích cỡ</label>
-              <select v-model="filters.size" class="form-select">
-                <option value="">Tất cả size</option>
-                <option v-for="size in allSizes" :key="size" :value="size">{{ size }}</option>
-              </select>
-            </div>
+              <!-- 2. Thương hiệu -->
+              <div class="filter-section border-bottom py-3">
+                <div
+                  class="d-flex justify-content-between align-items-center cursor-pointer"
+                  @click="toggleSection('brand')"
+                >
+                  <span class="fw-semibold text-dark">Thương hiệu</span>
+                  <i :class="sections.brand ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+                <div v-show="sections.brand" class="mt-3 ps-1">
+                  <div v-for="brand in brands" :key="brand.id" class="form-check mb-2">
+                    <input
+                      type="checkbox"
+                      class="form-check-input custom-checkbox"
+                      :id="'brand-' + brand.id"
+                      :value="brand.id"
+                      v-model="selectedBrands"
+                    />
+                    <label
+                      class="form-check-label cursor-pointer text-muted small"
+                      :for="'brand-' + brand.id"
+                    >
+                      {{ brand.ten }}
+                    </label>
+                  </div>
+                </div>
+              </div>
 
-            <div class="col-6 col-md-2">
-              <label class="form-label small fw-bold mb-1">Màu sắc</label>
-              <select v-model="filters.color" class="form-select">
-                <option value="">Tất cả màu</option>
-                <option v-for="color in allColors" :key="color" :value="color">{{ color }}</option>
-              </select>
-            </div>
+              <!-- 3. Màu sắc -->
+              <div class="filter-section border-bottom py-3">
+                <div
+                  class="d-flex justify-content-between align-items-center cursor-pointer"
+                  @click="toggleSection('color')"
+                >
+                  <span class="fw-semibold text-dark">Màu sắc</span>
+                  <i :class="sections.color ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+                <!-- Các nút màu sắc phải nằm hoàn toàn bên trong khối v-show này -->
+                <div v-show="sections.color" class="mt-3 d-flex flex-wrap gap-2">
+                  <div
+                    v-for="color in availableColors"
+                    :key="color"
+                    @click="toggleColor(color)"
+                    class="color-pill px-3 py-1 border rounded-pill small cursor-pointer"
+                    :class="{ active: selectedColors.includes(color) }"
+                  >
+                    {{ color }}
+                  </div>
+                </div>
+              </div>
 
-            <div class="col-6 col-md-1 d-grid">
-              <button class="btn btn-outline-dark" @click="resetFilters" title="Xóa bộ lọc">
-                Xóa
-              </button>
+              <!-- 4. Kích cỡ (Dạng lưới ô vuông) -->
+              <div class="filter-section py-3">
+                <div
+                  class="d-flex justify-content-between align-items-center cursor-pointer"
+                  @click="toggleSection('size')"
+                >
+                  <span class="fw-semibold text-dark">Kích cỡ</span>
+                  <i :class="sections.size ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+                <div v-show="sections.size" class="mt-3">
+                  <div class="size-grid">
+                    <div
+                      v-for="size in availableSizes"
+                      :key="size"
+                      @click="toggleSize(size)"
+                      class="size-box text-center py-2 border rounded cursor-pointer"
+                      :class="{ active: selectedSizes.includes(size) }"
+                    >
+                      {{ size }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nút xóa bộ lọc nhanh -->
+              <div v-if="hasActiveFilters" class="mt-3 pt-2 border-top text-center">
+                <button @click="resetFilters" class="btn btn-sm btn-outline-dark w-100 py-1">
+                  Xóa tất cả bộ lọc
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        <!-- ============================================================================== -->
 
-        <div v-if="loading" class="text-center my-5">
-          <div class="spinner-border text-dark" role="status"></div>
-        </div>
+        <!-- CỘT BÊN PHẢI: HIỂN THỊ SẢN PHẨM -->
+        <div class="col-lg-9">
+          <div
+            class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded border-0"
+          >
+            <span class="text-muted small"
+              >Hiển thị <b class="text-dark">{{ filteredProducts.length }}</b> sản phẩm</span
+            >
 
-        <div v-else>
-          <p class="text-muted mb-3 small">
-            Tìm thấy <b>{{ filteredSanPhams.length }}</b> sản phẩm
-          </p>
-
-          <div v-if="filteredSanPhams.length === 0" class="alert alert-info text-center">
-            Không tìm thấy sản phẩm phù hợp với bộ lọc hiện tại.
+            <div class="d-flex align-items-center gap-2">
+              <label class="small text-muted text-nowrap">Sắp xếp:</label>
+              <select v-model="sortBy" class="form-select form-select-sm">
+                <option value="default">Mặc định</option>
+                <option value="price-asc">Giá: Thấp đến Cao</option>
+                <option value="price-desc">Giá: Cao đến Thấp</option>
+                <option value="name">Tên: A - Z</option>
+              </select>
+            </div>
           </div>
 
-          <div v-else class="row row-cols-2 row-cols-md-4 g-4">
-            <div class="col" v-for="item in filteredSanPhams" :key="item.sanPham.id">
-              <div class="trendfit-product-card">
-                <div class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light">
+          <div v-if="loading" class="text-center my-5">
+            <div class="spinner-border text-dark" role="status"></div>
+          </div>
+
+          <div
+            v-else-if="filteredProducts.length === 0"
+            class="text-center py-5 border rounded bg-light"
+          >
+            <p class="text-muted mb-3">Không tìm thấy sản phẩm phù hợp với bộ lọc.</p>
+            <button @click="resetFilters" class="btn btn-dark btn-sm">Xem tất cả</button>
+          </div>
+
+          <div v-else class="row row-cols-2 row-cols-md-3 g-4">
+            <div class="col" v-for="item in filteredProducts" :key="item.sanPham?.id">
+              <div
+                class="trendfit-product-card h-100 border rounded-3 p-2 bg-white position-relative"
+              >
+                <div
+                  class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light rounded-2"
+                >
                   <img
                     :src="getAnhChinh(item.anhSanPhams)"
                     class="w-100 img-product-dynamic"
-                    style="height: 300px; object-fit: cover"
+                    style="height: 320px; object-fit: cover"
                     alt="product"
                   />
                   <router-link
-                    :to="'/product/' + item.sanPham.id"
+                    :to="'/product/' + item.sanPham?.id"
                     class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-white text-decoration-none text-uppercase fw-bold text-center"
                   >
                     Xem chi tiết
@@ -90,9 +189,9 @@
                   <div
                     class="d-flex justify-content-between font-size-10 text-uppercase text-muted mb-1"
                   >
-                    <span>{{ item.sanPham.danhMuc?.ten || 'Chưa phân loại' }}</span>
+                    <span>{{ item.sanPham?.danhMuc?.ten || 'Chưa phân loại' }}</span>
                     <span class="fw-bold text-dark">{{
-                      item.sanPham.thuongHieu?.ten || 'No Brand'
+                      item.sanPham?.thuongHieu?.ten || 'No Brand'
                     }}</span>
                   </div>
 
@@ -108,14 +207,14 @@
                   </div>
 
                   <span class="text-muted text-uppercase font-size-10 d-block mb-1">
-                    {{ item.sanPham.chatLieu || 'Premium Cotton' }}
+                    {{ item.sanPham?.chatLieu || 'Premium Cotton' }}
                   </span>
 
                   <router-link
-                    :to="'/product/' + item.sanPham.id"
+                    :to="'/product/' + item.sanPham?.id"
                     class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
                   >
-                    {{ item.sanPham.ten }}
+                    {{ item.sanPham?.ten }}
                   </router-link>
 
                   <p class="trendfit-price fw-bold text-danger m-0">
@@ -126,7 +225,7 @@
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
 
     <LayoutFooter />
@@ -140,15 +239,35 @@ import LayoutHeader from '@/components/LayoutHeader.vue'
 import LayoutFooter from '@/components/LayoutFooter.vue'
 
 const sanPhams = ref([])
+const categories = ref([])
+const brands = ref([])
 const loading = ref(true)
 
-const filters = ref({
-  keyword: '',
-  priceRange: 'all',
-  size: '',
-  color: '',
+// Trạng thái thu gọn/mở rộng từng mục lọc
+const sections = ref({
+  all: true,
+  category: true,
+  brand: true,
+  color: true,
+  size: true,
 })
 
+const toggleSection = (key) => {
+  if (key === 'all') {
+    sections.value.all = !sections.value.all
+  } else {
+    sections.value[key] = !sections.value[key]
+  }
+}
+
+// Biến trạng thái bộ lọc
+const selectedCategories = ref([])
+const selectedBrands = ref([])
+const selectedColors = ref([])
+const selectedSizes = ref([])
+const sortBy = ref('default')
+
+// Map tên màu sang mã Hex
 const colorMap = {
   Đen: '#000000',
   Trắng: '#FFFFFF',
@@ -156,38 +275,118 @@ const colorMap = {
   Đỏ: '#FF0000',
   Xám: '#808080',
   Navy: '#000080',
+  Vàng: '#FFD700',
 }
 
-const getColorName = (variant) => {
-  if (!variant) return ''
-  if (variant.mauSac && typeof variant.mauSac === 'object') {
-    return String(variant.mauSac.tenMau || '').trim()
-  }
-  return String(variant.mauSac || '').trim()
+// Lấy danh sách màu sắc động từ toàn bộ biến thể sản phẩm
+const availableColors = computed(() => {
+  const colorSet = new Set()
+  sanPhams.value.forEach((item) => {
+    ;(item.bienTheSanPhams || []).forEach((v) => {
+      const c = v.mauSac?.tenMau?.trim()
+      if (c) colorSet.add(c)
+    })
+  })
+  return [...colorSet]
+})
+
+// Lấy danh sách kích cỡ động từ toàn bộ biến thể sản phẩm
+const availableSizes = computed(() => {
+  const sizeSet = new Set()
+  sanPhams.value.forEach((item) => {
+    ;(item.bienTheSanPhams || []).forEach((v) => {
+      const s = v.kichCo?.tenKichCo?.trim()
+      if (s) sizeSet.add(s)
+    })
+  })
+  return [...sizeSet]
+})
+
+const toggleColor = (color) => {
+  const idx = selectedColors.value.indexOf(color)
+  if (idx > -1) selectedColors.value.splice(idx, 1)
+  else selectedColors.value.push(color)
 }
 
-const getSizeName = (variant) => {
-  if (!variant) return ''
-  if (variant.kichCo && typeof variant.kichCo === 'object') {
-    return String(variant.kichCo.tenKichCo || '').trim()
-  }
-  return String(variant.kichCo || '').trim()
+const toggleSize = (size) => {
+  const idx = selectedSizes.value.indexOf(size)
+  if (idx > -1) selectedSizes.value.splice(idx, 1)
+  else selectedSizes.value.push(size)
 }
+
+const hasActiveFilters = computed(() => {
+  return (
+    selectedCategories.value.length > 0 ||
+    selectedBrands.value.length > 0 ||
+    selectedColors.value.length > 0 ||
+    selectedSizes.value.length > 0
+  )
+})
+
+const resetFilters = () => {
+  selectedCategories.value = []
+  selectedBrands.value = []
+  selectedColors.value = []
+  selectedSizes.value = []
+  sortBy.value = 'default'
+}
+
+// Logic lọc sản phẩm Realtime
+const filteredProducts = computed(() => {
+  let result = [...sanPhams.value]
+
+  if (selectedCategories.value.length > 0) {
+    result = result.filter((item) => {
+      const catId = item.sanPham?.danhMuc?.id
+      return selectedCategories.value.includes(catId)
+    })
+  }
+
+  if (selectedBrands.value.length > 0) {
+    result = result.filter((item) => {
+      const brandId = item.sanPham?.thuongHieu?.id
+      return selectedBrands.value.includes(brandId)
+    })
+  }
+
+  if (selectedColors.value.length > 0) {
+    result = result.filter((item) => {
+      const variants = item.bienTheSanPhams || []
+      return variants.some((v) => selectedColors.value.includes(v.mauSac?.tenMau?.trim()))
+    })
+  }
+
+  if (selectedSizes.value.length > 0) {
+    result = result.filter((item) => {
+      const variants = item.bienTheSanPhams || []
+      return variants.some((v) => selectedSizes.value.includes(v.kichCo?.tenKichCo?.trim()))
+    })
+  }
+
+  // Sắp xếp
+  if (sortBy.value === 'price-asc') {
+    result.sort((a, b) => getMinPrice(a.bienTheSanPhams) - getMinPrice(b.bienTheSanPhams))
+  } else if (sortBy.value === 'price-desc') {
+    result.sort((a, b) => getMinPrice(b.bienTheSanPhams) - getMinPrice(a.bienTheSanPhams))
+  } else if (sortBy.value === 'name') {
+    result.sort((a, b) => {
+      const nameA = (a.sanPham?.ten || '').toLowerCase()
+      const nameB = (b.sanPham?.ten || '').toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }
+
+  return result
+})
 
 const getUniqueColors = (variants) => {
-  if (!variants) return []
-  return [...new Set(variants.map((v) => getColorName(v)).filter(Boolean))]
-}
-
-const getUniqueSizes = (variants) => {
-  if (!variants) return []
-  return [...new Set(variants.map((v) => getSizeName(v)).filter(Boolean))]
+  if (!variants || !Array.isArray(variants)) return []
+  return [...new Set(variants.map((v) => v.mauSac?.tenMau?.trim()).filter(Boolean))]
 }
 
 const getMinPrice = (variants) => {
   if (!variants || variants.length === 0) return 0
-  const prices = variants.map((v) => Number(v.giaSale ?? v.gia ?? 0)).filter((v) => v > 0)
-  if (prices.length === 0) return 0
+  const prices = variants.map((v) => Number(v.giaSale || v.gia || 0))
   return Math.min(...prices)
 }
 
@@ -197,76 +396,43 @@ const formatPrice = (v) => {
 }
 
 const getAnhChinh = (anhList) => {
-  if (anhList && anhList.length > 0) {
-    const anh = anhList.find((a) => a.laAnhChinh === true) || anhList[0]
-    return anh.urlAnh
+  if (anhList && Array.isArray(anhList) && anhList.length > 0) {
+    const anhChinh = anhList.find((a) => a.laAnhChinh === true || a.laAnhChinh === 1)
+    return (
+      anhChinh?.urlAnh ||
+      anhList[0]?.urlAnh ||
+      'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
+    )
   }
   return 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500'
 }
 
-const allSizes = computed(() => {
-  const set = new Set()
-  sanPhams.value.forEach((item) => {
-    getUniqueSizes(item.bienTheSanPhams).forEach((s) => set.add(s))
-  })
-  return [...set].sort()
-})
-
-const allColors = computed(() => {
-  const set = new Set()
-  sanPhams.value.forEach((item) => {
-    getUniqueColors(item.bienTheSanPhams).forEach((c) => set.add(c))
-  })
-  return [...set].sort()
-})
-
-const normalize = (str) =>
-  String(str || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-
-const filteredSanPhams = computed(() => {
-  const keyword = normalize(filters.value.keyword)
-  const [minPrice, maxPrice] =
-    filters.value.priceRange === 'all'
-      ? [null, null]
-      : filters.value.priceRange.split('-').map(Number)
-
-  return sanPhams.value.filter((item) => {
-    if (keyword && !normalize(item.sanPham.ten).includes(keyword)) {
-      return false
-    }
-
-    if (minPrice !== null) {
-      const price = getMinPrice(item.bienTheSanPhams)
-      if (price < minPrice || price > maxPrice) return false
-    }
-
-    if (filters.value.size) {
-      const sizes = getUniqueSizes(item.bienTheSanPhams)
-      if (!sizes.includes(filters.value.size)) return false
-    }
-
-    if (filters.value.color) {
-      const colors = getUniqueColors(item.bienTheSanPhams)
-      if (!colors.includes(filters.value.color)) return false
-    }
-
-    return true
-  })
-})
-
-const resetFilters = () => {
-  filters.value = { keyword: '', priceRange: 'all', size: '', color: '' }
-}
-
 onMounted(async () => {
   try {
+    // Gọi API lấy toàn bộ sản phẩm đầy đủ (ProductDetailDTO)
     const res = await axios.get('http://localhost:8080/api/public/products')
     sanPhams.value = res.data
+
+    // Tự động quét và gom nhóm danh mục & thương hiệu từ danh sách sản phẩm trả về
+    const catMap = new Map()
+    const brandMap = new Map()
+
+    res.data.forEach((item) => {
+      const sp = item.sanPham
+      if (sp) {
+        if (sp.danhMuc && sp.danhMuc.id) {
+          catMap.set(sp.danhMuc.id, { id: sp.danhMuc.id, ten: sp.danhMuc.ten })
+        }
+        if (sp.thuongHieu && sp.thuongHieu.id) {
+          brandMap.set(sp.thuongHieu.id, { id: sp.thuongHieu.id, ten: sp.thuongHieu.ten })
+        }
+      }
+    })
+
+    categories.value = [...catMap.values()]
+    brands.value = [...brandMap.values()]
   } catch (err) {
-    console.error('Lỗi tải sản phẩm:', err)
+    console.error('Lỗi tải dữ liệu:', err)
   } finally {
     loading.value = false
   }
@@ -274,11 +440,62 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.filter-sidebar {
+  position: sticky;
+  top: 90px;
+  background: #fff;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+/* Lưới hiển thị các ô Size dạng nút bấm */
+.size-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.size-box {
+  background: #f8f9fa;
+  border-color: #dee2e6 !important;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.size-box:hover {
+  border-color: #000 !important;
+}
+.size-box.active {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
+}
+
+/* Kiểu hộp màu sắc */
+.color-pill {
+  background: #f8f9fa;
+  border-color: #dee2e6 !important;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+.color-pill.active {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
+}
+
 .trendfit-product-card {
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .trendfit-product-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
 }
 .img-product-dynamic {
   transition: transform 0.5s ease;
@@ -305,10 +522,5 @@ onMounted(async () => {
 }
 .font-size-10 {
   font-size: 10px;
-}
-.filter-bar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
 }
 </style>

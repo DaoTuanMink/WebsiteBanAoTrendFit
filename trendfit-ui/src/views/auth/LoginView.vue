@@ -96,6 +96,11 @@ const xuLyDangNhap = async () => {
             :disabled="loading"
             required
           />
+          <div class="text-end mt-1">
+            <router-link to="/quen-mat-khau" class="small text-muted text-decoration-underline">
+              Quên mật khẩu?
+            </router-link>
+          </div>
         </div>
         <button
           type="submit"
