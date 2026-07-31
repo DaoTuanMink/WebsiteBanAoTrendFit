@@ -1,42 +1,82 @@
 <template>
   <div class="admin-orders bg-white min-vh-100">
     <div class="container py-5 text-start">
-      <h3 class="fw-bold text-dark mb-2">QUẢN LÝ HÓA ĐƠN & ĐƠN HÀNG</h3>
+      <h3 class="fw-bold text-dark mb-3">QUẢN LÝ HÓA ĐƠN & ĐƠN HÀNG</h3>
 
-      <div class="mb-4">
-        <button class="btn btn-sm btn-dark me-2" @click="fetchOrders('all')">Tất cả đơn</button>
-        <button class="btn btn-sm btn-outline-dark" @click="fetchOrders('null-user')">
-          Đơn vãng lai (null user)
+      <!-- THANH TAB PHÂN LOẠI ĐƠN HÀNG -->
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <button
+          class="btn btn-sm"
+          :class="currentTab === 'all' ? 'btn-dark' : 'btn-outline-dark'"
+          @click="switchTab('all')"
+        >
+          Tất cả đơn ({{ stats.all }})
+        </button>
+
+        <button
+          class="btn btn-sm"
+          :class="currentTab === 'online' ? 'btn-dark' : 'btn-outline-dark'"
+          @click="switchTab('online')"
+        >
+          📦 Đơn Online ({{ stats.online }})
+        </button>
+
+        <button
+          class="btn btn-sm"
+          :class="currentTab === 'pos' ? 'btn-dark' : 'btn-outline-dark'"
+          @click="switchTab('pos')"
+        >
+          🏪 Đơn Tại Quầy / POS ({{ stats.pos }})
+        </button>
+
+        <button
+          class="btn btn-sm"
+          :class="currentTab === 'null-user' ? 'btn-dark' : 'btn-outline-dark'"
+          @click="switchTab('null-user')"
+        >
+          👤 Đơn Khách Vãng Lai (null user) ({{ stats.nullUser }})
         </button>
       </div>
 
-      <div v-if="loading" class="text-center">Đang tải dữ liệu...</div>
+      <div v-if="loading" class="text-center py-5">
+        <div class="spinner-border text-dark" role="status"></div>
+        <div class="text-muted mt-2">Đang tải dữ liệu đơn hàng...</div>
+      </div>
 
-      <div class="table-responsive" v-else>
-        <table class="table table-bordered align-middle text-center">
+      <div class="table-responsive shadow-sm rounded-3" v-else>
+        <table class="table table-bordered align-middle text-center mb-0">
           <thead class="table-dark">
             <tr>
               <th>Mã Đơn</th>
               <th>Khách Hàng</th>
+              <th>Sản Phẩm</th>
               <th>Tổng Tiền</th>
               <th>Trạng Thái</th>
               <th>Hành Động</th>
-              <th>Lịch Sử Duyệt</th>
+              <th>Lịch Sử</th>
               <th>In Ấn</th>
             </tr>
           </thead>
           <tbody class="text-start">
-            <tr v-for="item in danhSachDonHang" :key="item.donHang.id">
+            <tr v-if="filteredOrders.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">
+                Không có đơn hàng nào trong mục này.
+              </td>
+            </tr>
+            <tr v-for="item in filteredOrders" :key="item.donHang.id">
               <td>
-                <strong>#{{ item.donHang.id }}</strong
-                ><br />
+                <strong>#{{ item.donHang.id }}</strong>
+                <span v-if="isPosOrder(item)" class="badge bg-primary ms-1">POS</span>
+                <br />
                 <small class="text-muted">{{ formatDate(item.donHang.ngayDat) }}</small>
               </td>
               <td>
                 <strong>{{ item.donHang.tenNguoiNhan }}</strong
                 ><br />
                 <i class="bi bi-telephone"></i> {{ item.donHang.soDienThoaiGiao }}<br />
-                <small>{{ item.donHang.diaChiGiao }}</small>
+                <small class="text-secondary">{{
+                  item.donHang.diaChiGiao || 'Mua tại quầy'
+                }}</small>
               </td>
               <td>
                 <ul class="list-unstyled mb-0 small">
@@ -47,9 +87,7 @@
               </td>
               <td class="text-end">
                 <div class="text-danger fw-bold">{{ formatPrice(item.donHang.tongThanhToan) }}</div>
-                <small class="text-muted"
-                  >Phí ship: {{ formatPrice(item.donHang.phiVanChuyen) }}</small
-                >
+                <small class="text-muted">Ship: {{ formatPrice(item.donHang.phiVanChuyen) }}</small>
               </td>
               <td>
                 <span class="badge w-100 mb-1" :class="getStatusClass(item.donHang.trangThai)">
@@ -58,7 +96,9 @@
                 <select
                   v-if="getAvailableStatuses(item.donHang.trangThai).length > 0"
                   class="form-select form-select-sm mt-2"
-                  @change="capNhatTrangThai(item.donHang.id, item.donHang.trangThai, $event.target.value)"
+                  @change="
+                    capNhatTrangThai(item.donHang.id, item.donHang.trangThai, $event.target.value)
+                  "
                   :value="item.donHang.trangThai"
                 >
                   <option :value="item.donHang.trangThai">-- Giữ nguyên --</option>
@@ -70,20 +110,20 @@
                     {{ getStatusLabel(status) }}
                   </option>
                 </select>
-                <div v-else class="text-muted small mt-2">
-                  <em>Không thể chuyển trạng thái</em>
+                <div v-else class="text-muted small text-center mt-2">
+                  <em>Cố định</em>
                 </div>
               </td>
-              <td>
+              <td class="text-center">
                 <button
-                  class="btn btn-sm btn-outline-secondary"
+                  class="btn btn-sm btn-outline-secondary text-nowrap"
                   @click="xemLichSu(item.donHang.id)"
                 >
                   Xem lịch sử
                 </button>
               </td>
-              <td>
-                <button class="btn btn-sm btn-outline-dark" @click="printInvoice(item)">
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-dark text-nowrap" @click="printInvoice(item)">
                   In Hóa Đơn
                 </button>
               </td>
@@ -93,7 +133,7 @@
       </div>
     </div>
 
-    <!-- ===================== MODAL LỊCH SỬ DUYỆT ĐƠN HÀNG (Thành) ===================== -->
+    <!-- ===================== MODAL LỊCH SỬ DUYỆT ĐƠN HÀNG ===================== -->
     <div v-if="showHistoryModal" class="history-overlay" @click.self="showHistoryModal = false">
       <div class="history-modal bg-white rounded-3 shadow p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -130,31 +170,63 @@
         </ul>
       </div>
     </div>
-    <!-- =================================================================================== -->
   </div>
 </template>
 
 <script setup>
-// Trang quản lý Đơn hàng — CHỈ dành cho ADMIN (nằm trong ADMIN_ONLY_PATHS của
-// AuthInterceptor, và route "/admin/orders" cũng có meta.requiresAdmin=true).
-// Dùng chung helper getAuthHeaders() thay vì hardcode 'ADMIN' để nhất quán
-// với các trang admin khác - nếu sau này nới quyền cho EMPLOYEE thì chỉ cần
-// sửa 1 chỗ (AuthInterceptor + router) mà không phải sửa lại từng trang.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import print from 'print-js'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
 const danhSachDonHang = ref([])
 const loading = ref(true)
+const currentTab = ref('all') // 'all', 'online', 'pos', 'null-user'
 
-// State cho modal "Lịch sử duyệt đơn hàng" (yêu cầu Thành)
+// State cho modal lịch sử
 const showHistoryModal = ref(false)
 const historyOrderId = ref(null)
 const orderHistory = ref([])
 const loadingHistory = ref(false)
 
-// Lấy dữ liệu với tham số lọc
+// Thống kê số lượng đơn theo từng tab
+const stats = computed(() => {
+  const all = danhSachDonHang.value.length
+  const pos = danhSachDonHang.value.filter((item) => isPosOrder(item)).length
+  const online = all - pos
+  // Đơn vãng lai (khách vãng lai tính trên danh sách hoặc gọi riêng API)
+  const nullUser = danhSachDonHang.value.filter((item) => !item.donHang.nguoiDung).length
+  return { all, online, pos, nullUser }
+})
+
+// Kiểm tra xem có phải đơn POS (tại quầy) hay không
+const isPosOrder = (item) => {
+  const address = item.donHang.diaChiGiao || ''
+  return address.toLowerCase().includes('quầy') || address.toLowerCase().includes('pos')
+}
+
+// Lọc danh sách hiển thị theo tab đang chọn ở Front-end hoặc gọi API vãng lai
+const filteredOrders = computed(() => {
+  if (currentTab.value === 'pos') {
+    return danhSachDonHang.value.filter((item) => isPosOrder(item))
+  }
+  if (currentTab.value === 'online') {
+    return danhSachDonHang.value.filter((item) => !isPosOrder(item))
+  }
+  return danhSachDonHang.value
+})
+
+// Chuyển tab và gọi API tương ứng
+const switchTab = (tab) => {
+  currentTab.value = tab
+  if (tab === 'null-user') {
+    fetchOrders('null-user')
+  } else {
+    fetchOrders('all')
+  }
+}
+
+// Lấy dữ liệu từ Backend
 const fetchOrders = async (type = 'all') => {
   loading.value = true
   try {
@@ -164,7 +236,6 @@ const fetchOrders = async (type = 'all') => {
     }
 
     const res = await axios.get(url, { headers: getAuthHeaders() })
-
     danhSachDonHang.value = res.data
   } catch (err) {
     console.error('Lỗi tải đơn hàng:', err)
@@ -173,49 +244,42 @@ const fetchOrders = async (type = 'all') => {
   }
 }
 
-// Xác định những trạng thái được phép chuyển tới từ trạng thái hiện tại
+// Trạng thái đơn hàng hợp lệ
 const getAvailableStatuses = (currentStatus) => {
   const transitions = {
     CHO_XAC_NHAN: ['DA_XAC_NHAN', 'DA_HUY'],
     DA_XAC_NHAN: ['DANG_VAN_CHUYEN', 'DA_HUY'],
-    DANG_VAN_CHUYEN: ['DA_THANH_CONG'], // Không được hủy khi đang giao
-    DA_THANH_CONG: [], // Trạng thái cuối, không chuyển được
-    DA_HUY: [], // Trạng thái cuối, không chuyển được
+    DANG_VAN_CHUYEN: ['DA_THANH_CONG'],
+    DA_THANH_CONG: [],
+    DA_HUY: [],
   }
   return transitions[currentStatus] || []
 }
 
 const capNhatTrangThai = async (id, currentStatus, newStatus) => {
-  // Kiểm tra xem trạng thái mới có hợp lệ không
-  if (newStatus === currentStatus) {
-    return // Không thay đổi
-  }
+  if (newStatus === currentStatus) return
 
   const available = getAvailableStatuses(currentStatus)
   if (!available.includes(newStatus)) {
-    alert(`❌ Không thể chuyển từ "${getStatusLabel(currentStatus)}" sang "${getStatusLabel(newStatus)}"`)
+    alert(`❌ Không thể chuyển trạng thái này!`)
     return
   }
 
-  const confirmMsg = `Chuyển từ "${getStatusLabel(currentStatus)}" sang "${getStatusLabel(newStatus)}"?`
-  if (!confirm(confirmMsg)) return
+  if (!confirm(`Xác nhận đổi trạng thái đơn hàng #${id}?`)) return
 
   try {
-    // getAuthHeaders() đã gồm cả "NhanVien-ID" -> backend dùng để ghi lại
-    // "ai đã duyệt/thay đổi trạng thái đơn hàng" (xem OrderService.capNhatTrangThaiDonHang)
     await axios.put(
       `http://localhost:8080/api/admin/orders/${id}/status?status=${newStatus}`,
       {},
       { headers: getAuthHeaders() },
     )
-    alert('✅ Cập nhật thành công!')
-    fetchOrders()
+    alert('✅ Cập nhật trạng thái thành công!')
+    fetchOrders(currentTab.value === 'null-user' ? 'null-user' : 'all')
   } catch (err) {
     alert('❌ Lỗi cập nhật: ' + (err.response?.data || err.message))
   }
 }
 
-// Mở modal và tải lịch sử duyệt/thay đổi trạng thái của 1 đơn hàng
 const xemLichSu = async (id) => {
   historyOrderId.value = id
   showHistoryModal.value = true
@@ -228,8 +292,7 @@ const xemLichSu = async (id) => {
     })
     orderHistory.value = res.data
   } catch (err) {
-    console.error('Lỗi tải lịch sử đơn hàng:', err)
-    alert('❌ Không thể tải lịch sử đơn hàng: ' + (err.response?.data || err.message))
+    console.error('Lỗi tải lịch sử:', err)
   } finally {
     loadingHistory.value = false
   }
@@ -265,10 +328,10 @@ const printInvoice = (item) => {
       (d) => `
     <tr>
       <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.tenSanPham}</td>
-      <td style="text-align: center;">${d.kichCoSize} / ${d.mauSac}</td>
-      <td style="text-align: center;">${d.soLuong}</td>
-      <td style="text-align: right;">${formatPrice(d.donGia)}</td>
-      <td style="text-align: right;">${formatPrice(d.soLuong * d.donGia)}</td>
+      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.kichCoSize} / ${d.mauSac}</td>
+      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.soLuong}</td>
+      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatPrice(d.donGia)}</td>
+      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatPrice(d.soLuong * d.donGia)}</td>
     </tr>
   `,
     )
@@ -276,13 +339,13 @@ const printInvoice = (item) => {
 
   const printContent = `
     <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h1 style="text-align: center;">HÓA ĐƠN ĐẶT HÀNG</h1>
+      <h1 style="text-align: center;">HÓA ĐƠN BÁN HÀNG</h1>
       <hr>
       <div style="display: flex; justify-content: space-between;">
         <div>
           <p><strong>Khách hàng:</strong> ${order.tenNguoiNhan}</p>
           <p><strong>SĐT:</strong> ${order.soDienThoaiGiao}</p>
-          <p><strong>Địa chỉ:</strong> ${order.diaChiGiao}</p>
+          <p><strong>Địa chỉ:</strong> ${order.diaChiGiao || 'Mua tại quầy'}</p>
         </div>
         <div>
           <p><strong>Mã đơn:</strong> #${order.id}</p>
@@ -308,17 +371,17 @@ const printInvoice = (item) => {
 }
 
 const formatPrice = (v) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0)
+
 const formatDate = (dateString) => {
   if (!dateString) return 'Chưa có ngày'
-  const options = {
+  return new Date(dateString).toLocaleDateString('vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }
-  return new Date(dateString).toLocaleDateString('vi-VN', options)
+  })
 }
 
 onMounted(() => fetchOrders('all'))
