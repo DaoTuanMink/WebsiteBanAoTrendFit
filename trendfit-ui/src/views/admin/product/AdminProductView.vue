@@ -67,6 +67,7 @@
               <th>Size</th>
               <th>Màu</th>
               <th>Số lượng tồn</th>
+              <th>Giá nhập</th>
               <th>Giá gốc</th>
 
               <th></th>
@@ -95,6 +96,15 @@
                   v-model.number="v.soLuongTon"
                   type="number"
                   class="form-control form-control-sm"
+                />
+              </td>
+              <td>
+                <input
+                  v-model.number="v.giaNhap"
+                  type="number"
+                  class="form-control form-control-sm"
+                  placeholder="Giá vốn nhập hàng"
+                  title="Dùng để tính lợi nhuận gộp ở trang Thống kê doanh số. Bỏ trống = tính lãi sai (luôn ra 100%)!"
                 />
               </td>
               <td>
@@ -280,6 +290,7 @@ const themBienTheMoi = () => {
     kichCo: null,
     mauSac: null,
     soLuongTon: 0,
+    giaNhap: 0,
     gia: 0,
   })
 }
