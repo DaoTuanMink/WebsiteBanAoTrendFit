@@ -17,6 +17,11 @@ public class OrderRequestDTO {
 
     private String diaChi;
 
+    // Tỉnh/thành khách CHỌN (không gõ tay) ở combobox trên FE - dùng để
+    // server tự tra ra vùng miền và tính phí ship, xem
+    // OrderService.tinhPhiShipGoiY(). Chỉ áp dụng cho đơn ĐẶT ONLINE.
+    private String tinhThanh;
+
     private String phuongThucThanhToan;
 
     private BigDecimal tongTienHang;
