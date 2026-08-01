@@ -26,6 +26,7 @@ import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class OrderService {
@@ -112,10 +113,10 @@ public class OrderService {
             }
         }
 
-        // Phí vận chuyển do server tự tính theo địa chỉ + giá trị đơn hàng
-        // (xem tinhPhiShipGoiY) - không dùng dto.getPhiVanChuyen() để tránh
-        // bị khách tự sửa xuống 0 hoặc số bất kỳ qua DevTools.
-        BigDecimal phiShipThat = tinhPhiShipGoiY(dto.getDiaChi(), tongTienHangThat);
+        // Phí vận chuyển do server tự tính theo VÙNG MIỀN khách chọn + giá
+        // trị đơn hàng (xem tinhPhiShipGoiY) - không dùng dto.getPhiVanChuyen()
+        // để tránh bị khách tự sửa xuống 0 hoặc số bất kỳ qua DevTools.
+        BigDecimal phiShipThat = tinhPhiShipGoiY(dto.getTinhThanh(), tongTienHangThat);
 
         BigDecimal tongThanhToanThat = tongTienHangThat.subtract(tienGiamThat).add(phiShipThat);
         if (tongThanhToanThat.compareTo(BigDecimal.ZERO) < 0) {
@@ -179,31 +180,73 @@ public class OrderService {
     }
 
     /**
-     * Tính GỢI Ý phí vận chuyển dựa trên địa chỉ + giá trị đơn hàng - ĐÂY LÀ
-     * NGUỒN TÍNH DUY NHẤT ĐÁNG TIN CẬY (server tự quyết định, không phụ
-     * thuộc số liệu FE gửi lên). Cùng logic với hàm goiYPhiShip() ở
+     * Bảng tra TỈNH/THÀNH -> VÙNG MIỀN (BAC/TRUNG/NAM), dùng KHOÁ ĐÃ CHUẨN HÓA
+     * (chữ thường, không dấu) để so khớp không phụ thuộc cách viết hoa/dấu
+     * câu FE gửi lên. Danh sách 34 tỉnh/thành sau sáp nhập (hiệu lực từ
+     * 01/07/2025) - PHẢI khớp với danhSachTinhThanh ở CheckoutView.vue, sửa
+     * ở đâu phải sửa đồng bộ cả 2 nơi.
+     */
+    private static final Map<String, String> TINH_MIEN = Map.ofEntries(
+            // Miền Bắc
+            Map.entry("tuyen quang", "BAC"), Map.entry("cao bang", "BAC"),
+            Map.entry("lai chau", "BAC"), Map.entry("lao cai", "BAC"),
+            Map.entry("thai nguyen", "BAC"), Map.entry("dien bien", "BAC"),
+            Map.entry("lang son", "BAC"), Map.entry("son la", "BAC"),
+            Map.entry("phu tho", "BAC"), Map.entry("tp. ha noi", "BAC"),
+            Map.entry("tp. hai phong", "BAC"), Map.entry("bac ninh", "BAC"),
+            Map.entry("quang ninh", "BAC"), Map.entry("hung yen", "BAC"),
+            Map.entry("ninh binh", "BAC"),
+            // Miền Trung
+            Map.entry("thanh hoa", "TRUNG"), Map.entry("nghe an", "TRUNG"),
+            Map.entry("ha tinh", "TRUNG"), Map.entry("quang tri", "TRUNG"),
+            Map.entry("tp. hue", "TRUNG"), Map.entry("tp. da nang", "TRUNG"),
+            Map.entry("quang ngai", "TRUNG"), Map.entry("gia lai", "TRUNG"),
+            Map.entry("dak lak", "TRUNG"), Map.entry("khanh hoa", "TRUNG"),
+            Map.entry("lam dong", "TRUNG"),
+            // Miền Nam
+            Map.entry("dong nai", "NAM"), Map.entry("tay ninh", "NAM"),
+            Map.entry("tp. ho chi minh", "NAM"), Map.entry("dong thap", "NAM"),
+            Map.entry("an giang", "NAM"), Map.entry("vinh long", "NAM"),
+            Map.entry("tp. can tho", "NAM"), Map.entry("ca mau", "NAM")
+    );
+
+    private static final Map<String, BigDecimal> PHI_SHIP_THEO_VUNG = Map.of(
+            "BAC", BigDecimal.valueOf(20000),
+            "TRUNG", BigDecimal.valueOf(30000),
+            "NAM", BigDecimal.valueOf(35000)
+    );
+
+    private String boChuanHoaKhongDau(String s) {
+        if (s == null) return "";
+        String khongDau = Normalizer.normalize(s.toLowerCase().trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return khongDau.replaceAll("\\s+", " ");
+    }
+
+    /**
+     * Tính GỢI Ý phí vận chuyển dựa trên TỈNH/THÀNH khách chọn (server tự tra
+     * ra vùng miền qua bảng TINH_MIEN, KHÔNG tin trực tiếp bất kỳ giá trị
+     * vùng miền nào nếu FE có gửi kèm) + giá trị đơn hàng - ĐÂY LÀ NGUỒN TÍNH
+     * DUY NHẤT ĐÁNG TIN CẬY. Cùng logic với hàm goiYPhiShip() ở
      * CheckoutView.vue để khách nhìn thấy đúng số tiền sẽ áp dụng thật -
      * NẾU SAU NÀY SỬA QUY TẮC TÍNH PHÍ SHIP, PHẢI SỬA ĐỒNG BỘ CẢ 2 NƠI.
      */
-    private BigDecimal tinhPhiShipGoiY(String diaChi, BigDecimal tongTienHang) {
+    private BigDecimal tinhPhiShipGoiY(String tinhThanh, BigDecimal tongTienHang) {
         BigDecimal nguongMienPhiShip = BigDecimal.valueOf(500000);
         if (tongTienHang.compareTo(nguongMienPhiShip) >= 0) {
             return BigDecimal.ZERO;
         }
-        if (diaChi == null || diaChi.isBlank()) {
+        if (tinhThanh == null || tinhThanh.isBlank()) {
             return BigDecimal.ZERO;
         }
 
-        String khongDau = Normalizer.normalize(diaChi.toLowerCase(), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
-
-        String[] noiThanh = {"ha noi", "hcm", "ho chi minh", "tp hcm", "sai gon", "tphcm"};
-        for (String kw : noiThanh) {
-            if (khongDau.contains(kw)) {
-                return BigDecimal.valueOf(20000);
-            }
+        String mien = TINH_MIEN.get(boChuanHoaKhongDau(tinhThanh));
+        if (mien == null) {
+            // Tỉnh/thành lạ (không có trong danh sách 34 tỉnh) -> áp mức phí
+            // xa nhất để an toàn, tránh bị lách bằng chuỗi tùy ý.
+            return BigDecimal.valueOf(35000);
         }
-        return BigDecimal.valueOf(35000);
+        return PHI_SHIP_THEO_VUNG.getOrDefault(mien, BigDecimal.valueOf(35000));
     }
 
     @Transactional

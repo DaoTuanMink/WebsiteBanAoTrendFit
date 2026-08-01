@@ -774,9 +774,9 @@ const cashReceived = ref(0)
 //
 // ⚠️ THAY 3 GIÁ TRỊ DƯỚI ĐÂY BẰNG THÔNG TIN TÀI KHOẢN NGÂN HÀNG THẬT CỦA CỬA
 // HÀNG trước khi dùng trong thực tế (hiện đang là giá trị mẫu để demo):
-const BANK_CODE = 'VCB' // Mã ngân hàng viết tắt theo chuẩn VietQR (VD: VCB, TCB, MB, ACB, BIDV...)
-const BANK_ACCOUNT_NO = '0123456789' // Số tài khoản nhận tiền của cửa hàng
-const BANK_ACCOUNT_NAME = 'CUA HANG TRENDFIT' // Tên chủ tài khoản, KHÔNG dấu
+const BANK_CODE = 'MB' // Mã ngân hàng viết tắt theo chuẩn VietQR (VD: VCB, TCB, MB, ACB, BIDV...)
+const BANK_ACCOUNT_NO = '0563663591' // Số tài khoản nhận tiền của cửa hàng
+const BANK_ACCOUNT_NAME = 'Phan The Bac' // Tên chủ tài khoản, KHÔNG dấu
 
 // Nội dung chuyển khoản: giúp đối soát - nhìn vào lịch sử biến động số dư,
 // nhân viên biết ngay giao dịch nào tương ứng với khách nào.
