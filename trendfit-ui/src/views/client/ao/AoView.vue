@@ -7,15 +7,16 @@
         <!-- CỘT BÊN TRÁI: BỘ LỌC CHUẨN GIAO DIỆN -->
         <div class="col-lg-3 mb-4">
           <div class="filter-sidebar border rounded-3 p-3 bg-white shadow-sm">
-            <!-- TIÊU ĐỀ BỘ LỌC -->
+            <!-- TIÊU ĐỀ TỔNG: BỘ LỌC -->
             <div
               class="filter-header d-flex justify-content-between align-items-center py-2 border-bottom cursor-pointer"
               @click="toggleSection('all')"
             >
               <span class="fw-bold text-uppercase fs-6">Bộ lọc</span>
-              <i class="ri-arrow-up-s-line fs-5" :class="{ 'rotate-180': !sections.all }"></i>
+              <i :class="sections.all ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
             </div>
 
+            <!-- Khối này sẽ ẩn/hiện toàn bộ danh sách bên dưới khi bấm vào chữ BỘ LỌC -->
             <div v-show="sections.all">
               <!-- 1. Danh mục -->
               <div class="filter-section border-bottom py-3">
@@ -24,24 +25,19 @@
                   @click="toggleSection('category')"
                 >
                   <span class="fw-semibold text-dark">Danh mục</span>
-                  <i :class="sections.category ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  <i :class="sections.category ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
                 </div>
-                <!-- Đảm bảo toàn bộ danh sách nằm gọn trong v-show này -->
-                <div v-show="sections.category" class="mt-3 ps-1">
-                  <div v-for="cat in categories" :key="cat.id" class="form-check mb-2">
-                    <input
-                      type="checkbox"
-                      class="form-check-input custom-checkbox"
-                      :id="'cat-' + cat.id"
-                      :value="cat.id"
-                      v-model="selectedCategories"
-                    />
-                    <label
-                      class="form-check-label cursor-pointer text-muted small"
-                      :for="'cat-' + cat.id"
+                <div v-show="sections.category" class="mt-3">
+                  <div class="filter-pill-grid">
+                    <div
+                      v-for="cat in categories"
+                      :key="cat.id"
+                      @click="toggleCategory(cat.id)"
+                      class="filter-pill-box text-center py-2 px-3 border rounded cursor-pointer small"
+                      :class="{ active: selectedCategories.includes(cat.id) }"
                     >
                       {{ cat.ten }}
-                    </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -53,58 +49,64 @@
                   @click="toggleSection('brand')"
                 >
                   <span class="fw-semibold text-dark">Thương hiệu</span>
-                  <i :class="sections.brand ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  <i :class="sections.brand ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
                 </div>
-                <div v-show="sections.brand" class="mt-3 ps-1">
-                  <div v-for="brand in brands" :key="brand.id" class="form-check mb-2">
-                    <input
-                      type="checkbox"
-                      class="form-check-input custom-checkbox"
-                      :id="'brand-' + brand.id"
-                      :value="brand.id"
-                      v-model="selectedBrands"
-                    />
-                    <label
-                      class="form-check-label cursor-pointer text-muted small"
-                      :for="'brand-' + brand.id"
+                <div v-show="sections.brand" class="mt-3">
+                  <div class="filter-pill-grid">
+                    <div
+                      v-for="brand in brands"
+                      :key="brand.id"
+                      @click="toggleBrand(brand.id)"
+                      class="filter-pill-box text-center py-2 px-3 border rounded cursor-pointer small"
+                      :class="{ active: selectedBrands.includes(brand.id) }"
                     >
                       {{ brand.ten }}
-                    </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 3. Màu sắc -->
+              <!-- 3. Màu sắc (Đã bổ sung đủ cấu trúc 4 thẻ div bọc chuẩn chỉnh) -->
               <div class="filter-section border-bottom py-3">
                 <div
                   class="d-flex justify-content-between align-items-center cursor-pointer"
                   @click="toggleSection('color')"
                 >
                   <span class="fw-semibold text-dark">Màu sắc</span>
-                  <i :class="sections.color ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  <i :class="sections.color ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
                 </div>
-                <!-- Các nút màu sắc phải nằm hoàn toàn bên trong khối v-show này -->
-                <div v-show="sections.color" class="mt-3 d-flex flex-wrap gap-2">
-                  <div
-                    v-for="color in availableColors"
-                    :key="color"
-                    @click="toggleColor(color)"
-                    class="color-pill px-3 py-1 border rounded-pill small cursor-pointer"
-                    :class="{ active: selectedColors.includes(color) }"
-                  >
-                    {{ color }}
+                <div v-show="sections.color" class="mt-3">
+                  <div class="d-flex flex-wrap gap-2">
+                    <div
+                      v-for="colorObj in availableColors"
+                      :key="colorObj.tenMau"
+                      @click="toggleColor(colorObj.tenMau)"
+                      class="color-pill px-3 py-1 border rounded-pill small cursor-pointer d-flex align-items-center gap-2"
+                      :class="{ active: selectedColors.includes(colorObj.tenMau) }"
+                    >
+                      <span
+                        class="rounded-circle border"
+                        :style="{
+                          backgroundColor: colorObj.maMau || '#ccc',
+                          width: '12px',
+                          height: '12px',
+                          display: 'inline-block',
+                        }"
+                      ></span>
+                      {{ colorObj.tenMau }}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 4. Kích cỡ (Dạng lưới ô vuông) -->
+              <!-- 4. Kích cỡ -->
               <div class="filter-section py-3">
                 <div
                   class="d-flex justify-content-between align-items-center cursor-pointer"
                   @click="toggleSection('size')"
                 >
                   <span class="fw-semibold text-dark">Kích cỡ</span>
-                  <i :class="sections.size ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  <i :class="sections.size ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
                 </div>
                 <div v-show="sections.size" class="mt-3">
                   <div class="size-grid">
@@ -197,12 +199,12 @@
 
                   <div class="d-flex gap-1 mb-2">
                     <span
-                      v-for="(color, idx) in getUniqueColors(item.bienTheSanPhams)"
+                      v-for="(colorInfo, idx) in getUniqueColorsWithHex(item.bienTheSanPhams)"
                       :key="idx"
-                      :style="{ backgroundColor: colorMap[color] || '#ccc' }"
+                      :style="{ backgroundColor: colorInfo.maMau || '#ccc' }"
                       class="rounded-circle border"
                       style="width: 14px; height: 14px"
-                      :title="color"
+                      :title="colorInfo.tenMau"
                     ></span>
                   </div>
 
@@ -260,6 +262,19 @@ const toggleSection = (key) => {
   }
 }
 
+// Thêm các hàm toggle cho danh mục và thương hiệu
+const toggleCategory = (catId) => {
+  const idx = selectedCategories.value.indexOf(catId)
+  if (idx > -1) selectedCategories.value.splice(idx, 1)
+  else selectedCategories.value.push(catId)
+}
+
+const toggleBrand = (brandId) => {
+  const idx = selectedBrands.value.indexOf(brandId)
+  if (idx > -1) selectedBrands.value.splice(idx, 1)
+  else selectedBrands.value.push(brandId)
+}
+
 // Biến trạng thái bộ lọc
 const selectedCategories = ref([])
 const selectedBrands = ref([])
@@ -278,16 +293,24 @@ const colorMap = {
   Vàng: '#FFD700',
 }
 
-// Lấy danh sách màu sắc động từ toàn bộ biến thể sản phẩm
+// Thay vì dùng mảng tĩnh colorMap, ta quét trực tiếp object màu từ biến thể
 const availableColors = computed(() => {
-  const colorSet = new Set()
+  const colorMap = new Map()
   sanPhams.value.forEach((item) => {
     ;(item.bienTheSanPhams || []).forEach((v) => {
-      const c = v.mauSac?.tenMau?.trim()
-      if (c) colorSet.add(c)
+      const mau = v.mauSac
+      if (mau && mau.tenMau) {
+        const tenTrim = mau.tenMau.trim()
+        if (!colorMap.has(tenTrim)) {
+          colorMap.set(tenTrim, {
+            tenMau: tenTrim,
+            maMau: mau.maMau || '#cccccc',
+          })
+        }
+      }
     })
   })
-  return [...colorSet]
+  return Array.from(colorMap.values())
 })
 
 // Lấy danh sách kích cỡ động từ toàn bộ biến thể sản phẩm
@@ -379,9 +402,22 @@ const filteredProducts = computed(() => {
   return result
 })
 
-const getUniqueColors = (variants) => {
+// Hàm lấy danh sách màu kèm mã hex để hiển thị lên card sản phẩm
+const getUniqueColorsWithHex = (variants) => {
   if (!variants || !Array.isArray(variants)) return []
-  return [...new Set(variants.map((v) => v.mauSac?.tenMau?.trim()).filter(Boolean))]
+  const map = new Map()
+  variants.forEach((v) => {
+    if (v.mauSac && v.mauSac.tenMau) {
+      const name = v.mauSac.tenMau.trim()
+      if (!map.has(name)) {
+        map.set(name, {
+          tenMau: name,
+          maMau: v.mauSac.maMau || '#ccc',
+        })
+      }
+    }
+  })
+  return Array.from(map.values())
 }
 
 const getMinPrice = (variants) => {
@@ -440,6 +476,34 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Lưới ô bấm cho Danh mục và Thương hiệu */
+.filter-pill-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.filter-pill-box {
+  background: #f8f9fa;
+  border-color: #dee2e6 !important;
+  text-align: left !important;
+  transition: all 0.2s ease;
+}
+
+.filter-pill-box:hover {
+  border-color: #000 !important;
+  background-color: #f1f3f5;
+}
+
+.filter-pill-box.active {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #000 !important;
+}
+
 .filter-sidebar {
   position: sticky;
   top: 90px;

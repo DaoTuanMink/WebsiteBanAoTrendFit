@@ -14,6 +14,7 @@
           <label class="form-label">Tên sản phẩm</label>
           <input v-model="formData.sanPham.ten" class="form-control" required />
         </div>
+
         <div class="col-md-3">
           <label class="form-label">Danh mục</label>
           <select v-model="formData.sanPham.danhMuc" class="form-select">
@@ -52,76 +53,121 @@
           <input v-model.number="formData.sanPham.namRaMat" type="number" class="form-control" />
         </div>
       </div>
+      <div class="col-md-3">
+        <label class="form-label">Trạng thái sản phẩm</label>
+        <button
+          type="button"
+          class="btn btn-sm w-100 mt-1"
+          :class="formData.sanPham.dangBan !== false ? 'btn-success' : 'btn-secondary'"
+          @click="formData.sanPham.dangBan = formData.sanPham.dangBan === false ? true : false"
+        >
+          {{ formData.sanPham.dangBan !== false ? '🟢 Đang bán' : '⚪ Ngừng bán' }}
+        </button>
+      </div>
 
       <div class="mt-3">
         <label class="form-label">Mô tả chi tiết</label>
         <textarea v-model="formData.sanPham.moTa" class="form-control" rows="3"></textarea>
       </div>
 
-      <!-- Biến thể -->
+      <!-- Biến thể sản phẩm (Đã bổ sung SKU, Giá sale, Trạng thái) -->
       <div class="mt-4">
-        <h6>Biến thể (Size / Màu)</h6>
-        <table class="table table-sm table-bordered">
-          <thead class="table-light">
-            <tr>
-              <th>Size</th>
-              <th>Màu</th>
-              <th>Số lượng tồn</th>
-              <th>Giá nhập</th>
-              <th>Giá gốc</th>
-
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(v, idx) in formData.bienTheSanPhams" :key="idx">
-              <td>
-                <select v-model="v.kichCo" class="form-select form-select-sm">
-                  <option :value="null">-- Size --</option>
-                  <option v-for="kc in metadata.kichCos" :key="kc.id" :value="kc">
-                    {{ kc.tenKichCo }}
-                  </option>
-                </select>
-              </td>
-              <td>
-                <select v-model="v.mauSac" class="form-select form-select-sm">
-                  <option :value="null">-- Màu --</option>
-                  <option v-for="ms in metadata.mauSacs" :key="ms.id" :value="ms">
-                    {{ ms.tenMau }}
-                  </option>
-                </select>
-              </td>
-              <td>
-                <input
-                  v-model.number="v.soLuongTon"
-                  type="number"
-                  class="form-control form-control-sm"
-                />
-              </td>
-              <td>
-                <input
-                  v-model.number="v.giaNhap"
-                  type="number"
-                  class="form-control form-control-sm"
-                  placeholder="Giá vốn nhập hàng"
-                  title="Dùng để tính lợi nhuận gộp ở trang Thống kê doanh số. Bỏ trống = tính lãi sai (luôn ra 100%)!"
-                />
-              </td>
-              <td>
-                <input v-model.number="v.gia" type="number" class="form-control form-control-sm" />
-              </td>
-
-              <td>
-                <button
-                  @click="formData.bienTheSanPhams.splice(idx, 1)"
-                  class="btn btn-danger btn-sm"
-                >
-                  x
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <h6>Biến thể (Size / Màu / SKU / Giá / Trạng thái)</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light text-center">
+              <tr>
+                <th style="width: 12%">Size</th>
+                <th style="width: 12%">Màu</th>
+                <th style="width: 12%">Mã SKU</th>
+                <th style="width: 10%">Tồn kho</th>
+                <th style="width: 11%">Giá nhập</th>
+                <th style="width: 11%">Giá gốc</th>
+                <th style="width: 11%">Giá sale</th>
+                <th style="width: 11%">Trạng thái</th>
+                <th style="width: 5%"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(v, idx) in formData.bienTheSanPhams" :key="idx">
+                <td>
+                  <select v-model="v.kichCo" class="form-select form-select-sm">
+                    <option :value="null">-- Size --</option>
+                    <option v-for="kc in metadata.kichCos" :key="kc.id" :value="kc">
+                      {{ kc.tenKichCo }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <select v-model="v.mauSac" class="form-select form-select-sm">
+                    <option :value="null">-- Màu --</option>
+                    <option v-for="ms in metadata.mauSacs" :key="ms.id" :value="ms">
+                      {{ ms.tenMau }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    v-model="v.maSku"
+                    type="text"
+                    class="form-control form-control-sm"
+                    placeholder="VD: SKU-SP-M-XANH"
+                  />
+                </td>
+                <td>
+                  <input
+                    v-model.number="v.soLuongTon"
+                    type="number"
+                    class="form-control form-control-sm text-center"
+                  />
+                </td>
+                <td>
+                  <input
+                    v-model.number="v.giaNhap"
+                    type="number"
+                    class="form-control form-control-sm"
+                    placeholder="Giá vốn"
+                  />
+                </td>
+                <td>
+                  <input
+                    v-model.number="v.gia"
+                    type="number"
+                    class="form-control form-control-sm"
+                    placeholder="Giá bán"
+                  />
+                </td>
+                <td>
+                  <input
+                    v-model.number="v.giaSale"
+                    type="number"
+                    class="form-control form-control-sm"
+                    placeholder="Giá khuyến mãi"
+                  />
+                </td>
+                <td class="text-center">
+                  <!-- Nút chuyển đổi trạng thái Đang bán / Ngừng bán -->
+                  <button
+                    type="button"
+                    class="btn btn-sm w-100"
+                    :class="v.dangBan ? 'btn-success' : 'btn-secondary'"
+                    @click="v.dangBan = !v.dangBan"
+                  >
+                    {{ v.dangBan ? 'Đang bán' : 'Ngừng bán' }}
+                  </button>
+                </td>
+                <td class="text-center">
+                  <button
+                    @click="formData.bienTheSanPhams.splice(idx, 1)"
+                    class="btn btn-danger btn-sm"
+                  >
+                    x
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <button @click="themBienTheMoi" class="btn btn-dark btn-sm">+ Thêm biến thể</button>
       </div>
 
@@ -214,25 +260,15 @@
 </template>
 
 <script setup>
-// Trang quản lý sản phẩm (CRUD sản phẩm + biến thể + ảnh).
-// Dùng RIÊNG 1 axios instance "apiAdmin" có tự động gắn header xác thực
-// (User-Role/NhanVien-ID) cho MỌI request gọi tới backend "/api/admin/products/**"
-// (đã được AuthInterceptor bảo vệ). Axios "trần" (import axios) chỉ dùng để
-// gọi Cloudinary (upload ảnh) - không nên gửi kèm header nội bộ của mình cho
-// bên thứ 3.
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
-const CLOUD_NAME = 'dqciew3rk' // ← Thay bằng Cloud Name thật của bạn
-const UPLOAD_PRESET = 'trendfit_preset' // ← Thay bằng Preset thật của bạn
+const CLOUD_NAME = 'dqciew3rk'
+const UPLOAD_PRESET = 'trendfit_preset'
 
 const API_BASE = 'http://localhost:8080/api/admin/products'
 
-// axios instance riêng cho API quản trị sản phẩm: mọi request qua đây đều tự
-// động có header "User-Role"/"NhanVien-ID" lấy từ localStorage tại THỜI ĐIỂM
-// gọi (không phải lúc tạo instance), nên vẫn đúng ngay cả khi người dùng
-// đăng xuất/đăng nhập lại tài khoản khác trong cùng 1 tab.
 const apiAdmin = axios.create()
 apiAdmin.interceptors.request.use((config) => {
   config.headers = { ...config.headers, ...getAuthHeaders() }
@@ -272,8 +308,6 @@ const handleImageUpload = async (event, idx) => {
   uploadForm.append('upload_preset', UPLOAD_PRESET)
 
   try {
-    // Gọi thẳng Cloudinary bằng axios "trần" (không qua apiAdmin) vì đây là
-    // dịch vụ bên thứ 3, không cần và không nên gửi header nội bộ của ta.
     const res = await axios.post(
       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
       uploadForm,
@@ -285,13 +319,17 @@ const handleImageUpload = async (event, idx) => {
   }
 }
 
+// Cập nhật hàm thêm biến thể mới đầy đủ các trường khớp với Entity Java
 const themBienTheMoi = () => {
   formData.value.bienTheSanPhams.push({
     kichCo: null,
     mauSac: null,
+    maSku: '',
     soLuongTon: 0,
     giaNhap: 0,
     gia: 0,
+    giaSale: null,
+    dangBan: true, // Mặc định là đang bán hiển thị cho khách
   })
 }
 
@@ -325,7 +363,10 @@ const kichHoatSuaForm = async (sp) => {
     ])
 
     formData.value = {
-      sanPham: { ...sp },
+      sanPham: {
+        ...sp,
+        dangBan: sp.dangBan !== false, // Đảm bảo luôn nhận đúng true/false
+      },
       bienTheSanPhams: resVariants.data || [],
       anhSanPhams: resImages.data || [],
     }
@@ -347,6 +388,7 @@ const moFormThemMoi = () => {
       chatLieu: '',
       xuatXu: 'Việt Nam',
       namRaMat: new Date().getFullYear(),
+      dangBan: true,
     },
     bienTheSanPhams: [],
     anhSanPhams: [],
@@ -366,3 +408,11 @@ const deleteProduct = async (id) => {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+/* Tùy chỉnh nhỏ giúp bảng biến thể gọn gàng hơn trên màn hình quản trị */
+.table th,
+.table td {
+  vertical-align: middle;
+}
+</style>

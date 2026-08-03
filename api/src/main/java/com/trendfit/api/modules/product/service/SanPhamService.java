@@ -72,6 +72,7 @@ public class SanPhamService {
         existingSp.setChatLieu(dto.getSanPham().getChatLieu());
         existingSp.setXuatXu(dto.getSanPham().getXuatXu());
         existingSp.setNamRaMat(dto.getSanPham().getNamRaMat());
+        existingSp.setDangBan(dto.getSanPham().getDangBan());
 
         // Xử lý biến thể
         List<BienTheSanPham> oldVariants = bienTheRepository.findBySanPham_Id(existingSp.getId());
@@ -151,14 +152,24 @@ public class SanPhamService {
     }
 
 public List<ProductDetailDTO> getAllPublicProducts() {
-    List<SanPham> listSp = sanPhamRepository.findAll();
+    // Chỉ lấy những sản phẩm có dangBan bằng true (đang kinh doanh)
+    List<SanPham> listSp = sanPhamRepository.findAll().stream()
+            .filter(sp -> Boolean.TRUE.equals(sp.getDangBan()))
+            .toList();
+            
     List<ProductDetailDTO> listDto = new ArrayList<>();
 
     for (SanPham sp : listSp) {
         ProductDetailDTO dto = new ProductDetailDTO();
         dto.setSanPham(sp);
-        dto.setBienTheSanPhams(bienTheRepository.findBySanPham_Id(sp.getId()));
-        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId())); // Lấy đầy đủ danh sách ảnh của sản phẩm này
+        
+        // (Tùy chọn) Bạn cũng có thể lọc luôn các biến thể nào ngừng bán nếu muốn
+        List<BienTheSanPham> activeVariants = bienTheRepository.findBySanPham_Id(sp.getId()).stream()
+                .filter(bt -> Boolean.TRUE.equals(bt.getDangBan()))
+                .toList();
+                
+        dto.setBienTheSanPhams(activeVariants);
+        dto.setAnhSanPhams(anhRepository.findBySanPham_Id(sp.getId()));
         listDto.add(dto);
     }
     return listDto;
