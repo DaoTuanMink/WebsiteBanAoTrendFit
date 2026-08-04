@@ -7,9 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * API quản trị Đơn hàng — CHỈ dành cho ADMIN (nằm trong ADMIN_ONLY_PATHS của
- * AuthInterceptor). Đây là nghiệp vụ nhạy cảm (duyệt/hủy đơn ảnh hưởng trực
- * tiếp tới tiền và tồn kho) nên không mở cho EMPLOYEE.
+ * API quản trị Đơn hàng — ADMIN và EMPLOYEE đều dùng được (STAFF_AREA).
+ * Nhân viên cần xem danh sách + duyệt/cập nhật trạng thái đơn online của khách.
+ * AuthInterceptor không còn xếp path này vào ADMIN_ONLY_PATHS.
  */
 @RestController
 @RequestMapping("/api/admin/orders")

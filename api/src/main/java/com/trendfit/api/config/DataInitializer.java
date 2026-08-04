@@ -39,16 +39,23 @@ public class DataInitializer implements CommandLineRunner {
             seedThuongHieu("TrendFit", "Việt Nam");
         }
 
-        // 3. Seed Tài khoản Admin mặc định (Phục vụ đăng nhập & test giỏ hàng)
-        if (nguoiDungRepository.findByEmail("admin") == null) {
-            NguoiDung admin = new NguoiDung();
-            admin.setEmail("admin");
-            admin.setHoTen("Quản Trị Viên");
-            admin.setMatKhau("123");
-            admin.setVaiTro("ADMIN");
-            admin.setDangHoatDong(true);
-            nguoiDungRepository.save(admin);
-            System.out.println(">>> Đã tự động tạo tài khoản Admin mặc định thành công!");
+        // 3. Seed tài khoản demo (đăng nhập: email + mật khẩu 123)
+        //    admin / nhanvien / khachhang — dùng cho chấm điểm & test duyệt đơn
+        seedUserIfMissing("admin", "Quản Trị Viên", "123", "ADMIN");
+        seedUserIfMissing("nhanvien", "Nhân Viên Bán Hàng", "123", "EMPLOYEE");
+        seedUserIfMissing("khachhang", "Khách Hàng Demo", "123", "CUSTOMER");
+    }
+
+    private void seedUserIfMissing(String email, String hoTen, String matKhau, String vaiTro) {
+        if (nguoiDungRepository.findByEmail(email) == null) {
+            NguoiDung u = new NguoiDung();
+            u.setEmail(email);
+            u.setHoTen(hoTen);
+            u.setMatKhau(matKhau);
+            u.setVaiTro(vaiTro);
+            u.setDangHoatDong(true);
+            nguoiDungRepository.save(u);
+            System.out.println(">>> Seed user: " + email + " / " + matKhau + " (" + vaiTro + ")");
         }
     }
 

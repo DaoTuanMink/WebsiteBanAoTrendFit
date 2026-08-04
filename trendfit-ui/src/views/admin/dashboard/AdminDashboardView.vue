@@ -1,814 +1,659 @@
 <template>
-  <div class="sales-page">
-    <div class="hero-section">
-      <span class="page-tag">BÁO CÁO KINH DOANH</span>
-
-      <h1>Thống kê doanh số</h1>
-
-      <p>
-        Theo dõi doanh thu, tiền nhập hàng, lợi nhuận và sản phẩm bán chạy của cửa hàng TrendFit
-      </p>
+  <div class="dash">
+    <div class="dash-head">
+      <p class="dash-eyebrow">BÁO CÁO KINH DOANH</p>
+      <h1 class="dash-title">Thống kê doanh số</h1>
+      <p class="dash-desc">Doanh thu · đơn hàng · khách · tồn kho — shop bán áo TrendFit</p>
     </div>
 
-    <div class="filter-box">
-      <select v-model="filter.type" @change="loadDashboard">
-        <option value="day">Theo ngày</option>
-        <option value="month">Theo tháng</option>
-        <option value="year">Theo năm</option>
-      </select>
-
-      <input type="date" v-model="filter.from" @change="loadDashboard" />
-      <input type="date" v-model="filter.to" @change="loadDashboard" />
-
-      <button @click="loadDashboard">Lọc dữ liệu</button>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Nhóm biểu đồ</label>
+        <div class="seg">
+          <button
+            v-for="opt in typeOptions"
+            :key="opt.v"
+            type="button"
+            :class="{ on: filter.type === opt.v }"
+            @click="filter.type = opt.v; loadDashboard()"
+          >{{ opt.l }}</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Từ ngày</label>
+        <input type="date" v-model="filter.from" @change="loadDashboard" />
+      </div>
+      <div class="filter-group">
+        <label>Đến ngày</label>
+        <input type="date" v-model="filter.to" @change="loadDashboard" />
+      </div>
+      <button type="button" class="btn-filter" @click="loadDashboard">Lọc dữ liệu</button>
     </div>
+    <p class="filter-note">
+      Khoảng <b>{{ filter.from }}</b> → <b>{{ filter.to }}</b>
+      · nhóm theo <b>{{ typeText }}</b>
+      · doanh thu chỉ tính đơn <b>thành công</b>
+    </p>
 
-    <div v-if="loading" class="loading-box">
-      Đang tải dữ liệu thống kê...
+    <div v-if="loading" class="state-box">
+      <div class="spinner"></div>
+      <span>Đang tải thống kê...</span>
     </div>
 
     <template v-else>
-      <div class="summary-grid">
-        <div class="summary-card revenue">
-          <p>Doanh thu</p>
-          <h2>{{ formatMoney(dashboard.totalRevenue) }}</h2>
-          <span>Tổng tiền khách đã thanh toán</span>
+      <!-- TÀI CHÍNH — đậm -->
+      <section class="section">
+        <h2 class="section-title">Tài chính</h2>
+        <div class="kpi-row">
+          <article class="kpi k-indigo">
+            <p class="kpi-label">Doanh thu</p>
+            <p class="kpi-val">{{ formatMoney(dashboard.totalRevenue) }}</p>
+            <p class="kpi-hint">Đơn thành công</p>
+          </article>
+          <article class="kpi k-amber">
+            <p class="kpi-label">Tiền vốn</p>
+            <p class="kpi-val">{{ formatMoney(dashboard.totalImportCost) }}</p>
+            <p class="kpi-hint">Chỉ SP đã nhập giá vốn</p>
+          </article>
+          <article class="kpi k-green">
+            <p class="kpi-label">Lợi nhuận gộp</p>
+            <p class="kpi-val">{{ formatMoney(dashboard.grossProfit) }}</p>
+            <p class="kpi-hint">Doanh thu − vốn</p>
+          </article>
+          <article class="kpi k-sky">
+            <p class="kpi-label">Tỷ suất lãi</p>
+            <p class="kpi-val">{{ formatPercent(dashboard.profitRate) }}</p>
+            <p class="kpi-hint">Lãi / doanh thu</p>
+          </article>
+          <article class="kpi k-violet">
+            <p class="kpi-label">Giá trị đơn TB</p>
+            <p class="kpi-val">{{ formatMoney(dashboard.avgOrderValue) }}</p>
+            <p class="kpi-hint">AOV</p>
+          </article>
         </div>
+      </section>
 
-        <div class="summary-card cost">
-          <p>Tiền nhập hàng</p>
-          <h2>{{ formatMoney(dashboard.totalImportCost) }}</h2>
-          <span>Giá nhập * số lượng đã bán</span>
-        </div>
-
-        <div class="summary-card profit">
-          <p>Lợi nhuận gộp</p>
-          <h2>{{ formatMoney(dashboard.grossProfit) }}</h2>
-          <span>Doanh thu trừ tiền nhập hàng</span>
-        </div>
-
-        <div class="summary-card rate">
-          <p>Tỷ suất lãi</p>
-          <h2>{{ formatPercent(dashboard.profitRate) }}</h2>
-          <span>Lợi nhuận / doanh thu</span>
-        </div>
-
-        <div class="summary-card success">
-          <p>Đơn hàng thành công</p>
-          <h2>{{ dashboard.totalSuccessOrders }}</h2>
-          <span>Số đơn đã giao / hoàn thành / tại quầy</span>
-        </div>
-
-        <div class="summary-card failed">
-          <p>Đơn hàng thất bại / đã hủy</p>
-          <h2>{{ dashboard.totalFailedOrders }}</h2>
-          <span>Số đơn bị hủy hoặc không thành công</span>
-        </div>
-      </div>
-
-      <div class="panel-grid">
-        <div class="panel panel-large">
-          <div class="panel-header">
-            <h3>Doanh số theo thời gian</h3>
-            <p>Biểu diễn doanh thu theo {{ typeText }}</p>
+      <!-- VẬN HÀNH — đậm -->
+      <section class="section">
+        <h2 class="section-title">Vận hành</h2>
+        <div class="ops-row">
+          <div class="ops-card">
+            <span class="ops-n">{{ dashboard.totalOrders }}</span>
+            <span class="ops-l">Tổng đơn</span>
           </div>
-
-          <div v-if="dashboard.revenueChart.length === 0" class="empty-box">
-            Chưa có dữ liệu doanh số
+          <div class="ops-card ok">
+            <span class="ops-n">{{ dashboard.totalSuccessOrders }}</span>
+            <span class="ops-l">Thành công · {{ successRate }}%</span>
           </div>
+          <div class="ops-card wait">
+            <span class="ops-n">{{ dashboard.totalPendingOrders }}</span>
+            <span class="ops-l">Đang xử lý</span>
+          </div>
+          <div class="ops-card bad">
+            <span class="ops-n">{{ dashboard.totalFailedOrders }}</span>
+            <span class="ops-l">Hủy / thất bại</span>
+          </div>
+          <div class="ops-card">
+            <span class="ops-n">{{ dashboard.totalCustomers }}</span>
+            <span class="ops-l">Khách có đơn</span>
+          </div>
+          <div class="ops-card">
+            <span class="ops-n">{{ dashboard.totalProductsSold }}</span>
+            <span class="ops-l">Áo đã bán (SL)</span>
+          </div>
+          <div class="ops-card">
+            <span class="ops-n">{{ dashboard.totalStock }}</span>
+            <span class="ops-l">Tồn kho hiện tại</span>
+          </div>
+        </div>
+      </section>
 
-          <div v-else class="revenue-list">
+      <div class="charts">
+        <!-- Doanh số -->
+        <section class="card chart-main">
+          <header class="card-h">
+            <div>
+              <h3>Doanh số theo {{ typeText }}</h3>
+              <p>Chỉ đơn thành công</p>
+            </div>
+          </header>
+          <div v-if="!dashboard.revenueChart.length" class="empty">Chưa có dữ liệu doanh số</div>
+          <div v-else class="bars">
             <div
-              v-for="(item, index) in dashboard.revenueChart"
-              :key="item.label"
-              class="revenue-item"
+              v-for="(item, i) in dashboard.revenueChart"
+              :key="item.label + '-' + i"
+              class="bar-row"
             >
-              <div class="revenue-left">
-                <div class="rank-badge">{{ index + 1 }}</div>
-
+              <div class="bar-meta">
+                <span class="bar-rank">{{ i + 1 }}</span>
                 <div>
-                  <div class="period-label">{{ item.label }}</div>
-                  <div class="period-sub">
-                    Chiếm {{ getRevenueShare(item.revenue) }} tổng doanh số
-                  </div>
+                  <div class="bar-label">{{ item.label }}</div>
+                  <div class="bar-sub">{{ item.orderCount || 0 }} đơn · {{ getRevenueShare(item.revenue) }}</div>
                 </div>
               </div>
-
-              <div class="revenue-center">
-                <div class="bar-track">
-                  <div
-                    class="bar-fill"
-                    :style="{ width: getRevenuePercent(item.revenue) + '%' }"
-                  ></div>
-                </div>
+              <div class="bar-track">
+                <div class="bar-fill" :style="{ width: getRevenuePercent(item.revenue) + '%' }"></div>
               </div>
-
-              <div class="revenue-right">
-                {{ formatMoney(item.revenue) }}
-              </div>
+              <div class="bar-money">{{ formatMoney(item.revenue) }}</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="panel panel-small">
-          <div class="panel-header">
-            <h3>Tỷ trọng trạng thái đơn hàng</h3>
-            <p>Biểu đồ tròn thể hiện tỷ lệ các trạng thái đơn hàng</p>
-          </div>
-
-          <div v-if="dashboard.orderStatusChart.length === 0" class="empty-box">
-            Chưa có dữ liệu trạng thái đơn hàng
-          </div>
-
-          <div v-else class="pie-section">
-            <div class="donut-chart" :style="pieChartStyle">
-              <div class="donut-center">
+        <!-- Trạng thái — 3 nhóm rõ ràng -->
+        <section class="card chart-side">
+          <header class="card-h">
+            <div>
+              <h3>Trạng thái đơn hàng</h3>
+              <p>Gộp nhóm · tổng = {{ totalStatusOrders }} đơn</p>
+            </div>
+          </header>
+          <div v-if="!statusItems.length" class="empty">Chưa có dữ liệu</div>
+          <div v-else class="status-box">
+            <div class="donut" :style="pieStyle">
+              <div class="donut-core">
                 <strong>{{ totalStatusOrders }}</strong>
-                <span>đơn hàng</span>
+                <span>đơn</span>
               </div>
             </div>
-
-            <div class="status-list">
-              <div
-                v-for="item in statusItems"
-                :key="item.label"
-                class="status-item"
-              >
-                <div class="status-main">
-                  <div class="status-name">
-                    <span
-                      class="status-dot"
-                      :style="{ backgroundColor: item.color }"
-                    ></span>
-                    <span>{{ item.label }}</span>
+            <ul class="legend">
+              <li v-for="s in statusItems" :key="s.status">
+                <span class="lg-dot" :style="{ background: s.color }"></span>
+                <div class="lg-body">
+                  <div class="lg-top">
+                    <span class="lg-name">{{ s.label }}</span>
+                    <span class="lg-count">{{ s.count }}</span>
+                    <span class="lg-pct">{{ s.percent }}%</span>
                   </div>
-
-                  <strong>{{ item.count }} đơn</strong>
+                  <div class="lg-track">
+                    <div class="lg-fill" :style="{ width: s.percent + '%', background: s.color }"></div>
+                  </div>
                 </div>
-
-                <div class="status-track">
-                  <div
-                    class="status-fill"
-                    :style="{
-                      width: item.percent + '%',
-                      backgroundColor: item.color
-                    }"
-                  ></div>
-                </div>
-
-                <div class="status-percent">
-                  {{ item.percent }}%
-                </div>
-              </div>
-            </div>
+              </li>
+            </ul>
+            <p class="match" :class="{ warn: statusMismatch }">
+              {{ statusMismatch ? 'Legend lệch API — kiểm tra DB' : 'Khớp tổng đơn' }}
+            </p>
           </div>
-        </div>
+        </section>
       </div>
 
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Top 5 sản phẩm bán chạy nhất</h3>
-          <p>Thống kê số lượng bán, doanh thu, tiền vốn và lãi của từng sản phẩm</p>
-        </div>
-
-        <div class="table-wrapper">
-          <table>
+      <!-- Top SP -->
+      <section class="card">
+        <header class="card-h">
+          <div>
+            <h3>Top sản phẩm bán chạy</h3>
+            <p>Chỉ sản phẩm còn trong kho và đã nhập giá vốn</p>
+          </div>
+        </header>
+        <div class="table-scroll">
+          <table class="tbl">
             <thead>
               <tr>
                 <th>STT</th>
-                <th>Tên sản phẩm</th>
-                <th>Số lượng bán</th>
+                <th>Sản phẩm</th>
+                <th>SL bán</th>
                 <th>Doanh thu</th>
-                <th>Tiền vốn</th>
+                <th>Vốn</th>
                 <th>Lãi</th>
-                <th>Tỷ suất lãi</th>
+                <th>Tỷ suất</th>
               </tr>
             </thead>
-
             <tbody>
-              <tr v-for="(item, index) in dashboard.topProducts" :key="index">
-                <td>{{ index + 1 }}</td>
-                <td>{{ item.productName }}</td>
-                <td>{{ item.quantitySold }}</td>
-                <td>{{ formatMoney(item.revenue) }}</td>
-                <td>{{ formatMoney(item.importCost) }}</td>
+              <tr v-for="(item, i) in topProductsFiltered" :key="i">
+                <td><span class="rank" :class="'r' + Math.min(i + 1, 3)">{{ i + 1 }}</span></td>
                 <td>
-                  <span :class="Number(item.profit || 0) >= 0 ? 'profit-text' : 'loss-text'">
-                    {{ formatMoney(item.profit) }}
-                  </span>
+                  <div class="prod-name">{{ item.productName }}</div>
                 </td>
-                <td>{{ formatPercent(calcProfitRate(item.profit, item.revenue)) }}</td>
+                <td class="num">{{ item.quantitySold }}</td>
+                <td class="num">{{ formatMoney(item.revenue) }}</td>
+                <td class="num">
+                  <template v-if="hasCost(item)">{{ formatMoney(item.importCost) }}</template>
+                  <span v-else class="muted" title="Không khớp biến thể / chưa nhập giá vốn">—</span>
+                </td>
+                <td class="num">
+                  <template v-if="hasCost(item)">
+                    <span :class="Number(item.profit) >= 0 ? 'pos' : 'neg'">{{ formatMoney(item.profit) }}</span>
+                  </template>
+                  <span v-else class="muted">—</span>
+                </td>
+                <td class="num">
+                  <template v-if="hasCost(item)">
+                    {{ formatPercent(item.margin != null ? item.margin : calcRate(item.profit, item.revenue)) }}
+                  </template>
+                  <span v-else class="muted">—</span>
+                </td>
               </tr>
-
-              <tr v-if="dashboard.topProducts.length === 0">
-                <td colspan="7" class="empty-table">
-                  Chưa có dữ liệu sản phẩm bán chạy
-                </td>
+              <tr v-if="!topProductsFiltered.length">
+                <td colspan="7" class="empty-td">Chưa có sản phẩm bán chạy trong khoảng này</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup>
-// Trang "Thống kê doanh số" — gọi API /api/admin/analytics/dashboard.
-// API này nằm dưới "/api/admin/**" nên đã được AuthInterceptor yêu cầu phải
-// có header "User-Role" hợp lệ (ADMIN hoặc EMPLOYEE), nếu không sẽ luôn
-// nhận lỗi 401 (và trình duyệt sẽ hiển thị nhầm thành lỗi CORS vì response
-// lỗi không đi qua @CrossOrigin của controller).
+/**
+ * NOTE NHÓM — Dashboard UI
+ * - Trạng thái gộp 3 nhóm: Thành công / Đang xử lý / Đã hủy (dễ đọc, khớp KPI)
+ * - Top SP: tên lấy từ chi_tiet_don_hang (snapshot lúc bán) — có thể khác tên SP hiện tại
+ * - Vốn/lãi chỉ khi costKnown (có gia_nhap)
+ */
 import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
 const loading = ref(false)
-
-const filter = ref({
-  type: 'month',
-  from: '2026-01-01',
-  to: '2026-12-31',
-})
-
-const dashboard = ref({
-  totalRevenue: 0,
-  totalImportCost: 0,
-  grossProfit: 0,
-  profitRate: 0,
-  totalSuccessOrders: 0,
-  totalFailedOrders: 0,
-  revenueChart: [],
-  orderStatusChart: [],
-  topProducts: [],
-})
-
-const statusColors = [
-  '#16a34a',
-  '#dc2626',
-  '#2563eb',
-  '#f59e0b',
-  '#7c3aed',
-  '#0f172a',
+const typeOptions = [
+  { v: 'day', l: 'Ngày' },
+  { v: 'month', l: 'Tháng' },
+  { v: 'year', l: 'Năm' },
 ]
+const filter = ref({ type: 'month', from: '2026-01-01', to: '2026-12-31' })
+
+const emptyDash = () => ({
+  totalRevenue: 0, totalImportCost: 0, grossProfit: 0, profitRate: 0, avgOrderValue: 0,
+  totalSuccessOrders: 0, totalFailedOrders: 0, totalOrders: 0, totalPendingOrders: 0,
+  totalCustomers: 0, totalProductsSold: 0, totalStock: 0,
+  revenueChart: [], orderStatusChart: [], topProducts: [],
+})
+const dashboard = ref(emptyDash())
+
+/** 3 màu cố định — không rối nhiều tone xanh */
+const colorMap = {
+  THANH_CONG: '#16a34a',
+  DANG_XU_LY: '#f59e0b',
+  HUY: '#ef4444',
+  KHAC: '#94a3b8',
+}
 
 const loadDashboard = async () => {
+  loading.value = true
   try {
-    loading.value = true
-
-    console.log('Tải dashboard với params:', {
-      type: filter.value.type,
-      from: filter.value.from,
-      to: filter.value.to,
-    })
-
+    if (filter.value.from && filter.value.to && filter.value.from > filter.value.to) {
+      const t = filter.value.from; filter.value.from = filter.value.to; filter.value.to = t
+    }
     const res = await axios.get('http://localhost:8080/api/admin/analytics/dashboard', {
-      params: {
-        type: filter.value.type,
-        from: filter.value.from,
-        to: filter.value.to,
-      },
+      params: { type: filter.value.type, from: filter.value.from, to: filter.value.to },
       headers: getAuthHeaders(),
     })
-
-    console.log('Dashboard data:', res.data)
-
+    const d = res.data || {}
     dashboard.value = {
-      totalRevenue: res.data.totalRevenue || 0,
-      totalImportCost: res.data.totalImportCost || 0,
-      grossProfit: res.data.grossProfit || 0,
-      profitRate: res.data.profitRate || 0,
-      totalSuccessOrders: res.data.totalSuccessOrders || 0,
-      totalFailedOrders: res.data.totalFailedOrders || 0,
-      revenueChart: res.data.revenueChart || [],
-      orderStatusChart: res.data.orderStatusChart || [],
-      topProducts: res.data.topProducts || [],
+      totalRevenue: d.totalRevenue || 0,
+      totalImportCost: d.totalImportCost || 0,
+      grossProfit: d.grossProfit || 0,
+      profitRate: d.profitRate || 0,
+      avgOrderValue: d.avgOrderValue || 0,
+      totalSuccessOrders: Number(d.totalSuccessOrders || 0),
+      totalFailedOrders: Number(d.totalFailedOrders || 0),
+      totalOrders: Number(d.totalOrders || 0),
+      totalPendingOrders: Number(d.totalPendingOrders || 0),
+      totalCustomers: Number(d.totalCustomers || 0),
+      totalProductsSold: Number(d.totalProductsSold || 0),
+      totalStock: Number(d.totalStock || 0),
+      revenueChart: Array.isArray(d.revenueChart) ? d.revenueChart : [],
+      orderStatusChart: Array.isArray(d.orderStatusChart) ? d.orderStatusChart : [],
+      topProducts: Array.isArray(d.topProducts) ? d.topProducts : [],
     }
-  } catch (error) {
-    console.error('Chi tiết lỗi:', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: error.config?.url,
-    })
-    alert(
-      error.response?.data?.message ||
-        error.message ||
-        'Không tải được dữ liệu thống kê. Vui lòng thử lại!'
-    )
+  } catch (e) {
+    console.error(e)
+    alert(e.response?.data?.message || e.response?.data || e.message || 'Không tải được thống kê')
+    dashboard.value = emptyDash()
   } finally {
     loading.value = false
   }
 }
 
+const typeText = computed(() =>
+  filter.value.type === 'day' ? 'ngày' : filter.value.type === 'year' ? 'năm' : 'tháng'
+)
 const successRate = computed(() => {
-  const success = Number(dashboard.value.totalSuccessOrders || 0)
-  const failed = Number(dashboard.value.totalFailedOrders || 0)
-  const total = success + failed
-
-  if (total === 0) {
-    return 0
-  }
-
-  return ((success / total) * 100).toFixed(1)
+  const t = dashboard.value.totalOrders
+  return t ? ((dashboard.value.totalSuccessOrders / t) * 100).toFixed(1) : '0.0'
 })
-
-const typeText = computed(() => {
-  if (filter.value.type === 'day') {
-    return 'ngày'
-  }
-
-  if (filter.value.type === 'year') {
-    return 'năm'
-  }
-
-  return 'tháng'
+const maxRevenue = computed(() =>
+  Math.max(...dashboard.value.revenueChart.map((x) => Number(x.revenue || 0)), 0)
+)
+const sumRevenueChart = computed(() =>
+  dashboard.value.revenueChart.reduce((s, x) => s + Number(x.revenue || 0), 0)
+)
+const totalStatusOrders = computed(() =>
+  dashboard.value.orderStatusChart.reduce((s, x) => s + Number(x.count || 0), 0)
+)
+const statusMismatch = computed(() => {
+  const api = dashboard.value.totalOrders
+  return api > 0 && api !== totalStatusOrders.value
 })
-
-const maxRevenue = computed(() => {
-  const revenues = dashboard.value.revenueChart.map((item) => Number(item.revenue || 0))
-  return Math.max(...revenues, 0)
-})
-
-const totalRevenueValue = computed(() => {
-  return dashboard.value.revenueChart.reduce((sum, item) => {
-    return sum + Number(item.revenue || 0)
-  }, 0)
-})
-
-const totalStatusOrders = computed(() => {
-  return dashboard.value.orderStatusChart.reduce((sum, item) => {
-    return sum + Number(item.count || 0)
-  }, 0)
-})
-
 const statusItems = computed(() => {
-  return dashboard.value.orderStatusChart.map((item, index) => {
+  const total = totalStatusOrders.value
+  return dashboard.value.orderStatusChart.map((item) => {
     const count = Number(item.count || 0)
-
-    const percent =
-      totalStatusOrders.value === 0
-        ? 0
-        : Number(((count / totalStatusOrders.value) * 100).toFixed(1))
-
+    const status = String(item.status || '').toUpperCase()
     return {
-      label: item.statusLabel || item.status || 'Không xác định',
+      status,
+      label: item.statusLabel || item.status || 'Khác',
       count,
-      percent,
-      color: statusColors[index % statusColors.length],
+      percent: total ? Number(((count / total) * 100).toFixed(1)) : 0,
+      color: colorMap[status] || '#94a3b8',
     }
   })
 })
-
-const pieChartStyle = computed(() => {
-  if (statusItems.value.length === 0 || totalStatusOrders.value === 0) {
-    return {
-      background: '#e5e7eb',
-    }
-  }
-
+const pieStyle = computed(() => {
+  const total = totalStatusOrders.value
+  if (!statusItems.value.length || !total) return { background: '#e2e8f0' }
   let start = 0
-
-  const segments = statusItems.value.map((item) => {
-    const end = start + item.percent
-    const segment = `${item.color} ${start}% ${end}%`
+  const segs = statusItems.value.map((s) => {
+    const end = start + (s.count / total) * 100
+    const seg = `${s.color} ${start}% ${end}%`
     start = end
-    return segment
+    return seg
   })
-
-  return {
-    background: `conic-gradient(${segments.join(', ')})`,
-  }
+  return { background: `conic-gradient(${segs.join(', ')})` }
 })
 
-const getRevenuePercent = (value) => {
-  if (maxRevenue.value === 0) {
-    return 0
-  }
-
-  return ((Number(value || 0) / maxRevenue.value) * 100).toFixed(1)
+const getRevenuePercent = (v) =>
+  maxRevenue.value ? ((Number(v || 0) / maxRevenue.value) * 100).toFixed(1) : 0
+const getRevenueShare = (v) =>
+  sumRevenueChart.value
+    ? ((Number(v || 0) / sumRevenueChart.value) * 100).toFixed(1) + '%'
+    : '0%'
+const calcRate = (p, r) => {
+  const rv = Number(r || 0)
+  return rv ? (Number(p || 0) / rv) * 100 : 0
 }
-
-const getRevenueShare = (value) => {
-  if (totalRevenueValue.value === 0) {
-    return '0%'
-  }
-
-  return ((Number(value || 0) / totalRevenueValue.value) * 100).toFixed(1) + '%'
+/** Chỉ hiện SP có giá nhập — ẩn snapshot đơn cũ / SP đã xóa (vốn null) */
+const topProductsFiltered = computed(() =>
+  (dashboard.value.topProducts || []).filter((item) => hasCost(item))
+)
+const hasCost = (item) => {
+  if (!item) return false
+  if (item.costKnown === true || item.costKnown === 'true' || item.costKnown === 1) return true
+  if (item.costKnown === false || item.costKnown === 'false' || item.costKnown === 0) return false
+  return Number(item.importCost) > 0
 }
+const formatPercent = (v) => Number(v || 0).toFixed(2) + '%'
+const formatMoney = (v) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v || 0))
 
-const calcProfitRate = (profit, revenue) => {
-  const revenueValue = Number(revenue || 0)
-
-  if (revenueValue === 0) {
-    return 0
-  }
-
-  return (Number(profit || 0) / revenueValue) * 100
-}
-
-const formatPercent = (value) => {
-  return Number(value || 0).toFixed(2) + '%'
-}
-
-const formatMoney = (value) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(Number(value || 0))
-}
-
-onMounted(() => {
-  loadDashboard()
-})
+onMounted(loadDashboard)
 </script>
 
 <style scoped>
-.sales-page {
-  min-height: 100vh;
-  padding: 28px;
-  background: #f4f6fb;
+.dash {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
   color: #0f172a;
+  max-width: 1180px;
+}
+.dash-head { margin-bottom: 18px; }
+.dash-eyebrow {
+  margin: 0 0 6px; font-size: 11px; font-weight: 800;
+  letter-spacing: 0.1em; color: #7c3aed;
+}
+.dash-title {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em;
+}
+.dash-desc { margin: 0; font-size: 14px; color: #64748b; }
+
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+  background: #fff; border: 1px solid #e8eaf0; border-radius: 16px;
+  padding: 16px 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.filter-group { display: flex; flex-direction: column; gap: 6px; }
+.filter-group label {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase; color: #94a3b8;
+}
+.filter-group input[type="date"] {
+  padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: 14px; font-weight: 600; font-family: inherit; color: #0f172a;
+  background: #fafbff; min-width: 150px;
+}
+.filter-group input:focus {
+  outline: none; border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+.seg {
+  display: inline-flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 2px;
+}
+.seg button {
+  border: none; background: transparent; padding: 8px 14px; border-radius: 8px;
+  font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; font-family: inherit;
+}
+.seg button.on {
+  background: #fff; color: #7c3aed;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.btn-filter {
+  border: none; padding: 11px 18px; border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff; font-weight: 800; font-size: 13px; cursor: pointer;
+  font-family: inherit; box-shadow: 0 6px 16px rgba(124, 58, 237, 0.28);
+}
+.filter-note {
+  margin: 10px 0 20px; font-size: 12.5px; color: #94a3b8;
+}
+.filter-note b { color: #475569; font-weight: 700; }
+
+.state-box {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 48px; color: #64748b; font-weight: 700;
+}
+.spinner {
+  width: 22px; height: 22px; border: 2.5px solid #e2e8f0; border-top-color: #7c3aed;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.section { margin-bottom: 22px; }
+.section-title {
+  margin: 0 0 12px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #64748b;
 }
 
-.hero-section {
-  margin-bottom: 20px;
-}
-
-.page-tag {
-  display: inline-block;
-  padding: 6px 12px;
-  background: #e8eefc;
-  color: #1d4ed8;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.hero-section h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-}
-
-.hero-section p {
-  margin-top: 8px;
-  color: #64748b;
-  font-size: 16px;
-}
-
-.filter-box {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 22px;
-}
-
-.filter-box select,
-.filter-box input,
-.filter-box button {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #dbe2ea;
-  font-size: 15px;
-  background: #ffffff;
-}
-
-.filter-box button {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-}
-
-.loading-box {
-  padding: 30px;
-  border-radius: 18px;
-  background: white;
-  text-align: center;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
-}
-
-.summary-grid {
+/* KPI đậm */
+.kpi-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 22px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 18px;
-  padding: 22px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  border: 1px solid #eef2f7;
-}
-
-.summary-card p {
-  margin: 0;
-  color: #64748b;
-  font-size: 15px;
-}
-
-.summary-card h2 {
-  margin: 10px 0 8px;
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.summary-card span {
-  color: #94a3b8;
-  font-size: 13px;
-}
-
-.summary-card.revenue h2 {
-  color: #2563eb;
-}
-
-.summary-card.cost h2 {
-  color: #f59e0b;
-}
-
-.summary-card.profit h2 {
-  color: #16a34a;
-}
-
-.summary-card.success h2 {
-  color: #16a34a;
-}
-
-.summary-card.failed h2 {
-  color: #dc2626;
-}
-
-.summary-card.rate h2 {
-  color: #7c3aed;
-}
-
-.panel-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 18px;
-  margin-bottom: 22px;
-}
-
-.panel {
-  background: white;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  border: 1px solid #eef2f7;
-}
-
-.panel-header {
-  margin-bottom: 18px;
-}
-
-.panel-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.panel-header p {
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 14px;
-}
-
-.empty-box {
-  text-align: center;
-  color: #94a3b8;
-  padding: 32px 0;
-}
-
-.revenue-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.revenue-item {
-  display: grid;
-  grid-template-columns: 220px 1fr 160px;
-  gap: 16px;
-  align-items: center;
-}
-
-.revenue-left {
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
-
-.rank-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #0f172a;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+.kpi {
+  background: #fff;
+  border: 1px solid #e8eaf0;
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  border-top: 4px solid #cbd5e1;
 }
+.k-indigo { border-top-color: #7c3aed; }
+.k-amber { border-top-color: #f59e0b; }
+.k-green { border-top-color: #16a34a; }
+.k-sky { border-top-color: #0ea5e9; }
+.k-violet { border-top-color: #9333ea; }
 
-.period-label {
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.period-sub {
-  margin-top: 4px;
+.kpi-label {
+  margin: 0 0 8px;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase;
   color: #64748b;
-  font-size: 13px;
+}
+.kpi-val {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 1.35rem; font-weight: 700;
+  color: #0f172a; line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+.kpi-hint {
+  margin: 8px 0 0;
+  font-size: 12px; font-weight: 600; color: #94a3b8;
 }
 
-.bar-track {
-  width: 100%;
-  height: 16px;
-  background: #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
+/* Ops đậm */
+.ops-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.ops-card {
+  background: #fff;
+  border: 1px solid #e8eaf0;
+  border-radius: 14px;
+  padding: 16px 10px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+.ops-n {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.55rem; font-weight: 700;
+  color: #0f172a; line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.ops-l {
+  display: block; margin-top: 6px;
+  font-size: 12px; font-weight: 700; color: #64748b;
+}
+.ops-card.ok .ops-n { color: #15803d; }
+.ops-card.wait .ops-n { color: #b45309; }
+.ops-card.bad .ops-n { color: #b91c1c; }
+
+.charts {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.card {
+  background: #fff; border: 1px solid #e8eaf0; border-radius: 16px;
+  padding: 20px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-bottom: 14px;
+}
+.card-h { margin-bottom: 16px; }
+.card-h h3 {
+  margin: 0 0 4px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.08rem; font-weight: 700;
+}
+.card-h p { margin: 0; font-size: 13px; color: #94a3b8; font-weight: 500; }
+.card-h code {
+  font-size: 11.5px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px;
+}
+.empty {
+  padding: 36px; text-align: center; color: #94a3b8; font-weight: 700; font-size: 14px;
 }
 
+.bars { display: flex; flex-direction: column; gap: 14px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.15fr) 1.6fr auto;
+  gap: 12px; align-items: center;
+}
+.bar-meta { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.bar-rank {
+  width: 26px; height: 26px; border-radius: 8px; background: #f1f5f9;
+  display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #64748b;
+  flex-shrink: 0;
+}
+.bar-label { font-size: 13.5px; font-weight: 800; color: #0f172a; }
+.bar-sub { font-size: 11.5px; color: #94a3b8; margin-top: 1px; font-weight: 600; }
+.bar-track { height: 10px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
 .bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #0f172a, #2563eb);
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+}
+.bar-money {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px; font-weight: 700; white-space: nowrap;
 }
 
-.revenue-right {
-  text-align: right;
-  font-weight: 700;
-  color: #334155;
+.status-box { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.donut {
+  width: 140px; height: 140px; border-radius: 50%;
+  display: grid; place-items: center;
 }
-
-.pie-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.donut-core {
+  width: 88px; height: 88px; border-radius: 50%; background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px #e8eaf0;
 }
-
-.donut-chart {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  position: relative;
-  margin-bottom: 24px;
+.donut-core strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem; font-weight: 700; line-height: 1;
 }
+.donut-core span { font-size: 11px; color: #94a3b8; font-weight: 700; margin-top: 2px; }
 
-.donut-chart::after {
-  content: '';
-  position: absolute;
-  inset: 48px;
-  background: white;
-  border-radius: 50%;
+.legend { list-style: none; margin: 0; padding: 0; width: 100%; }
+.legend li {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 14px;
 }
-
-.donut-center {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.lg-dot {
+  width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
 }
-
-.donut-center strong {
-  font-size: 28px;
-  font-weight: 800;
+.lg-body { flex: 1; min-width: 0; }
+.lg-top {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px;
 }
-
-.donut-center span {
-  color: #64748b;
-  font-size: 13px;
+.lg-name { flex: 1; font-weight: 700; font-size: 13.5px; color: #0f172a; }
+.lg-count { font-weight: 800; font-size: 14px; color: #0f172a; }
+.lg-pct { font-size: 12px; font-weight: 700; color: #94a3b8; min-width: 42px; text-align: right; }
+.lg-track { height: 6px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.lg-fill { height: 100%; border-radius: 99px; }
+.match {
+  margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-align: center;
 }
+.match.warn { color: #b45309; font-weight: 800; }
 
-.status-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.table-scroll { overflow-x: auto; }
+.tbl {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px;
 }
-
-.status-item {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #edf2f7;
+.tbl th {
+  text-align: left; padding: 12px 14px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase; color: #94a3b8;
+  background: #f8fafc; border-bottom: 1px solid #e8eaf0;
 }
-
-.status-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+.tbl td {
+  padding: 14px; border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle; color: #334155; font-weight: 600;
 }
-
-.status-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
+.tbl tbody tr:hover td { background: #fafbff; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.num {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-weight: 700; white-space: nowrap;
 }
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.rank {
+  display: inline-grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: #f1f5f9; font-size: 12px; font-weight: 800; color: #64748b;
 }
+.rank.r1 { background: #ede9fe; color: #6d28d9; }
+.rank.r2 { background: #e0e7ff; color: #4338ca; }
+.rank.r3 { background: #f3e8ff; color: #7e22ce; }
+.prod-name { font-weight: 700; color: #0f172a; line-height: 1.35; }
+.pos { color: #15803d; font-weight: 800; }
+.neg { color: #b91c1c; font-weight: 800; }
+.muted { color: #cbd5e1; font-weight: 700; }
+.empty-td { text-align: center; color: #94a3b8; padding: 28px !important; }
 
-.status-track {
-  height: 10px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  overflow: hidden;
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .ops-row { grid-template-columns: repeat(4, 1fr); }
 }
-
-.status-fill {
-  height: 100%;
-  border-radius: 999px;
-}
-
-.status-percent {
-  margin-top: 6px;
-  text-align: right;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead th {
-  background: #f8fafc;
-  color: #334155;
-  font-weight: 700;
-}
-
-th,
-td {
-  padding: 14px 16px;
-  text-align: left;
-  border-bottom: 1px solid #edf2f7;
-  white-space: nowrap;
-}
-
-tbody tr:hover {
-  background: #f8fbff;
-}
-
-.empty-table {
-  text-align: center;
-  color: #94a3b8;
-  padding: 20px;
-}
-
-.profit-text {
-  color: #16a34a;
-  font-weight: 700;
-}
-
-.loss-text {
-  color: #dc2626;
-  font-weight: 700;
-}
-
-@media (max-width: 1200px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .panel-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .sales-page {
-    padding: 18px;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .revenue-item {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .revenue-right {
-    text-align: left;
-  }
+@media (max-width: 900px) {
+  .charts { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .ops-row { grid-template-columns: repeat(3, 1fr); }
+  .bar-row { grid-template-columns: 1fr; gap: 6px; }
 }
 </style>

@@ -89,8 +89,8 @@ const router = createRouter({
         {
           path: 'orders',
           name: 'admin-orders',
+          // NOTE: cho phép cả EMPLOYEE vào duyệt đơn (khớp AuthInterceptor)
           component: () => import('@/views/admin/order/AdminOrderView.vue'),
-          meta: { requiresAdmin: true },
         },
         {
           path: 'staff',
@@ -120,10 +120,9 @@ const router = createRouter({
 // (bắt buộc) nằm ở Backend trong AuthInterceptor, vì Frontend luôn có thể bị
 // vượt qua (sửa localStorage bằng tay). Cả 2 lớp phải khớp logic với nhau:
 //   - ADMIN    : vào được TẤT CẢ route trong /admin
-//   - EMPLOYEE : vào được các route "vận hành" (sản phẩm, danh mục, POS...)
-//                nhưng KHÔNG vào được route có meta.requiresAdmin = true
-//                (đơn hàng, nhân viên, voucher) — khớp với ADMIN_ONLY_PATHS
-//                bên AuthInterceptor.java
+//   - EMPLOYEE : vào được vận hành + đơn hàng (duyệt/cập nhật trạng thái)
+//                nhưng KHÔNG vào được route meta.requiresAdmin (nhân viên, voucher)
+//                — khớp AuthInterceptor.java
 //   - CUSTOMER (hoặc chưa đăng nhập) : không vào được /admin dưới bất kỳ hình thức nào
 router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem('user_role')
