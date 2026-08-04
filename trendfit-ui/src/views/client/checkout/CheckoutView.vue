@@ -4,7 +4,31 @@
     <div class="row">
       <div class="col-md-7">
         <div class="card p-4 shadow-sm border-0">
-          <h5 class="mb-3">Thông tin giao hàng</h5>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="m-0">Thông tin giao hàng</h5>
+            <!-- Nút chọn nhanh từ sổ địa chỉ nếu đã đăng nhập và có địa chỉ -->
+            <div v-if="danhSachDiaChi.length > 0" class="dropdown">
+              <button
+                class="btn btn-sm btn-outline-dark dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+              >
+                📍 Chọn từ sổ địa chỉ
+              </button>
+              <ul class="dropdown-menu shadow">
+                <li v-for="dc in danhSachDiaChi" :key="dc.id">
+                  <a class="dropdown-item small py-2" href="#" @click.prevent="chonDiaChiCoSan(dc)">
+                    <strong>{{ dc.tenNguoiNhan }}</strong> ({{ dc.soDienThoai }})<br />
+                    <span class="text-muted"
+                      >{{ dc.duong }}, {{ dc.phuongXa }}, {{ dc.tinhThanh }}</span
+                    >
+                    <span v-if="dc.laMacDinh" class="text-success ms-1">★ Mặc định</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <input
             v-model="form.hoTen"
             class="form-control mb-3"
@@ -47,28 +71,18 @@
           </div>
           <!-- =============================================================================================== -->
 
-          <!-- ===================== PHÍ VẬN CHUYỂN (chỉ áp dụng đơn online) ===================== -->
+          <!-- ===================== PHÍ VẬN CHUYỂN ===================== -->
           <div class="mb-3">
             <label class="form-label d-flex justify-content-between align-items-center">
               <span>Phí vận chuyển</span>
               <small class="text-muted">Tự động tính theo khu vực nhận hàng</small>
             </label>
-            <!--
-              CHỈ HIỂN THỊ, KHÔNG CHO SỬA: trước đây ô này là <input> tự do,
-              khách có thể tự gõ số 0 hoặc bất kỳ giá trị nào để "qua mặt" phí
-              ship thật. Số hiển thị ở đây chỉ mang tính TƯƠNG ĐỐI để khách
-              xem trước - con số CHÍNH THỨC luôn do BACKEND tự tính lại tại
-              OrderService.taoDonHang() (không đọc giá trị này từ request),
-              nên dù có sửa được ô input cũng không có tác dụng gì với đơn
-              hàng thật.
-            -->
             <div class="form-control bg-light">{{ formatPrice(phiVanChuyen) }}</div>
             <div v-if="totalPrice >= NGUONG_MIEN_PHI_SHIP" class="form-text text-success">
               Đơn hàng từ {{ formatPrice(NGUONG_MIEN_PHI_SHIP) }} được miễn phí vận chuyển!
             </div>
           </div>
-          <!-- =================================================================================== -->
-
+          <!-- =================================================================== -->
 
           <h5 class="mt-3">Phương thức thanh toán</h5>
           <select v-model="form.phuongThucThanhToan" class="form-select mb-3">
@@ -175,20 +189,12 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// 1. Chỉ đọc các sản phẩm được chọn từ trang Cart truyền sang qua sessionStorage
 const cart = ref(JSON.parse(sessionStorage.getItem('checkout_items') || '[]'))
-
 const form = ref({ hoTen: '', sdt: '', diaChi: '', tinhThanh: '', phuongThucThanhToan: 'COD' })
+const danhSachDiaChi = ref([])
 
-// ===================== TỈNH/THÀNH ĐỂ TÌM-VÀ-CHỌN (combobox) =====================
-// Danh sách 34 tỉnh/thành phố của Việt Nam sau sáp nhập (hiệu lực từ
-// 01/07/2025, theo Nghị quyết 202/2025/QH15 và điều chỉnh vùng kinh tế -
-// xã hội tại Nghị quyết 306/NQ-CP). Mỗi tỉnh/thành được gắn `mien` để tính
-// phí ship - PHẢI khớp với danh sách TINH_MIEN ở
-// OrderService.tinhPhiShipGoiY() bên backend, sửa ở đâu phải sửa đồng bộ cả
-// 2 nơi.
+// ===================== TỈNH/THÀNH ĐỂ TÌM-VÀ-CHỌN =====================
 const danhSachTinhThanh = [
-  // --- Miền Bắc (15) ---
   { ten: 'Tuyên Quang', mien: 'BAC' },
   { ten: 'Cao Bằng', mien: 'BAC' },
   { ten: 'Lai Châu', mien: 'BAC' },
@@ -204,7 +210,6 @@ const danhSachTinhThanh = [
   { ten: 'Quảng Ninh', mien: 'BAC' },
   { ten: 'Hưng Yên', mien: 'BAC' },
   { ten: 'Ninh Bình', mien: 'BAC' },
-  // --- Miền Trung (11) ---
   { ten: 'Thanh Hóa', mien: 'TRUNG' },
   { ten: 'Nghệ An', mien: 'TRUNG' },
   { ten: 'Hà Tĩnh', mien: 'TRUNG' },
@@ -216,7 +221,6 @@ const danhSachTinhThanh = [
   { ten: 'Đắk Lắk', mien: 'TRUNG' },
   { ten: 'Khánh Hòa', mien: 'TRUNG' },
   { ten: 'Lâm Đồng', mien: 'TRUNG' },
-  // --- Miền Nam (8) ---
   { ten: 'Đồng Nai', mien: 'NAM' },
   { ten: 'Tây Ninh', mien: 'NAM' },
   { ten: 'TP. Hồ Chí Minh', mien: 'NAM' },
@@ -232,13 +236,10 @@ const boThauKhongDau = (s) =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-
 const tinhThanhSearch = ref('')
 const openTinhThanhDropdown = ref(false)
 const tinhThanhWrapRef = ref(null)
 
-// Lọc danh sách theo chữ khách gõ (không phân biệt dấu/hoa-thường) - khách
-// CHỈ ĐƯỢC BẤM CHỌN từ danh sách này, không thể tự gõ tỉnh/thành tự do.
 const tinhThanhGoiY = computed(() => {
   const kw = boThauKhongDau(tinhThanhSearch.value)
   if (!kw) return danhSachTinhThanh
@@ -251,9 +252,6 @@ function chonTinhThanh(tt) {
   openTinhThanhDropdown.value = false
 }
 
-// Khi rời khỏi ô: nếu khách gõ chữ nhưng không bấm chọn (hoặc gõ sai với
-// tỉnh/thành đã chọn), reset lại ô hiển thị về đúng giá trị ĐÃ CHỌN để
-// tránh lưu nhầm 1 chuỗi tự do không có trong danh sách.
 function onTinhThanhBlur() {
   openTinhThanhDropdown.value = false
   if (tinhThanhSearch.value !== form.value.tinhThanh) {
@@ -261,52 +259,66 @@ function onTinhThanhBlur() {
   }
 }
 
-// Bấm ra ngoài khu vực combobox thì đóng danh sách gợi ý lại
 function onClickNgoaiCombobox(e) {
   if (tinhThanhWrapRef.value && !tinhThanhWrapRef.value.contains(e.target)) {
     openTinhThanhDropdown.value = false
   }
 }
-onMounted(() => document.addEventListener('mousedown', onClickNgoaiCombobox))
+
+// ===================== TỰ ĐỘNG NẠP ĐỊA CHỈ TỪ PROFILE NGƯỜI DÙNG =====================
+const fetchUserAddresses = async () => {
+  const userId = localStorage.getItem('user_id')
+  if (!userId) return
+  try {
+    const res = await axios.get(`http://localhost:8080/api/public/profile/${userId}`)
+    // Điền sẵn họ tên & số điện thoại từ thông tin tài khoản nếu form đang trống
+    if (!form.value.hoTen) form.value.hoTen = res.data.hoTen || ''
+    if (!form.value.sdt) form.value.sdt = res.data.soDienThoai || ''
+
+    danhSachDiaChi.value = res.data.danhSachDiaChi || []
+
+    // Tự động tìm địa chỉ mặc định để điền sẵn vào form
+    const macDinh = danhSachDiaChi.value.find((d) => d.laMacDinh) || danhSachDiaChi.value[0]
+    if (macDinh) {
+      chonDiaChiCoSan(macDinh)
+    }
+  } catch (err) {
+    console.error('Không thể tải sổ địa chỉ:', err)
+  }
+}
+
+function chonDiaChiCoSan(dc) {
+  form.value.hoTen = dc.tenNguoiNhan
+  form.value.sdt = dc.soDienThoai
+  form.value.diaChi = `${dc.duong}, ${dc.phuongXa}`
+  form.value.tinhThanh = dc.tinhThanh
+  tinhThanhSearch.value = dc.tinhThanh
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onClickNgoaiCombobox)
+  fetchUserAddresses()
+})
 onUnmounted(() => document.removeEventListener('mousedown', onClickNgoaiCombobox))
 // ==================================================================================
 
 const totalPrice = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
-
 const formatPrice = (v) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)
 
 const voucherCode = ref('')
 const appliedVoucher = ref(null)
 
-// Tính số tiền được giảm
 const giamGia = computed(() => {
   if (!appliedVoucher.value) return 0
   const v = appliedVoucher.value
   if (v.loai === 'PERCENT') return (totalPrice.value * v.giaTriGiam) / 100
-  return v.giaTriGiam // Trường hợp FIXED
+  return v.giaTriGiam
 })
 
-// ===================== PHÍ VẬN CHUYỂN (chỉ áp dụng cho đơn ĐẶT ONLINE) =====================
-// Yêu cầu nghiệp vụ:
-//   - Bán tại quầy (offline, xem AdminPosView.vue): phí ship = 0, khách trả ngay.
-//   - Bán online (trang này): khách nhập địa chỉ nhận hàng -> hệ thống TỰ
-//     TÍNH GỢI Ý phí ship theo địa chỉ + giá trị đơn hàng, khách/hệ thống
-//     vẫn có thể NHẬP LẠI số khác nếu cần -> phí ship được CỘNG vào tổng
-//     thanh toán -> đơn chuyển trạng thái "Chờ xác nhận" (xem
-//     OrderService.taoDonHang(), trangThai mặc định = CHO_XAC_NHAN) để nhân
-//     viên xác nhận rồi mới giao cho đơn vị vận chuyển.
-const NGUONG_MIEN_PHI_SHIP = 500000 // Đơn từ 500k trở lên được miễn phí ship
+const NGUONG_MIEN_PHI_SHIP = 500000
 const phiVanChuyen = ref(0)
-
-// Gợi ý phí ship theo TỈNH/THÀNH khách chọn (tra ra vùng miền của tỉnh đó
-// rồi áp bảng giá theo vùng). NẾU SAU NÀY SỬA BẢNG GIÁ, PHẢI SỬA ĐỒNG BỘ VỚI
-// TINH_MIEN + PHI_SHIP_THEO_VUNG ở OrderService.tinhPhiShipGoiY() bên backend.
-const PHI_SHIP_THEO_VUNG = {
-  BAC: 20000,
-  TRUNG: 30000,
-  NAM: 35000,
-}
+const PHI_SHIP_THEO_VUNG = { BAC: 20000, TRUNG: 30000, NAM: 35000 }
 
 function goiYPhiShip(tenTinhThanh, tongTienHang) {
   if (tongTienHang >= NGUONG_MIEN_PHI_SHIP) return 0
@@ -315,8 +327,6 @@ function goiYPhiShip(tenTinhThanh, tongTienHang) {
   return PHI_SHIP_THEO_VUNG[tt.mien] ?? 35000
 }
 
-// Mỗi khi khách chọn tỉnh/thành hoặc giỏ hàng thay đổi giá trị -> tự cập
-// nhật lại GỢI Ý phí ship.
 watch(
   () => [form.value.tinhThanh, totalPrice.value],
   () => {
@@ -324,19 +334,11 @@ watch(
   },
   { immediate: true },
 )
-// ==============================================================================================
 
-// Tổng tiền sau giảm giá VÀ đã cộng phí vận chuyển
 const finalPrice = computed(
   () => totalPrice.value - giamGia.value + Number(phiVanChuyen.value || 0),
 )
 
-// ===================== QR THANH TOÁN (VietQR) =====================
-// Dùng dịch vụ công khai VietQR.io để tạo ảnh QR động theo ĐÚNG số tiền cần
-// thu (đã gồm phí ship) - không cần gọi API riêng, không cần API key.
-// ⚠️ THAY 3 GIÁ TRỊ DƯỚI ĐÂY BẰNG THÔNG TIN TÀI KHOẢN NGÂN HÀNG THẬT CỦA CỬA
-// HÀNG trước khi dùng trong thực tế (hiện đang là giá trị mẫu để demo), và
-// giữ NHẤT QUÁN với 3 giá trị tương ứng trong AdminPosView.vue.
 const BANK_CODE = 'MB'
 const BANK_ACCOUNT_NO = '0563663591'
 const BANK_ACCOUNT_NAME = 'Phan The Bac'
@@ -352,7 +354,6 @@ const vietQrUrl = computed(() => {
   const ten = encodeURIComponent(BANK_ACCOUNT_NAME)
   return `https://img.vietqr.io/image/${BANK_CODE}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${noiDung}&accountName=${ten}`
 })
-// =====================================================================
 
 const apDungVoucher = async () => {
   try {
@@ -363,8 +364,6 @@ const apDungVoucher = async () => {
     appliedVoucher.value = res.data
     alert('Áp dụng mã thành công!')
   } catch (err) {
-    // Backend trả lỗi dạng chuỗi thuần (ví dụ "Mã đã hết hạn!"), không phải
-    // object có field .message - đọc trực tiếp err.response.data trước.
     const thongBaoLoi = err.response?.data
     alert(
       (typeof thongBaoLoi === 'string' && thongBaoLoi) ||
@@ -374,7 +373,6 @@ const apDungVoucher = async () => {
   }
 }
 
-// 2. Xử lý đặt hàng và chỉ xóa những món đã mua khỏi giỏ hàng chung
 const confirmOrder = async () => {
   if (!form.value.hoTen || !form.value.sdt || !form.value.diaChi) {
     return alert('Vui lòng điền đủ thông tin!')
@@ -394,9 +392,6 @@ const confirmOrder = async () => {
 
   const payload = {
     ...form.value,
-    // Gộp địa chỉ cụ thể + tỉnh/thành đã chọn thành 1 chuỗi địa chỉ đầy đủ để
-    // lưu vào đơn hàng (form.diaChi vẫn giữ nguyên chỉ là phần cụ thể, dùng
-    // hiển thị lại trên form nếu khách bấm quay lại sửa).
     diaChi: `${form.value.diaChi}, ${form.value.tinhThanh}`,
     tongTienHang: totalPrice.value,
     phiVanChuyen: Number(phiVanChuyen.value || 0),
@@ -414,20 +409,14 @@ const confirmOrder = async () => {
   }
 
   try {
-    // Bước 1: Gửi request tạo đơn hàng lên Backend
     await axios.post('http://localhost:8080/api/public/orders', payload)
 
-    // Bước 2: Lấy toàn bộ giỏ hàng gốc trên LocalStorage ra
     let fullCart = JSON.parse(localStorage.getItem('cart') || '[]')
-
-    // Lọc bỏ những món vừa thanh toán, chỉ giữ lại những món KHÔNG ĐƯỢC CHỌN
     const checkedOutIds = cart.value.map((i) => i.bienTheId)
     const remainingCart = fullCart.filter((i) => !checkedOutIds.includes(i.bienTheId))
 
-    // Bước 3: Cập nhật lại giỏ hàng còn lại vào LocalStorage
     localStorage.setItem('cart', JSON.stringify(remainingCart))
 
-    // Bước 4: Đồng bộ giỏ hàng mới (đã loại bỏ món đã mua) lên Database
     if (numericId) {
       try {
         await axios.post('http://localhost:8080/api/public/cart/sync', {
@@ -439,7 +428,6 @@ const confirmOrder = async () => {
       }
     }
 
-    // Xóa bộ nhớ tạm thanh toán
     sessionStorage.removeItem('checkout_items')
 
     alert('Đặt hàng thành công!')
@@ -452,15 +440,12 @@ const confirmOrder = async () => {
 </script>
 
 <style scoped>
-/* ===================== COMBOBOX TÌM & CHỌN TỈNH/THÀNH ===================== */
 .combobox-wrap {
   position: relative;
 }
-
 .combobox {
   position: relative;
 }
-
 .combobox-list {
   position: absolute;
   z-index: 20;
@@ -475,7 +460,6 @@ const confirmOrder = async () => {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   padding: 6px;
 }
-
 .combobox-item {
   padding: 9px 12px;
   border-radius: 8px;
@@ -484,17 +468,14 @@ const confirmOrder = async () => {
   color: #212529;
   transition: background 0.1s ease-in-out;
 }
-
 .combobox-item:hover {
   background: #f1f3f5;
 }
-
 .combobox-item.active {
   background: #212529;
   color: #fff;
   font-weight: 600;
 }
-
 .combobox-empty {
   padding: 10px 12px;
   font-size: 0.88rem;

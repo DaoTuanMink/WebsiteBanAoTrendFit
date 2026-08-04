@@ -134,6 +134,8 @@ const managementItems = [
   { to: '/admin/categories', label: 'Danh mục', icon: '▤' },
   { to: '/admin/brands', label: 'Thương hiệu', icon: '◉' },
   { to: '/admin/sizes-colors', label: 'Kích cỡ & màu sắc', icon: '◐' },
+  // Bổ sung quản lý khách hàng vào menu quản trị
+  { to: '/admin/customers', label: 'Khách hàng', icon: '웃' },
   { to: '/admin/orders', label: 'Đơn hàng', icon: '▧', roles: ['ADMIN'] },
   { to: '/admin/vouchers', label: 'Phiếu giảm giá', icon: '◇', roles: ['ADMIN'] },
   { to: '/admin/staff', label: 'Nhân viên', icon: '♙', roles: ['ADMIN'] },
