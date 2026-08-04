@@ -7,7 +7,7 @@
     <div class="container-fluid px-4 px-md-5">
       <div class="row g-4 border-bottom border-secondary pb-4 mb-4 text-start">
         <div class="col-12 col-md-4">
-          <h4 class="fw-black text-uppercase mb-3 tracking-widest text-white">OWEN STORE</h4>
+          <h4 class="fw-black text-uppercase mb-3 tracking-widest text-white">TRENDFIT STORE</h4>
           <p class="text-muted small lh-lg mb-0">Công ty Cổ phần Thời trang Kowil Việt Nam</p>
           <p class="text-muted small lh-lg">📍 Trụ sở: Tầng 17, Tòa nhà xanh, Cầu Giấy, Hà Nội</p>
         </div>
@@ -33,7 +33,7 @@
         </div>
       </div>
       <div class="text-center text-muted small">
-        © 2026 Bản quyền thuộc về Owen Fashion | Nền tảng đồ án TrendFit Studio.
+        © 2026 Bản quyền thuộc về Trendfit Fashion | Nền tảng đồ án TrendFit Studio.
       </div>
     </div>
   </footer>
