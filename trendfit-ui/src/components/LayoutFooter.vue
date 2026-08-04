@@ -1,34 +1,11 @@
 <template>
-  <footer class="tf-footer">
-    <div class="container-fluid px-4 px-lg-5">
-      <div class="tf-footer-grid">
-        <!-- Brand -->
-        <div class="tf-footer-brand">
-          <div class="tf-footer-logo">
-            <span class="tf-logo-mark">TF</span>
-            <span class="tf-logo-text">TRENDFIT</span>
-          </div>
-          <p class="tf-footer-desc">
-            Fashion Tech 2026 — Nền tảng thời trang hiện đại, tối ưu trải nghiệm mua sắm thông minh.
-          </p>
-          <div class="tf-social">
-            <a href="#" class="tf-social-btn" aria-label="Facebook"><i class="ri-facebook-fill"></i></a>
-            <a href="#" class="tf-social-btn" aria-label="Instagram"><i class="ri-instagram-line"></i></a>
-            <a href="#" class="tf-social-btn" aria-label="TikTok"><i class="ri-tiktok-fill"></i></a>
-            <a href="#" class="tf-social-btn" aria-label="YouTube"><i class="ri-youtube-fill"></i></a>
-          </div>
-        </div>
-
-        <!-- Links -->
-        <div class="tf-footer-col">
-          <h6 class="tf-footer-title">Khám phá</h6>
-          <ul class="tf-footer-links">
-            <li><router-link to="/">Trang chủ</router-link></li>
-            <li><router-link to="/ao">Áo</router-link></li>
-            <li><a href="#">Quần</a></li>
-            <li><a href="#">Phụ kiện</a></li>
-            <li><a href="#">Bộ sưu tập mới</a></li>
-          </ul>
+  <footer class="bg-dark text-white pt-5 pb-4 border-top border-secondary">
+    <div class="container-fluid px-4 px-md-5">
+      <div class="row g-4 border-bottom border-secondary pb-4 mb-4 text-start">
+        <div class="col-12 col-md-4">
+          <h4 class="fw-black text-uppercase mb-3 tracking-widest text-white">TRENDFIT STORE</h4>
+          <p class="text-muted small lh-lg mb-0">Công ty Cổ phần Thời trang Kowil Việt Nam</p>
+          <p class="text-muted small lh-lg">📍 Trụ sở: Tầng 17, Tòa nhà xanh, Cầu Giấy, Hà Nội</p>
         </div>
 
         <div class="tf-footer-col">
@@ -56,10 +33,8 @@
           </p>
         </div>
       </div>
-
-      <div class="tf-footer-bottom">
-        <span>© 2026 TrendFit Studio. All rights reserved.</span>
-        <span class="tf-footer-tech">Built with Vue · Fashion × Tech</span>
+      <div class="text-center text-muted small">
+        © 2026 Bản quyền thuộc về Trendfit Fashion | Nền tảng đồ án TrendFit Studio.
       </div>
     </div>
   </footer>

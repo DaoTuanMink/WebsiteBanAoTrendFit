@@ -33,6 +33,11 @@ const router = createRouter({
       name: 'history-order',
       component: () => import('@/views/client/historyOrder/HistoryOrderView.vue'),
     },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/client/profile/ProfileView.vue'),
+    },
 
     // ==================== AUTH ====================
     { path: '/login', name: 'login', component: LoginView },
@@ -74,6 +79,12 @@ const router = createRouter({
           path: 'sizes-colors',
           name: 'admin-sizes-colors',
           component: () => import('@/views/admin/sizeColor/AdminColorSizeView.vue'),
+        },
+        // BỔ SUNG ROUTE QUẢN LÝ KHÁCH HÀNG
+        {
+          path: 'customers',
+          name: 'admin-customers',
+          component: () => import('@/views/admin/customer/AdminCustomerView.vue'),
         },
         {
           path: 'orders',
