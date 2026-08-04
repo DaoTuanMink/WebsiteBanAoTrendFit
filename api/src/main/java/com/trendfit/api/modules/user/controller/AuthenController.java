@@ -68,28 +68,42 @@ public class AuthenController {
         String username = loginRequest.getOrDefault("username", "").trim();
         String password = loginRequest.getOrDefault("password", "");
 
-        // --- Tài khoản ADMIN demo, phục vụ chấm điểm/demo nhanh không cần seed DB ---
-        if ("admin".equals(username) && "123".equals(password)) {
+        if (username.isEmpty() || password.isEmpty()) {
+            return ResponseEntity.badRequest().body("Vui lòng nhập tài khoản và mật khẩu!");
+        }
+
+        // Alias demo (không phân biệt hoa thường) -> map sang email seed trong DB
+        // admin / nhanvien / khachhang  (mật khẩu demo: 123)
+        String lookupEmail = username.toLowerCase();
+        if ("admin".equals(lookupEmail)) {
+            lookupEmail = "admin";
+        } else if ("nhanvien".equals(lookupEmail) || "employee".equals(lookupEmail) || "staff".equals(lookupEmail)) {
+            lookupEmail = "nhanvien";
+        } else if ("khachhang".equals(lookupEmail) || "customer".equals(lookupEmail) || "user".equals(lookupEmail)) {
+            lookupEmail = "khachhang";
+        }
+
+        // 1) Ưu tiên tìm trong DB (DataInitializer seed admin/nhanvien/khachhang)
+        NguoiDung user = nguoiDungRepository.findByEmail(lookupEmail);
+        if (user == null && !lookupEmail.equals(username)) {
+            // Thử đúng email người dùng gõ (đăng ký thật)
+            user = nguoiDungRepository.findByEmail(username);
+        }
+
+        // 2) Fallback ADMIN demo nếu DB chưa seed (chấm điểm nhanh)
+        if (user == null && "admin".equalsIgnoreCase(username) && "123".equals(password)) {
             return ResponseEntity.ok(createResponse(1, "Quản lý cấp cao", "ADMIN"));
         }
 
-        // --- Tài khoản thật trong DB: dùng chung cho cả NHÂN VIÊN và KHÁCH HÀNG,
-        //     vì cả hai đều là 1 bản ghi NguoiDung, chỉ khác giá trị "vaiTro" ---
-        NguoiDung user = nguoiDungRepository.findByEmail(username);
         if (user == null || user.getMatKhau() == null) {
-            return ResponseEntity.status(401).body("Tài khoản hoặc mật khẩu không chính xác!");
+            return ResponseEntity.status(401).body("Tài khoản hoặc mật khẩu không chính xác! Dùng admin/nhanvien/khachhang - mật khẩu 123.");
         }
 
-        // Tài khoản đã bị Admin khóa (dangHoatDong = false) -> không cho đăng nhập
         if (Boolean.FALSE.equals(user.getDangHoatDong())) {
             return ResponseEntity.status(403).body("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!");
         }
 
-        // TODO (bảo mật): mật khẩu hiện lưu dạng chữ thường (plain text) nên so
-        // sánh trực tiếp bằng equals(). Khi nâng cấp bảo mật, hãy đổi cột
-        // mat_khau sang lưu dạng băm (BCrypt) và dùng passwordEncoder.matches(...)
-        // ở đây thay vì equals() - đồng thời cập nhật lại chỗ tạo tài khoản
-        // (AuthenController.register, UserAdminService.taoTaiKhoanNhanVien).
+        // Plain-text password (đồ án demo). Production nên dùng BCrypt.
         if (!user.getMatKhau().equals(password)) {
             return ResponseEntity.status(401).body("Tài khoản hoặc mật khẩu không chính xác!");
         }

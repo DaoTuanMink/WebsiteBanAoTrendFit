@@ -22,12 +22,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
  *
  * QUY TẮC PHÂN QUYỀN (đơn giản, 2 cấp):
  *  1) Nhóm "ADMIN_ONLY"  : chỉ Quản trị viên (ADMIN) mới được dùng.
- *     Gồm: quản lý đơn hàng (duyệt/hủy), quản lý nhân viên, quản lý voucher/khuyến mãi.
- *     Lý do: đây là các nghiệp vụ ảnh hưởng tiền bạc / nhân sự, rủi ro cao.
- *  2) Nhóm "STAFF_AREA"  : ADMIN và EMPLOYEE (nhân viên) đều được dùng.
+ *     Gồm: quản lý nhân viên, quản lý voucher/khuyến mãi (tạo/sửa/xóa).
+ *  2) Nhóm "STAFF_AREA"  : ADMIN và EMPLOYEE đều được dùng.
  *     Gồm: quản lý sản phẩm/danh mục/thương hiệu/size-màu, bán hàng tại quầy,
- *     xem thống kê doanh số.
- *     Lý do: đây là công việc vận hành hàng ngày mà nhân viên bán hàng cũng cần làm.
+ *     xem thống kê, DUYỆT / CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG online của khách.
+ *     Lý do: nhân viên cần xử lý yêu cầu đơn hàng hàng ngày.
  *
  * LƯU Ý CHO THÀNH VIÊN KHÁC:
  *  - Nếu bạn thêm 1 Controller mới nằm trong "/api/admin/...", API đó sẽ TỰ ĐỘNG
@@ -44,10 +43,12 @@ public class AuthInterceptor implements HandlerInterceptor {
      * Các tiền tố đường dẫn CHỈ dành riêng cho ADMIN (quản trị viên cấp cao).
      * Nhân viên (EMPLOYEE) gọi vào các API này sẽ bị từ chối (403).
      */
+    // NOTE: /api/admin/orders đã MỞ cho cả EMPLOYEE để nhân viên có thể
+    // xem & duyệt đơn online của khách (yêu cầu nghiệp vụ shop bán áo).
+    // Chỉ giữ users + vouchers (tạo/sửa) cho ADMIN.
     private static final String[] ADMIN_ONLY_PATHS = {
-            "/api/admin/orders",   // Duyệt / đổi trạng thái / xem lịch sử duyệt đơn hàng
             "/api/admin/users",    // Quản lý tài khoản nhân viên (tạo/sửa/xóa)
-            "/api/admin/vouchers", // Quản lý mã giảm giá
+            "/api/admin/vouchers", // Quản lý mã giảm giá (tạo/sửa/xóa)
     };
 
     @Override

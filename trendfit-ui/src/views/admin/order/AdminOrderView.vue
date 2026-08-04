@@ -43,6 +43,16 @@
         <div class="text-muted mt-2">Đang tải dữ liệu đơn hàng...</div>
       </div>
 
+      <div v-else-if="fetchError" class="alert alert-danger">
+        <strong>Không tải được đơn hàng.</strong><br />
+        {{ fetchError }}
+        <div class="mt-2">
+          <button class="btn btn-sm btn-outline-danger" @click="fetchOrders(currentTab === 'null-user' ? 'null-user' : 'all')">
+            Thử lại
+          </button>
+        </div>
+      </div>
+
       <div class="table-responsive shadow-sm rounded-3" v-else>
         <table class="table table-bordered align-middle text-center mb-0">
           <thead class="table-dark">
@@ -63,7 +73,7 @@
                 Không có đơn hàng nào trong mục này.
               </td>
             </tr>
-            <tr v-for="item in filteredOrders" :key="item.donHang.id">
+            <tr v-for="item in filteredOrders" :key="item.donHang?.id || item.id">
               <td>
                 <strong>#{{ item.donHang.id }}</strong>
                 <span v-if="isPosOrder(item)" class="badge bg-primary ms-1">POS</span>
@@ -80,8 +90,14 @@
               </td>
               <td>
                 <ul class="list-unstyled mb-0 small">
-                  <li v-for="ct in item.chiTietDonHangs" :key="ct.id">
-                    {{ ct.soLuong }}x {{ ct.tenSanPham }} ({{ ct.kichCoSize }} / {{ ct.mauSac }})
+                  <li v-for="ct in (item.chiTietDonHangs || [])" :key="ct.id">
+                    {{ ct.soLuong }}x {{ ct.tenSanPham || 'Sản phẩm' }}
+                    <span v-if="ct.kichCoSize || ct.mauSac">
+                      ({{ ct.kichCoSize || '-' }} / {{ ct.mauSac || '-' }})
+                    </span>
+                  </li>
+                  <li v-if="!item.chiTietDonHangs || item.chiTietDonHangs.length === 0" class="text-muted">
+                    Không có chi tiết
                   </li>
                 </ul>
               </td>
@@ -227,18 +243,45 @@ const switchTab = (tab) => {
 }
 
 // Lấy dữ liệu từ Backend
+const fetchError = ref('')
+
 const fetchOrders = async (type = 'all') => {
   loading.value = true
+  fetchError.value = ''
   try {
+    // Kiểm tra đã đăng nhập admin/nhân viên chưa
+    const headers = getAuthHeaders()
+    if (!headers['User-Role']) {
+      fetchError.value =
+        'Chưa đăng nhập hoặc phiên hết hạn. Vui lòng đăng nhập bằng tài khoản admin / nhanvien.'
+      danhSachDonHang.value = []
+      return
+    }
+
     let url = 'http://localhost:8080/api/admin/orders'
     if (type === 'null-user') {
       url = 'http://localhost:8080/api/admin/orders/null-user'
     }
 
-    const res = await axios.get(url, { headers: getAuthHeaders() })
-    danhSachDonHang.value = res.data
+    const res = await axios.get(url, { headers })
+    // Đảm bảo luôn là mảng
+    danhSachDonHang.value = Array.isArray(res.data) ? res.data : []
   } catch (err) {
     console.error('Lỗi tải đơn hàng:', err)
+    const status = err.response?.status
+    const msg = err.response?.data
+    if (status === 401) {
+      fetchError.value = 'Thiếu xác thực. Đăng nhập lại (admin/nhanvien - mật khẩu 123).'
+    } else if (status === 403) {
+      fetchError.value =
+        'Không có quyền xem đơn hàng. Cần tài khoản ADMIN hoặc EMPLOYEE (đã mở quyền cho nhân viên).'
+    } else if (!err.response) {
+      fetchError.value = 'Không kết nối được backend (localhost:8080). Hãy chạy API rồi F5.'
+    } else {
+      fetchError.value =
+        typeof msg === 'string' ? msg : `Lỗi tải đơn hàng (${status || 'network'})`
+    }
+    danhSachDonHang.value = []
   } finally {
     loading.value = false
   }

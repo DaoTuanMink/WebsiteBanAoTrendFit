@@ -134,7 +134,7 @@ const managementItems = [
   { to: '/admin/categories', label: 'Danh mục', icon: '▤' },
   { to: '/admin/brands', label: 'Thương hiệu', icon: '◉' },
   { to: '/admin/sizes-colors', label: 'Kích cỡ & màu sắc', icon: '◐' },
-  { to: '/admin/orders', label: 'Đơn hàng', icon: '▧', roles: ['ADMIN'] },
+  { to: '/admin/orders', label: 'Đơn hàng', icon: '▧', roles: ['ADMIN', 'EMPLOYEE'] },  // NV được duyệt đơn
   { to: '/admin/vouchers', label: 'Phiếu giảm giá', icon: '◇', roles: ['ADMIN'] },
   { to: '/admin/staff', label: 'Nhân viên', icon: '♙', roles: ['ADMIN'] },
 ]

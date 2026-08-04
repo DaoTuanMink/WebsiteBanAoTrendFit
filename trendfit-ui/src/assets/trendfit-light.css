@@ -4,6 +4,57 @@
    Import SAU Bootstrap trong src/main.js
    ========================================================= */
 
+/* ========== TRENDFIT TYPOGRAPHY UPGRADE ========== */
+:root {
+  --tf-font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --tf-font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--tf-font-body) !important;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  color: #0f172a;
+}
+
+h1, h2, h3, h4, h5, h6,
+.heading-font {
+  font-family: var(--tf-font-display) !important;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+p {
+  line-height: 1.65;
+}
+
+button, input, select, textarea {
+  font-family: var(--tf-font-body) !important;
+}
+
+/* Clearer product / UI text hierarchy */
+.text-xs { font-size: 0.75rem; line-height: 1.4; }
+.text-sm { font-size: 0.875rem; line-height: 1.5; }
+.text-base { font-size: 1rem; line-height: 1.6; }
+.text-lg { font-size: 1.125rem; line-height: 1.5; }
+.text-xl { font-size: 1.25rem; line-height: 1.4; }
+
+.fw-semibold { font-weight: 600; }
+.fw-bold { font-weight: 700; }
+.fw-black { font-weight: 800; }
+
+
+
 :root {
   color-scheme: light;
 
@@ -849,4 +900,50 @@ table tbody tr:hover td {
     width: 100% !important;
     margin: 0 !important;
   }
+}
+
+
+/* ========== GLOBAL SMOOTH MOTION ========== */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+a, button, .btn {
+  transition: color 0.2s ease, background-color 0.2s ease,
+              border-color 0.2s ease, box-shadow 0.25s ease,
+              transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.2s ease;
+}
+
+img {
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Soft page enter for router views */
+.tf-page-enter {
+  animation: tfPageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes tfPageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Skeleton pulse for loading */
+@keyframes tfPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.tf-skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: tfShimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes tfShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
