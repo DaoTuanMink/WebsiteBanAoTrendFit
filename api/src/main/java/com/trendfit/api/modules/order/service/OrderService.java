@@ -10,9 +10,11 @@ import com.trendfit.api.modules.order.dto.OrderResponseDTO;
 import com.trendfit.api.modules.order.entity.ChiTietDonHang;
 import com.trendfit.api.modules.order.entity.DonHang;
 import com.trendfit.api.modules.order.entity.LichSuDonHang;
+import com.trendfit.api.modules.order.entity.YeuCauHoanTra;
 import com.trendfit.api.modules.order.repository.ChiTietDonHangRepository;
 import com.trendfit.api.modules.order.repository.DonHangRepository;
 import com.trendfit.api.modules.order.repository.LichSuDonHangRepository;
+import com.trendfit.api.modules.order.repository.YeuCauHoanTraRepository;
 import com.trendfit.api.modules.product.entity.BienTheSanPham;
 import com.trendfit.api.modules.product.repository.BienTheSanPhamRepository;
 import com.trendfit.api.modules.user.entity.NguoiDung;
@@ -38,6 +40,7 @@ public class OrderService {
     @Autowired private BienTheSanPhamRepository bienTheRepository;
     @Autowired private NguoiDungRepository nguoiDungRepository;
     @Autowired private LichSuDonHangRepository lichSuDonHangRepository;
+    @Autowired private YeuCauHoanTraRepository yeuCauHoanTraRepository;
 
     // Constructor (giữ nguyên)
     OrderService(MaGiamGiaRepository maGiamGiaRepository) {
@@ -249,10 +252,9 @@ public class OrderService {
         return PHI_SHIP_THEO_VUNG.getOrDefault(mien, BigDecimal.valueOf(35000));
     }
 
-    @Transactional
-    public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
-        capNhatTrangThaiDonHang(id, trangThai, null);
-    }
+    
+
+    
 
     /**
      * Cập nhật trạng thái đơn hàng, đồng thời ghi lại lịch sử ai đã duyệt/
@@ -261,6 +263,12 @@ public class OrderService {
      * "NhanVien-ID". Nếu không xác định được (null) thì vẫn ghi log nhưng
      * để trống người thực hiện.
      */
+    
+    @Transactional
+    public void capNhatTrangThaiDonHang(Integer id, String trangThai) {
+        capNhatTrangThaiDonHang(id, trangThai, null);
+    }
+
     @Transactional
     public void capNhatTrangThaiDonHang(Integer id, String trangThai, Integer nguoiThucHienId) {
         DonHang donHang = donHangRepository.findById(id)
@@ -268,23 +276,21 @@ public class OrderService {
 
         String trangThaiCu = donHang.getTrangThai();
 
-        // Không có gì thay đổi thì không cần ghi log
+        // Không có gì thay đổi thì bỏ qua
         if (trangThai.equals(trangThaiCu)) {
             return;
         }
 
-        // Kho đã bị trừ NGAY LÚC ĐẶT HÀNG (xem taoDonHang()), nên khi đơn
-        // chuyển sang DA_HUY (từ bất kỳ trạng thái nào KHÁC DA_HUY), phải
-        // cộng trả lại tồn kho + giảm số lượng đã bán tương ứng.
-        if ("DA_HUY".equals(trangThai) && !"DA_HUY".equals(trangThaiCu)) {
+        // Nếu chuyển sang DA_HUY hoặc DA_TRA_HANG thì tiến hành hoàn trả tồn kho
+        if (("DA_HUY".equals(trangThai) || "DA_TRA_HANG".equals(trangThai)) 
+            && !"DA_HUY".equals(trangThaiCu) && !"DA_TRA_HANG".equals(trangThaiCu)) {
             xuLyTonKho(donHang, 1);
         }
 
-        // Cập nhật trạng thái mới cho đơn hàng
         donHang.setTrangThai(trangThai);
         donHangRepository.save(donHang);
 
-        // Ghi lại lịch sử: ai đã duyệt / đổi trạng thái, từ trạng thái nào sang trạng thái nào
+        // Ghi lại lịch sử thay đổi trạng thái đơn hàng
         LichSuDonHang lichSu = new LichSuDonHang();
         lichSu.setDonHang(donHang);
         lichSu.setTrangThaiCu(trangThaiCu);
@@ -321,6 +327,7 @@ public class OrderService {
         }
         return result;
     }
+
 
     private void xuLyTonKho(DonHang dh, int factor) {
         List<ChiTietDonHang> chiTiets = chiTietDonHangRepository.findByDonHang_Id(dh.getId());
@@ -437,4 +444,30 @@ public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
     }
     return savedOrder;
 }
+
+@Transactional
+public void yeuCauTraHang(Integer orderId, String lyDo, String anhMinhChung) {
+    DonHang donHang = donHangRepository.findById(orderId)
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng!"));
+
+    // 1. Cập nhật trạng thái đơn hàng chính
+    donHang.setTrangThai("YEU_CAU_TRA_HANG");
+    donHangRepository.save(donHang);
+
+    // 2. Lưu bản ghi vào bảng yeu_cau_hoan_tra có sẵn của bạn
+    YeuCauHoanTra yeuCau = new YeuCauHoanTra();
+    yeuCau.setDonHang(donHang);
+    yeuCau.setLyDo(lyDo);
+    yeuCau.setMoTaChiTiet(anhMinhChung); // Lưu link ảnh minh chứng vào đây
+    yeuCau.setTrangThai("CHO_XU_LY");
+    
+    yeuCauHoanTraRepository.save(yeuCau);
+}
+
+@Transactional(readOnly = true)
+public YeuCauHoanTra getChiTietHoanTra(Integer donHangId) {
+    return yeuCauHoanTraRepository.findByDonHang_Id(donHangId).orElse(null);
+}
+
+
 }
