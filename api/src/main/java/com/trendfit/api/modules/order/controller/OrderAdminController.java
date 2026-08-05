@@ -26,11 +26,10 @@ public class OrderAdminController {
             @PathVariable Integer id, 
             @RequestParam String status,
             // Header do FE tự động gắn (xem main.js), chứa id của người đang đăng nhập
-            // (nhân viên/admin) -> dùng để ghi lại "ai đã duyệt đơn hàng" (yêu cầu Thành)
             @RequestHeader(value = "NhanVien-ID", required = false) Integer nguoiThucHienId) {
         
-        // Kiểm tra tính hợp lệ của trạng thái
-        if (!status.matches("CHO_XAC_NHAN|DA_XAC_NHAN|DANG_VAN_CHUYEN|DA_THANH_CONG|DA_HUY")) {
+        // Bổ sung thêm YEU_CAU_TRA_HANG và DA_TRA_HANG vào danh sách trạng thái hợp lệ
+        if (!status.matches("CHO_XAC_NHAN|DA_XAC_NHAN|DANG_VAN_CHUYEN|DA_THANH_CONG|DA_HUY|YEU_CAU_TRA_HANG|DA_TRA_HANG")) {
             return ResponseEntity.badRequest().body("Trạng thái không hợp lệ");
         }
         
@@ -38,21 +37,30 @@ public class OrderAdminController {
         return ResponseEntity.ok("Cập nhật trạng thái thành công!");
     }
 
-@GetMapping
-public ResponseEntity<?> getAllOrders() {
-    return ResponseEntity.ok(orderService.findAllOrdersWithDetails());
-}
+    @GetMapping
+    public ResponseEntity<?> getAllOrders() {
+        return ResponseEntity.ok(orderService.findAllOrdersWithDetails());
+    }
 
-// Lấy các đơn hàng chưa gán cho khách (userId is null)
-@GetMapping("/null-user")
-public ResponseEntity<?> getOrdersWithNullUser() {
-    return ResponseEntity.ok(orderService.findOrdersWithNullUser());
-}
+    // Lấy các đơn hàng chưa gán cho khách (userId is null)
+    @GetMapping("/null-user")
+    public ResponseEntity<?> getOrdersWithNullUser() {
+        return ResponseEntity.ok(orderService.findOrdersWithNullUser());
+    }
 
-// Xem lịch sử ai đã duyệt / đổi trạng thái của 1 đơn hàng (yêu cầu Thành)
-@GetMapping("/{id}/history")
-public ResponseEntity<?> getOrderHistory(@PathVariable Integer id) {
-    return ResponseEntity.ok(orderService.getLichSuDonHang(id));
-}
+    // Xem lịch sử ai đã duyệt / đổi trạng thái của 1 đơn hàng
+    @GetMapping("/{id}/history")
+    public ResponseEntity<?> getOrderHistory(@PathVariable Integer id) {
+        return ResponseEntity.ok(orderService.getLichSuDonHang(id));
+    }
 
+    // BỔ SUNG: Endpoint lấy chi tiết lý do và ảnh minh chứng trả hàng cho Admin
+    @GetMapping("/{id}/return-details")
+    public ResponseEntity<?> getReturnDetails(@PathVariable Integer id) {
+        Object chiTiet = orderService.getChiTietHoanTra(id);
+        if (chiTiet != null) {
+            return ResponseEntity.ok(chiTiet);
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
