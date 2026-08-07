@@ -1,75 +1,110 @@
 <template>
-  <div class="admin-orders bg-white min-vh-100">
-    <div class="container py-5 text-start">
-      <h3 class="fw-bold text-dark mb-3">QUẢN LÝ HÓA ĐƠN & ĐƠN HÀNG</h3>
-
-      <!-- THANH TAB PHÂN LOẠI ĐƠN HÀNG -->
-      <div class="d-flex flex-wrap gap-2 mb-4">
-        <button
-          class="btn btn-sm"
-          :class="currentTab === 'all' ? 'btn-dark' : 'btn-outline-dark'"
-          @click="switchTab('all')"
-        >
-          Tất cả đơn ({{ stats.all }})
-        </button>
-
-        <button
-          class="btn btn-sm"
-          :class="currentTab === 'online' ? 'btn-dark' : 'btn-outline-dark'"
-          @click="switchTab('online')"
-        >
-          📦 Đơn Online ({{ stats.online }})
-        </button>
-
-        <button
-          class="btn btn-sm"
-          :class="currentTab === 'pos' ? 'btn-dark' : 'btn-outline-dark'"
-          @click="switchTab('pos')"
-        >
-          🏪 Đơn Tại Quầy / POS ({{ stats.pos }})
-        </button>
-
-        <button
-          class="btn btn-sm"
-          :class="currentTab === 'null-user' ? 'btn-dark' : 'btn-outline-dark'"
-          @click="switchTab('null-user')"
-        >
-          👤 Đơn Khách Vãng Lai (null user) ({{ stats.nullUser }})
-        </button>
+  <div class="container-fluid py-4">
+    <!-- Header đồng bộ UI admin -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Quản lý đơn hàng</h4>
+        <p class="text-secondary small mb-0">Duyệt đơn online, tại quầy và yêu cầu trả hàng</p>
       </div>
+    </div>
 
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-dark" role="status"></div>
-        <div class="text-muted mt-2">Đang tải dữ liệu đơn hàng...</div>
-      </div>
+    <!-- Tab phân loại -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <button
+        type="button"
+        class="btn btn-sm"
+        :class="currentTab === 'all' ? 'btn-primary' : 'btn-outline-primary'"
+        @click="switchTab('all')"
+      >
+        Tất cả ({{ stats.all }})
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        :class="currentTab === 'online' ? 'btn-primary' : 'btn-outline-primary'"
+        @click="switchTab('online')"
+      >
+        Đơn online ({{ stats.online }})
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        :class="currentTab === 'return' ? 'btn-danger' : 'btn-outline-danger'"
+        @click="switchTab('return')"
+      >
+        Yêu cầu trả hàng ({{ stats.returnOrders }})
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        :class="currentTab === 'null-user' ? 'btn-primary' : 'btn-outline-primary'"
+        @click="switchTab('null-user')"
+      >
+        Vãng lai / tại quầy ({{ stats.nullUser }})
+      </button>
+    </div>
 
-      <div v-else-if="fetchError" class="alert alert-danger">
-        <strong>Không tải được đơn hàng.</strong><br />
-        {{ fetchError }}
-        <div class="mt-2">
-          <button class="btn btn-sm btn-outline-danger" @click="fetchOrders(currentTab === 'null-user' ? 'null-user' : 'all')">
-            Thử lại
-          </button>
+    <!-- Lọc theo ngày + luôn sắp xếp đơn mới nhất lên đầu (trong filteredOrders) -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Từ ngày</label>
+            <input v-model="filterFromDate" type="date" class="form-control form-control-sm" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Đến ngày</label>
+            <input v-model="filterToDate" type="date" class="form-control form-control-sm" />
+          </div>
+          <div class="col-md-auto d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @click="clearDateFilter">
+              Xóa lọc ngày
+            </button>
+          </div>
+          <div class="col-md-auto ms-md-auto">
+            <span class="small text-secondary">Sắp xếp: mới nhất trước</span>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="table-responsive shadow-sm rounded-3" v-else>
-        <table class="table table-bordered align-middle text-center mb-0">
-          <thead class="table-dark">
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <div class="text-muted mt-2">Đang tải dữ liệu đơn hàng...</div>
+    </div>
+
+    <div v-else-if="fetchError" class="alert alert-danger">
+      <strong>Không tải được đơn hàng.</strong><br />
+      {{ fetchError }}
+      <div class="mt-2">
+        <button type="button" class="btn btn-sm btn-outline-danger" @click="fetchOrders()">Thử lại</button>
+      </div>
+    </div>
+
+    <!--
+      Bảng đơn hàng — đã GỘP cột "Hành Động" + "Lịch Sử" + "In Ấn"
+      thành 1 cột "Thao tác" (tránh trùng nút Xem lịch sử).
+    -->
+    <div v-else class="card border-0 shadow-sm overflow-hidden">
+      <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold">Danh sách đơn hàng</span>
+        <span class="badge text-bg-primary rounded-pill">Tổng: {{ filteredOrders.length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
             <tr>
-              <th>Mã Đơn</th>
-              <th>Khách Hàng</th>
-              <th>Sản Phẩm</th>
-              <th>Tổng Tiền</th>
-              <th>Trạng Thái</th>
-              <th>Hành Động</th>
-              <th>Lịch Sử</th>
-              <th>In Ấn</th>
+              <th>Mã đơn</th>
+              <th>Khách hàng</th>
+              <th>Sản phẩm</th>
+              <th class="text-end">Tổng tiền</th>
+              <th>Trạng thái</th>
+              <th class="text-center" style="min-width: 150px">Thao tác</th>
             </tr>
           </thead>
-          <tbody class="text-start">
+          <tbody>
             <tr v-if="filteredOrders.length === 0">
-              <td colspan="8" class="text-center text-muted py-4">
+              <td colspan="6" class="text-center text-muted py-4">
                 Không có đơn hàng nào trong mục này.
               </td>
             </tr>
@@ -130,18 +165,32 @@
                   <em>Cố định</em>
                 </div>
               </td>
+              <!-- Một cột Thao tác: lịch sử + trả hàng (nếu có) + in hóa đơn -->
               <td class="text-center">
-                <button
-                  class="btn btn-sm btn-outline-secondary text-nowrap"
-                  @click="xemLichSu(item.donHang.id)"
-                >
-                  Xem lịch sử
-                </button>
-              </td>
-              <td class="text-center">
-                <button class="btn btn-sm btn-outline-dark text-nowrap" @click="printInvoice(item)">
-                  In Hóa Đơn
-                </button>
+                <div class="d-flex flex-column gap-1 align-items-center">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary text-nowrap"
+                    @click="xemLichSu(item.donHang.id)"
+                  >
+                    Lịch sử
+                  </button>
+                  <button
+                    v-if="item.donHang.trangThai === 'YEU_CAU_TRA_HANG'"
+                    type="button"
+                    class="btn btn-sm btn-outline-danger text-nowrap"
+                    @click="xemChiTietTraHang(item.donHang.id)"
+                  >
+                    Yêu cầu trả
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary text-nowrap"
+                    @click="printInvoice(item)"
+                  >
+                    In hóa đơn
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -197,7 +246,10 @@ import { getAuthHeaders } from '@/utils/adminAuth'
 
 const danhSachDonHang = ref([])
 const loading = ref(true)
-const currentTab = ref('all') // 'all', 'online', 'pos', 'null-user'
+const currentTab = ref('all') // 'all', 'online', 'return', 'null-user'
+// Lọc theo khoảng ngày (input type="date" → chuỗi YYYY-MM-DD)
+const filterFromDate = ref('')
+const filterToDate = ref('')
 
 // State cho modal lịch sử
 const showHistoryModal = ref(false)
@@ -221,25 +273,68 @@ const isPosOrder = (item) => {
   return address.toLowerCase().includes('quầy') || address.toLowerCase().includes('pos')
 }
 
-// Lọc danh sách hiển thị theo tab đang chọn ở Front-end hoặc gọi API vãng lai
-const filteredOrders = computed(() => {
-  if (currentTab.value === 'pos') {
-    return danhSachDonHang.value.filter((item) => isPosOrder(item))
-  }
-  if (currentTab.value === 'online') {
-    return danhSachDonHang.value.filter((item) => !isPosOrder(item))
-  }
-  return danhSachDonHang.value
+// Thống kê số lượng đơn theo từng tab phân loại
+const stats = computed(() => {
+  const all = danhSachDonHang.value.length
+  const online = danhSachDonHang.value.filter(
+    (item) => !isPosOrder(item) && item.donHang.nguoiDung,
+  ).length
+  const returnOrders = danhSachDonHang.value.filter(
+    (item) => item.donHang.trangThai === 'YEU_CAU_TRA_HANG',
+  ).length
+  const nullUser = danhSachDonHang.value.filter(
+    (item) => isPosOrder(item) || !item.donHang.nguoiDung,
+  ).length
+  return { all, online, returnOrders, nullUser }
 })
 
-// Chuyển tab và gọi API tương ứng
+// Lọc theo tab + khoảng ngày, rồi sắp xếp đơn mới nhất lên đầu
+const filteredOrders = computed(() => {
+  let list = danhSachDonHang.value
+
+  // 1) Lọc theo tab
+  if (currentTab.value === 'online') {
+    list = list.filter((item) => !isPosOrder(item) && item.donHang.nguoiDung)
+  } else if (currentTab.value === 'return') {
+    list = list.filter((item) => item.donHang.trangThai === 'YEU_CAU_TRA_HANG')
+  } else if (currentTab.value === 'null-user') {
+    list = list.filter((item) => isPosOrder(item) || !item.donHang.nguoiDung)
+  }
+
+  // 2) Lọc theo ngày đặt (so sánh theo ngày local, bỏ qua giờ)
+  if (filterFromDate.value || filterToDate.value) {
+    list = list.filter((item) => {
+      const raw = item.donHang?.ngayDat
+      if (!raw) return false
+      const d = new Date(raw)
+      if (Number.isNaN(d.getTime())) return false
+      // Chuẩn hóa về YYYY-MM-DD theo local
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const key = `${y}-${m}-${day}`
+      if (filterFromDate.value && key < filterFromDate.value) return false
+      if (filterToDate.value && key > filterToDate.value) return false
+      return true
+    })
+  }
+
+  // 3) Mới nhất lên đầu (ngayDat giảm dần; fallback theo id)
+  return [...list].sort((a, b) => {
+    const ta = new Date(a.donHang?.ngayDat || 0).getTime()
+    const tb = new Date(b.donHang?.ngayDat || 0).getTime()
+    if (tb !== ta) return tb - ta
+    return Number(b.donHang?.id || 0) - Number(a.donHang?.id || 0)
+  })
+})
+
 const switchTab = (tab) => {
   currentTab.value = tab
-  if (tab === 'null-user') {
-    fetchOrders('null-user')
-  } else {
-    fetchOrders('all')
-  }
+}
+
+const clearDateFilter = () => {
+  filterFromDate.value = ''
+  filterToDate.value = ''
 }
 
 // Lấy dữ liệu từ Backend
@@ -363,51 +458,102 @@ const getStatusLabel = (status) => {
   return labels[status] || status
 }
 
+// In hóa đơn từ trang Quản lý đơn hàng.
+// Bổ sung đầy đủ: tạm tính, phí ship, mã giảm giá + số tiền giảm, tổng thanh toán.
 const printInvoice = (item) => {
   const order = item.donHang
-  const details = item.chiTietDonHangs
+  const details = item.chiTietDonHangs || []
+
   const rows = details
     .map(
-      (d) => `
+      (d, index) => `
     <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.tenSanPham}</td>
-      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.kichCoSize} / ${d.mauSac}</td>
+      <td style="text-align: center; padding: 8px; border-bottom: 1px solid #ddd;">${index + 1}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${d.tenSanPham || 'Sản phẩm'}</td>
+      <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.kichCoSize || '-'} / ${d.mauSac || '-'}</td>
       <td style="text-align: center; border-bottom: 1px solid #ddd;">${d.soLuong}</td>
       <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatPrice(d.donGia)}</td>
-      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatPrice(d.soLuong * d.donGia)}</td>
+      <td style="text-align: right; border-bottom: 1px solid #ddd;">${formatPrice(Number(d.soLuong || 0) * Number(d.donGia || 0))}</td>
     </tr>
   `,
     )
     .join('')
 
+  // Mã giảm giá: ưu tiên maVoucher / maGiamGia / voucher.ma (tùy backend trả về)
+  const maGiamGia =
+    order.maVoucher ||
+    order.maGiamGia ||
+    order.voucher?.ma ||
+    order.maCode ||
+    null
+
+  // ---- Tính tiền in hóa đơn cho khớp số liệu ----
+  // Có đơn backend để tienGiam = 0 nhưng tongThanhToan đã trừ giảm → suy ra số giảm
+  // để hóa đơn không bị "Tạm tính 269k + giảm 0 = tổng 242k" (vô lý).
+  const phiShip = Number(order.phiVanChuyen || 0)
+  const tongHangFromItems = details.reduce(
+    (sum, d) => sum + Number(d.soLuong || 0) * Number(d.donGia || 0),
+    0,
+  )
+  const tamTinh = Number(order.tongTienHang || 0) || tongHangFromItems
+  const tongThanhToan = Number(order.tongThanhToan || 0)
+  let tienGiam = Number(order.tienGiam || 0)
+  if (tienGiam <= 0) {
+    const inferred = tamTinh + phiShip - tongThanhToan
+    if (inferred > 0.5) tienGiam = inferred
+  }
+
   const printContent = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h1 style="text-align: center;">HÓA ĐƠN BÁN HÀNG</h1>
-      <hr>
-      <div style="display: flex; justify-content: space-between;">
+    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto;">
+      <h1 style="text-align: center; margin-bottom: 8px;">HÓA ĐƠN BÁN HÀNG</h1>
+      <hr style="border: 0; border-top: 1px solid #ccc; margin: 12px 0 20px;" />
+
+      <div style="display: flex; justify-content: space-between; gap: 24px; margin-bottom: 16px;">
         <div>
-          <p><strong>Khách hàng:</strong> ${order.tenNguoiNhan}</p>
-          <p><strong>SĐT:</strong> ${order.soDienThoaiGiao}</p>
-          <p><strong>Địa chỉ:</strong> ${order.diaChiGiao || 'Mua tại quầy'}</p>
+          <p style="margin: 4px 0;"><strong>Khách hàng:</strong> ${order.tenNguoiNhan || '—'}</p>
+          <p style="margin: 4px 0;"><strong>SĐT:</strong> ${order.soDienThoaiGiao || '—'}</p>
+          <p style="margin: 4px 0;"><strong>Địa chỉ:</strong> ${order.diaChiGiao || 'Mua tại quầy'}</p>
         </div>
         <div>
-          <p><strong>Mã đơn:</strong> #${order.id}</p>
-          <p><strong>Ngày đặt:</strong> ${formatDate(order.ngayDat)}</p>
-          <p><strong>Thanh toán:</strong> ${order.phuongThucThanhToan || 'Tiền mặt'}</p>
+          <p style="margin: 4px 0;"><strong>Mã đơn:</strong> #${order.id}</p>
+          <p style="margin: 4px 0;"><strong>Ngày đặt:</strong> ${formatDate(order.ngayDat)}</p>
+          <p style="margin: 4px 0;"><strong>Thanh toán:</strong> ${order.phuongThucThanhToan || 'Tiền mặt'}</p>
+          ${
+            maGiamGia
+              ? `<p style="margin: 4px 0;"><strong>Mã giảm giá:</strong> ${maGiamGia}</p>`
+              : ''
+          }
         </div>
       </div>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
         <thead style="background: #eee;">
-          <tr><th style="text-align: left; padding: 8px;">Sản phẩm</th><th>Size/Màu</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr>
+          <tr>
+            <th style="text-align: center; padding: 8px;">STT</th>
+            <th style="text-align: left; padding: 8px;">Sản phẩm</th>
+            <th style="text-align: center; padding: 8px;">Size/Màu</th>
+            <th style="text-align: center; padding: 8px;">SL</th>
+            <th style="text-align: right; padding: 8px;">Đơn giá</th>
+            <th style="text-align: right; padding: 8px;">Thành tiền</th>
+          </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <div style="margin-top: 20px; text-align: right;">
-        <p>Tạm tính: ${formatPrice(order.tongTienHang)}</p>
-        <p>Giảm giá: ${formatPrice(order.tienGiam)}</p>
-        <h2 style="color: red;">Tổng thanh toán: ${formatPrice(order.tongThanhToan)}</h2>
+
+      <div style="margin-top: 20px; text-align: right; line-height: 1.7;">
+        <p style="margin: 4px 0;">Tạm tính: ${formatPrice(tamTinh)}</p>
+        <p style="margin: 4px 0;">Phí vận chuyển: ${formatPrice(phiShip)}</p>
+        <p style="margin: 4px 0;">
+          Giảm giá${maGiamGia ? ` (${maGiamGia})` : ''}: ${formatPrice(tienGiam)}
+        </p>
+        <h2 style="color: red; margin: 12px 0 0;">
+          Tổng thanh toán: ${formatPrice(tongThanhToan)}
+        </h2>
       </div>
-      <p style="margin-top: 30px; font-style: italic;">Ghi chú: ${order.ghiChu || 'Không có'}</p>
+
+      <p style="margin-top: 36px; text-align: center; font-style: italic; color: #4f46e5;">
+        Cảm ơn quý khách đã mua hàng tại TrendFit!
+      </p>
     </div>
   `
   print({ printable: printContent, type: 'raw-html' })

@@ -1,48 +1,92 @@
 <template>
   <div class="container-fluid py-4">
-    <div class="card p-3 mb-4 shadow-sm">
-      <h4 class="fw-bold">QUẢN TRỊ DANH MỤC</h4>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Quản trị danh mục</h4>
+        <p class="text-secondary small mb-0">Thêm, sửa, xóa danh mục sản phẩm</p>
+      </div>
+    </div>
 
-      <div v-if="errorMsg" class="alert alert-danger py-2 mt-2 mb-0">{{ errorMsg }}</div>
+    <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
 
-      <div class="row g-2 mt-2">
-        <div class="col-md-4">
-          <input v-model.trim="formData.ten" class="form-control" placeholder="Tên danh mục..." />
-        </div>
-        <div class="col-md-2">
-          <button @click="saveDanhMuc" class="btn btn-dark w-100" :disabled="submitting">
-            {{ dangSua ? 'Cập nhật' : 'Thêm mới' }}
-          </button>
-          <button v-if="dangSua" @click="resetForm" class="btn btn-link btn-sm">Hủy</button>
+    <!-- Form -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label small fw-semibold">Tên danh mục</label>
+            <input
+              v-model.trim="formData.ten"
+              class="form-control"
+              placeholder="Nhập tên danh mục..."
+              @keyup.enter="saveDanhMuc"
+            />
+          </div>
+          <div class="col-md-auto d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="submitting"
+              @click="saveDanhMuc"
+            >
+              {{ dangSua ? 'Cập nhật' : 'Thêm mới' }}
+            </button>
+            <button
+              v-if="dangSua"
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="resetForm"
+            >
+              Hủy
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card shadow-sm">
-      <table class="table table-hover align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>ID</th>
-            <th>Tên Danh Mục</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="danhMucs.length === 0">
-            <td colspan="3" class="text-center text-muted py-3">Chưa có danh mục nào</td>
-          </tr>
-          <tr v-for="dm in danhMucs" :key="dm.id">
-            <td>#{{ dm.id }}</td>
-            <td>{{ dm.ten }}</td>
-            <td>
-              <button @click="kichHoatSua(dm)" class="btn btn-sm btn-outline-warning me-2">
-                Sửa
-              </button>
-              <button @click="xoaDanhMuc(dm.id)" class="btn btn-sm btn-outline-danger">Xóa</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Table -->
+    <div class="card border-0 shadow-sm overflow-hidden">
+      <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold">Danh sách danh mục</span>
+        <span class="badge text-bg-primary rounded-pill">Tổng: {{ danhMucs.length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>Tên danh mục</th>
+              <th class="text-center" style="width: 160px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="danhMucs.length === 0">
+              <td colspan="3" class="text-center text-muted py-4">Chưa có danh mục nào</td>
+            </tr>
+            <tr v-for="dm in danhMucs" :key="dm.id">
+              <td class="fw-semibold">#{{ dm.id }}</td>
+              <td>{{ dm.ten }}</td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning me-1"
+                  @click="kichHoatSua(dm)"
+                >
+                  Sửa
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  @click="xoaDanhMuc(dm.id)"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

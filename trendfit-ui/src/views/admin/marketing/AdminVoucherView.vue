@@ -1,157 +1,173 @@
 <template>
   <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-bold m-0">QUẢN LÝ MÃ GIẢM GIÁ (VOUCHER)</h3>
-      <button @click="moFormMoi" class="btn btn-primary">+ TẠO VOUCHER MỚI</button>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Quản lý mã giảm giá</h4>
+        <p class="text-secondary small mb-0">Tạo và quản lý voucher / chương trình khuyến mãi</p>
+      </div>
+      <button type="button" class="btn btn-primary" @click="moFormMoi">+ Tạo voucher mới</button>
     </div>
 
-    <!-- Bảng danh sách voucher hiển thị đầy đủ các trường -->
-    <div class="card shadow-sm">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-dark text-center">
-              <tr>
-                <th>Mã Code</th>
-                <th>Tên chương trình</th>
-                <th>Loại & Giá trị</th>
-                <th>Giảm tối đa</th>
-                <th>Đơn tối thiểu</th>
-                <th>Thời hạn</th>
-                <th>Đã dùng / Giới hạn</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="v in vouchers" :key="v.id">
-                <td class="fw-bold text-primary text-center">{{ v.ma }}</td>
-                <td>{{ v.ten }}</td>
-                <td class="text-center">
-                  <span class="badge bg-info text-dark">
-                    {{ v.loai === 'PERCENT' ? v.giaTriGiam + '%' : formatCurrency(v.giaTriGiam) }}
-                  </span>
-                </td>
-                <td class="text-end">
-                  {{ v.giaTriToiDa ? formatCurrency(v.giaTriToiDa) : 'Không giới hạn' }}
-                </td>
-                <td class="text-end">
-                  {{ v.donHangToiThieu ? formatCurrency(v.donHangToiThieu) : '0 đ' }}
-                </td>
-                <td class="small text-center text-muted">
-                  {{ v.ngayBatDau || '---' }} <br />đến<br />
-                  {{ v.ngayKetThuc || '---' }}
-                </td>
-                <td class="text-center">
-                  <span class="fw-semibold">{{ v.soLanDaDung || 0 }}</span> /
-                  {{
-                    v.gioiHanSuDung !== null && v.gioiHanSuDung !== undefined
-                      ? v.gioiHanSuDung
-                      : '∞'
-                  }}
-                </td>
-                <td class="text-center">
-                  <!-- Nút bấm chuyển đổi trạng thái Hoạt động / Khóa trực tiếp tại bảng -->
-                  <button
-                    type="button"
-                    class="btn btn-sm w-100"
-                    :class="v.dangHoatDong ? 'btn-success' : 'btn-secondary'"
-                    @click="toggleStatus(v)"
-                  >
-                    {{ v.dangHoatDong ? 'Hoạt động' : 'Đã khóa' }}
-                  </button>
-                </td>
-                <td class="text-center">
-                  <button class="btn btn-sm btn-warning me-1" @click="editVoucher(v)" title="Sửa">
-                    ✏️
-                  </button>
-                  <button class="btn btn-sm btn-danger" @click="xoaVoucher(v.id)" title="Xóa">
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="vouchers.length === 0">
-                <td colspan="9" class="text-center py-4 text-muted">
-                  Chưa có mã giảm giá nào trong hệ thống.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <!-- Form -->
+    <div v-if="showForm" class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          {{ editMode ? 'Cập nhật voucher #' + form.id : 'Tạo voucher mới' }}
+        </h6>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Mã code (*)</label>
+            <input v-model="form.ma" class="form-control" placeholder="VD: SALE50K" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Tên chương trình</label>
+            <input v-model="form.ten" class="form-control" placeholder="VD: Siêu sale hè 2026" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Loại giảm giá</label>
+            <select v-model="form.loai" class="form-select">
+              <option value="PERCENT">Phần trăm (%)</option>
+              <option value="FIXED">Số tiền (đ)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Giá trị giảm (*)</label>
+            <input
+              v-model.number="form.giaTriGiam"
+              type="number"
+              class="form-control"
+              placeholder="10 hoặc 50000"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Giới hạn lượt dùng</label>
+            <input
+              v-model.number="form.gioiHanSuDung"
+              type="number"
+              class="form-control"
+              placeholder="Trống = vô hạn"
+            />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Giảm tối đa (cho %)</label>
+            <input
+              v-model.number="form.giaTriToiDa"
+              type="number"
+              class="form-control"
+              placeholder="VD: 100000"
+            />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Đơn tối thiểu</label>
+            <input
+              v-model.number="form.donHangToiThieu"
+              type="number"
+              class="form-control"
+              placeholder="VD: 200000"
+            />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Ngày bắt đầu</label>
+            <input v-model="form.ngayBatDau" type="date" class="form-control" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Ngày kết thúc</label>
+            <input v-model="form.ngayKetThuc" type="date" class="form-control" />
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+          <button type="button" class="btn btn-primary" @click="saveVoucher">Lưu voucher</button>
+          <button type="button" class="btn btn-outline-secondary" @click="showForm = false">
+            Hủy
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Form Thêm / Sửa Voucher đầy đủ trường -->
-    <div v-if="showForm" class="card p-4 shadow mt-4 border-0 bg-light">
-      <h5 class="fw-bold mb-3">
-        {{ editMode ? 'Cập nhật Voucher #' + form.id : 'Tạo Voucher mới' }}
-      </h5>
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Mã Code (*)</label>
-          <input v-model="form.ma" placeholder="VD: SALE50K" class="form-control" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Tên chương trình</label>
-          <input v-model="form.ten" placeholder="VD: Siêu sale hè 2026" class="form-control" />
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold">Loại giảm giá</label>
-          <select v-model="form.loai" class="form-select">
-            <option value="PERCENT">Phần trăm (%)</option>
-            <option value="FIXED">Số tiền (đ)</option>
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold">Giá trị giảm (*)</label>
-          <input
-            v-model.number="form.giaTriGiam"
-            type="number"
-            placeholder="VD: 10 hoặc 50000"
-            class="form-control"
-          />
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold">Giới hạn số lượt dùng</label>
-          <input
-            v-model.number="form.gioiHanSuDung"
-            type="number"
-            placeholder="Để trống = Vô hạn"
-            class="form-control"
-          />
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Giá trị giảm tối đa (Cho %)</label>
-          <input
-            v-model.number="form.giaTriToiDa"
-            type="number"
-            placeholder="VD: 100000"
-            class="form-control"
-          />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Đơn hàng tối thiểu</label>
-          <input
-            v-model.number="form.donHangToiThieu"
-            type="number"
-            placeholder="VD: 200000"
-            class="form-control"
-          />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Ngày bắt đầu</label>
-          <input v-model="form.ngayBatDau" type="date" class="form-control" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Ngày kết thúc</label>
-          <input v-model="form.ngayKetThuc" type="date" class="form-control" />
-        </div>
+    <!-- Table -->
+    <div class="card border-0 shadow-sm overflow-hidden">
+      <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold">Danh sách voucher</span>
+        <span class="badge text-bg-primary rounded-pill">Tổng: {{ vouchers.length }}</span>
       </div>
-
-      <div class="mt-4 d-flex gap-2">
-        <button @click="saveVoucher" class="btn btn-success px-4">💾 Lưu Voucher</button>
-        <button @click="showForm = false" class="btn btn-secondary px-4">Hủy</button>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light text-center">
+            <tr>
+              <th>Mã code</th>
+              <th class="text-start">Tên chương trình</th>
+              <th>Loại & giá trị</th>
+              <th>Giảm tối đa</th>
+              <th>Đơn tối thiểu</th>
+              <th>Thời hạn</th>
+              <th>Đã dùng / giới hạn</th>
+              <th>Trạng thái</th>
+              <th style="width: 140px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="v in vouchers" :key="v.id">
+              <td class="fw-bold text-primary text-center">{{ v.ma }}</td>
+              <td class="text-start">{{ v.ten }}</td>
+              <td class="text-center">
+                <span class="badge bg-info text-dark">
+                  {{ v.loai === 'PERCENT' ? v.giaTriGiam + '%' : formatCurrency(v.giaTriGiam) }}
+                </span>
+              </td>
+              <td class="text-end">
+                {{ v.giaTriToiDa ? formatCurrency(v.giaTriToiDa) : 'Không giới hạn' }}
+              </td>
+              <td class="text-end">
+                {{ v.donHangToiThieu ? formatCurrency(v.donHangToiThieu) : '0 đ' }}
+              </td>
+              <td class="small text-center text-muted">
+                {{ v.ngayBatDau || '—' }} <br />đến<br />
+                {{ v.ngayKetThuc || '—' }}
+              </td>
+              <td class="text-center">
+                <span class="fw-semibold">{{ v.soLanDaDung || 0 }}</span>
+                /
+                {{
+                  v.gioiHanSuDung !== null && v.gioiHanSuDung !== undefined
+                    ? v.gioiHanSuDung
+                    : '∞'
+                }}
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  :class="v.dangHoatDong ? 'btn-success' : 'btn-secondary'"
+                  @click="toggleStatus(v)"
+                >
+                  {{ v.dangHoatDong ? 'Hoạt động' : 'Đã khóa' }}
+                </button>
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning me-1"
+                  @click="editVoucher(v)"
+                >
+                  Sửa
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  @click="xoaVoucher(v.id)"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+            <tr v-if="vouchers.length === 0">
+              <td colspan="9" class="text-center py-4 text-muted">
+                Chưa có mã giảm giá nào trong hệ thống.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
