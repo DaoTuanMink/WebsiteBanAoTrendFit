@@ -1,736 +1,189 @@
 <template>
   <div class="container-fluid py-3">
-    <!-- TIÊU ĐỀ TRANG -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
       <div>
-        <h2 class="fw-bold mb-1">Bán hàng tại quầy</h2>
-        <p class="text-secondary mb-0">Tạo đơn trực tiếp cho khách mua tại cửa hàng</p>
+        <h4 class="fw-bold mb-1">Bán hàng tại quầy</h4>
+        <p class="text-secondary small mb-0">Tạo đơn trực tiếp cho khách mua tại cửa hàng</p>
       </div>
-
-      <button type="button" class="btn btn-primary" @click="loadProducts">Tải lại sản phẩm</button>
     </div>
 
     <div class="row g-4 align-items-start">
-      <!-- CỘT DANH SÁCH SẢN PHẨM -->
       <div class="col-12 col-xl-5">
-        <section class="card border-0 shadow-sm">
-          <div class="card-header bg-white py-3">
-            <h5 class="fw-bold mb-0">Danh sách sản phẩm</h5>
-          </div>
-
-          <div class="card-body">
-            <div class="input-group mb-3">
-              <span class="input-group-text">Tìm</span>
-              <input
-                v-model="keyword"
-                type="text"
-                class="form-control"
-                placeholder="Tìm sản phẩm theo tên..."
-              />
-            </div>
-
-            <div v-if="filteredProducts.length" class="d-grid gap-3">
-              <div
-                v-for="product in filteredProducts"
-                :key="product.id"
-                class="border rounded-3 p-3"
-              >
-                <div class="d-flex justify-content-between align-items-center gap-3">
-                  <div class="flex-grow-1">
-                    <h6 class="fw-bold mb-1">{{ product.ten }}</h6>
-                    <div class="small text-secondary">
-                      {{ product.danhMuc?.ten || 'Chưa có danh mục' }}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary btn-sm text-nowrap"
-                    :disabled="!product.id"
-                    @click="loadVariants(product)"
-                  >
-                    {{ product.id ? 'Chọn biến thể' : 'Thiếu ID' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div v-else class="alert alert-secondary text-center mb-0">
-              Không tìm thấy sản phẩm phù hợp.
-            </div>
-          </div>
-        </section>
+        <PosProductPanel
+          :keyword="keyword"
+          :products="filteredProducts"
+          :selected-product="selectedProduct"
+          :variants="variants"
+          :format-money="formatMoney"
+          :get-price="getPrice"
+          @update:keyword="keyword = $event"
+          @reload="loadProducts"
+          @select-product="loadVariants"
+          @clear-product="selectedProduct = null; variants = []"
+          @add-to-cart="(p, v) => addToCart(p, v)"
+        />
       </div>
 
-      <!-- CỘT GIỎ HÀNG VÀ THANH TOÁN -->
       <div class="col-12 col-xl-7">
-        <section class="card border-0 shadow-sm">
-          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0">Giỏ hàng tại quầy</h5>
-
-            <div class="d-flex gap-2">
-              <!-- Nút mở danh sách "Hóa đơn chờ" - hiển thị số lượng đang treo -->
-              <button
-                type="button"
-                class="btn btn-outline-secondary btn-sm position-relative"
-                @click="moModalHoaDonCho"
-              >
-                Hóa đơn chờ
-                <span
-                  v-if="danhSachHoaDonCho.length > 0"
-                  class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
-                >
-                  {{ danhSachHoaDonCho.length }}
-                </span>
-              </button>
-
-              <!-- Nút tạm lưu giỏ hàng hiện tại thành hóa đơn chờ -->
-              <button
-                type="button"
-                class="btn btn-outline-warning btn-sm"
-                :disabled="!cart.length || dangLuuTam"
-                @click="luuHoaDonCho"
-              >
-                {{ dangLuuTam ? 'Đang lưu...' : '⏸ Lưu tạm' }}
-              </button>
-            </div>
-          </div>
-
-          <div class="card-body">
-            <!-- THÔNG TIN KHÁCH HÀNG -->
-            <div class="mb-4">
-              <h6 class="fw-bold mb-3">Thông tin khách hàng</h6>
-
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label">Tên khách hàng</label>
-                  <input
-                    v-model="customerName"
-                    type="text"
-                    class="form-control"
-                    placeholder="Bỏ trống nếu là khách lẻ"
-                  />
-                </div>
-
-                <div class="col-12 col-md-6">
-                  <label class="form-label">Số điện thoại</label>
-                  <input
-                    v-model="customerPhone"
-                    type="text"
-                    class="form-control"
-                    placeholder="Nhập số điện thoại"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- DANH SÁCH BIẾN THỂ -->
-            <div v-if="selectedProduct" class="card border-primary mb-4">
-              <div class="card-header bg-primary-subtle d-flex justify-content-between gap-3">
-                <div>
-                  <div class="small text-secondary">Sản phẩm đang chọn</div>
-                  <strong>{{ selectedProduct.ten }}</strong>
-                </div>
-
-                <button
-                  type="button"
-                  class="btn-close"
-                  aria-label="Đóng"
-                  @click="
-                    () => {
-                      selectedProduct = null
-                      variants = []
-                    }
-                  "
-                ></button>
-              </div>
-
-              <div class="card-body">
-                <div v-if="variants.length" class="list-group">
-                  <div v-for="variant in variants" :key="variant.id" class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center gap-3">
-                      <div>
-                        <div class="fw-bold">
-                          {{ variant.kichCo?.tenKichCo }} - {{ variant.mauSac?.tenMau }}
-                        </div>
-                        <div class="small text-secondary">SKU: {{ variant.maSku }}</div>
-                        <div class="small text-secondary">Tồn kho: {{ variant.soLuongTon }}</div>
-                        <div class="fw-semibold text-primary">
-                          {{ formatMoney(getPrice(variant)) }}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        class="btn btn-primary btn-sm"
-                        :disabled="variant.soLuongTon <= 0"
-                        @click="addToCart(selectedProduct, variant)"
-                      >
-                        {{ variant.soLuongTon > 0 ? 'Thêm' : 'Hết hàng' }}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else class="alert alert-warning mb-0">Sản phẩm này chưa có biến thể.</div>
-              </div>
-            </div>
-
-            <!-- GIỎ HÀNG TRỐNG -->
-            <div v-if="!cart.length" class="alert alert-secondary text-center mb-0">
-              Chưa có sản phẩm nào trong giỏ hàng.
-            </div>
-
-            <!-- NỘI DUNG GIỎ HÀNG -->
-            <div v-else>
-              <div class="table-responsive mb-4">
-                <table class="table table-bordered table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Sản phẩm</th>
-                      <th class="text-center">Số lượng</th>
-                      <th class="text-end">Đơn giá</th>
-                      <th class="text-end">Thành tiền</th>
-                      <th class="text-center">Thao tác</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr v-for="item in cart" :key="item.bienTheId">
-                      <td>
-                        <div class="fw-semibold">{{ item.ten }}</div>
-                        <small class="text-secondary">
-                          {{ item.tenKichCo }} - {{ item.tenMau }}
-                        </small>
-                      </td>
-
-                      <td>
-                        <input
-                          v-model.number="item.quantity"
-                          type="number"
-                          min="1"
-                          :max="item.soLuongTon"
-                          class="form-control form-control-sm mx-auto"
-                          @change="normalizeQuantity(item)"
-                        />
-                      </td>
-
-                      <td class="text-end text-nowrap">
-                        {{ formatMoney(item.gia) }}
-                      </td>
-
-                      <td class="text-end fw-semibold text-nowrap">
-                        {{ formatMoney(item.gia * item.quantity) }}
-                      </td>
-
-                      <td class="text-center">
-                        <button
-                          type="button"
-                          class="btn btn-outline-danger btn-sm"
-                          @click="removeItem(item.bienTheId)"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- MÃ GIẢM GIÁ -->
-              <div class="card mb-4 voucher-card">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                    <div>
-                      <h6 class="fw-bold mb-1">Mã giảm giá</h6>
-                      <div class="small text-secondary">
-                        Chọn mã gợi ý hoặc nhập mã thủ công cho khách.
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="btn btn-outline-secondary btn-sm text-nowrap"
-                      :disabled="isLoadingVouchers"
-                      @click="loadVoucherSuggestions"
-                    >
-                      <span
-                        v-if="isLoadingVouchers"
-                        class="spinner-border spinner-border-sm me-1"
-                        aria-hidden="true"
-                      ></span>
-                      {{ isLoadingVouchers ? 'Đang tải' : 'Làm mới mã' }}
-                    </button>
-                  </div>
-
-                  <div class="input-group">
-                    <input
-                      v-model.trim="voucherCode"
-                      type="text"
-                      class="form-control text-uppercase"
-                      placeholder="Nhập mã, ví dụ: SALE10"
-                      :disabled="!!appliedVoucher"
-                      @keyup.enter="applyVoucher"
-                    />
-
-                    <button
-                      v-if="!appliedVoucher"
-                      type="button"
-                      class="btn btn-primary"
-                      @click="applyVoucher"
-                    >
-                      Áp dụng
-                    </button>
-
-                    <button v-else type="button" class="btn btn-danger" @click="removeVoucher">
-                      Hủy mã
-                    </button>
-                  </div>
-
-                  <div
-                    v-if="voucherMessage"
-                    class="alert mt-3 mb-0"
-                    :class="appliedVoucher ? 'alert-success' : 'alert-warning'"
-                  >
-                    {{ voucherMessage }}
-                  </div>
-
-                  <div class="mt-4">
-                    <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-                      <div class="fw-bold">Gợi ý phù hợp với đơn hàng</div>
-                      <span class="badge text-bg-light border">
-                        Tổng đơn: {{ formatMoney(totalAmount) }}
-                      </span>
-                    </div>
-
-                    <div v-if="!cart.length" class="alert alert-light border mb-0">
-                      Thêm sản phẩm vào giỏ để hệ thống xác định mã phù hợp.
-                    </div>
-
-                    <div v-else-if="isLoadingVouchers" class="text-center py-4">
-                      <div class="spinner-border text-primary" role="status"></div>
-                      <div class="small text-secondary mt-2">Đang tìm mã giảm giá...</div>
-                    </div>
-
-                    <div v-else-if="suggestedVouchers.length" class="d-grid gap-2">
-                      <div
-                        v-for="voucher in suggestedVouchers"
-                        :key="voucher.id || voucher.ma"
-                        class="voucher-suggestion"
-                        :class="{
-                          'is-eligible': voucher.eligible,
-                          'is-applied': appliedVoucher?.ma === voucher.ma,
-                        }"
-                      >
-                        <div class="d-flex justify-content-between align-items-start gap-3">
-                          <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                              <span class="voucher-code">{{ voucher.ma }}</span>
-                              <span
-                                class="badge"
-                                :class="voucher.eligible ? 'text-bg-success' : 'text-bg-warning'"
-                              >
-                                {{ voucher.eligible ? 'Dùng được' : voucher.reason }}
-                              </span>
-                            </div>
-
-                            <div class="fw-semibold text-dark">
-                              {{ voucher.ten || voucherDiscountLabel(voucher) }}
-                            </div>
-
-                            <div class="small text-secondary mt-1">
-                              {{ voucherDiscountLabel(voucher) }}
-                              <span v-if="voucher.minimumOrder > 0">
-                                · Đơn tối thiểu {{ formatMoney(voucher.minimumOrder) }}
-                              </span>
-                            </div>
-
-                            <div class="small mt-1">
-                              <span v-if="voucher.eligible" class="text-success fw-semibold">
-                                Đơn này dự kiến giảm {{ formatMoney(voucher.estimatedDiscount) }}
-                              </span>
-                              <span v-else class="text-warning fw-semibold">
-                                {{ voucher.helpText }}
-                              </span>
-                            </div>
-
-                            <div class="small text-secondary mt-1">
-                              <span v-if="voucher.ngayKetThuc">
-                                Hạn: {{ formatVoucherDate(voucher.ngayKetThuc) }}
-                              </span>
-                              <span v-if="voucher.remainingUses !== null">
-                                · Còn {{ voucher.remainingUses }} lượt
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            class="btn btn-sm text-nowrap"
-                            :class="
-                              voucher.eligible ? 'btn-outline-primary' : 'btn-outline-secondary'
-                            "
-                            :disabled="!voucher.eligible || !!appliedVoucher"
-                            @click="applySuggestedVoucher(voucher)"
-                          >
-                            {{ appliedVoucher?.ma === voucher.ma ? 'Đã dùng' : 'Chọn mã' }}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div v-else class="alert alert-light border mb-0">
-                      Chưa có mã giảm giá đang hoạt động hoặc phù hợp với đơn này.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- PHƯƠNG THỨC THANH TOÁN -->
-              <div class="card mb-4">
-                <div class="card-body">
-                  <h6 class="fw-bold mb-3">Phương thức thanh toán</h6>
-
-                  <div class="row g-2 mb-3">
-                    <div class="col-6">
-                      <button
-                        type="button"
-                        class="btn w-100"
-                        :class="
-                          paymentMethod === 'TIEN_MAT' ? 'btn-primary' : 'btn-outline-primary'
-                        "
-                        @click="paymentMethod = 'TIEN_MAT'"
-                      >
-                        Tiền mặt
-                      </button>
-                    </div>
-
-                    <div class="col-6">
-                      <button
-                        type="button"
-                        class="btn w-100"
-                        :class="
-                          paymentMethod === 'CHUYEN_KHOAN' ? 'btn-primary' : 'btn-outline-primary'
-                        "
-                        @click="paymentMethod = 'CHUYEN_KHOAN'"
-                      >
-                        Chuyển khoản
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-if="paymentMethod === 'TIEN_MAT'">
-                    <label class="form-label">Tiền khách đưa</label>
-                    <input
-                      v-model.number="cashReceived"
-                      type="number"
-                      min="0"
-                      class="form-control mb-3"
-                      placeholder="Nhập số tiền khách đưa"
-                    />
-
-                    <div class="row row-cols-2 row-cols-md-4 g-2">
-                      <div class="col">
-                        <button
-                          type="button"
-                          class="btn btn-outline-secondary btn-sm w-100"
-                          @click="cashReceived = totalPayable"
-                        >
-                          Vừa đủ
-                        </button>
-                      </div>
-
-                      <div class="col">
-                        <button
-                          type="button"
-                          class="btn btn-outline-secondary btn-sm w-100"
-                          @click="cashReceived = 100000"
-                        >
-                          100.000
-                        </button>
-                      </div>
-
-                      <div class="col">
-                        <button
-                          type="button"
-                          class="btn btn-outline-secondary btn-sm w-100"
-                          @click="cashReceived = 200000"
-                        >
-                          200.000
-                        </button>
-                      </div>
-
-                      <div class="col">
-                        <button
-                          type="button"
-                          class="btn btn-outline-secondary btn-sm w-100"
-                          @click="cashReceived = 500000"
-                        >
-                          500.000
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- ===================== QR THANH TOÁN (VietQR) ===================== -->
-                  <div v-else-if="paymentMethod === 'CHUYEN_KHOAN'" class="text-center py-2">
-                    <p class="text-muted small mb-2">
-                      Khách quét mã QR bên dưới bằng app ngân hàng để chuyển khoản
-                    </p>
-                    <img
-                      :src="vietQrUrl"
-                      alt="Mã QR chuyển khoản"
-                      class="img-fluid border rounded"
-                      style="max-width: 260px"
-                    />
-                    <p class="fw-bold fs-5 mt-2 mb-0 text-primary">
-                      {{ formatMoney(totalPayable) }}
-                    </p>
-                    <p class="small text-muted mb-0">Nội dung CK: {{ noiDungChuyenKhoan }}</p>
-                  </div>
-                  <!-- ===================================================================== -->
-                </div>
-              </div>
-
-              <!-- TỔNG TIỀN -->
-              <div class="card bg-light border-0 mb-4">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary">Tổng tiền hàng</span>
-                    <strong>{{ formatMoney(totalAmount) }}</strong>
-                  </div>
-
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-secondary">Giảm giá</span>
-                    <strong class="text-danger">- {{ formatMoney(discountAmount) }}</strong>
-                  </div>
-
-                  <hr />
-
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold">Khách cần trả</span>
-                    <strong class="fs-4 text-primary">{{ formatMoney(totalPayable) }}</strong>
-                  </div>
-
-                  <template v-if="paymentMethod === 'TIEN_MAT'">
-                    <div class="d-flex justify-content-between mb-2">
-                      <span class="text-secondary">Tiền khách đưa</span>
-                      <strong>{{ formatMoney(cashReceived) }}</strong>
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                      <span class="text-secondary">Tiền thừa</span>
-                      <strong class="text-success">{{ formatMoney(changeAmount) }}</strong>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                class="btn btn-success btn-lg w-100"
-                :disabled="isSubmitting"
-                @click="checkout"
-              >
-                <span
-                  v-if="isSubmitting"
-                  class="spinner-border spinner-border-sm me-2"
-                  aria-hidden="true"
-                ></span>
-                {{ isSubmitting ? 'Đang thanh toán...' : 'Thanh toán' }}
-              </button>
-            </div>
-          </div>
-        </section>
+        <PosCartPanel
+          :cart="cart"
+          :customer-name="customerName"
+          :customer-phone="customerPhone"
+          :voucher-code="voucherCode"
+          :applied-voucher="appliedVoucher"
+          :voucher-message="voucherMessage"
+          :suggested-vouchers="suggestedVouchers"
+          :loading-vouchers="isLoadingVouchers"
+          :payment-method="paymentMethod"
+          :cash-received="cashReceived"
+          :total-amount="totalAmount"
+          :discount-amount="discountAmount"
+          :total-payable="totalPayable"
+          :change-amount="changeAmount"
+          :viet-qr-url="vietQrUrl"
+          :transfer-note="noiDungChuyenKhoan"
+          :pending-count="danhSachHoaDonCho.length"
+          :saving-pending="dangLuuTam"
+          :submitting="isSubmitting"
+          :format-money="formatMoney"
+          :discount-label="voucherDiscountLabel"
+          @update:customerName="customerName = $event"
+          @update:customerPhone="customerPhone = $event"
+          @update:voucherCode="voucherCode = $event"
+          @update:paymentMethod="paymentMethod = $event"
+          @update:cashReceived="cashReceived = $event"
+          @open-pending="moModalHoaDonCho"
+          @save-pending="luuHoaDonCho"
+          @normalize-qty="normalizeQuantity"
+          @remove-item="removeItem"
+          @reload-vouchers="loadVoucherSuggestions"
+          @apply-voucher="applyVoucher"
+          @remove-voucher="removeVoucher"
+          @apply-suggested="applySuggestedVoucher"
+          @checkout="checkout"
+        />
       </div>
     </div>
 
-    <!-- ===================== MODAL DANH SÁCH "HÓA ĐƠN CHỜ" ===================== -->
-    <template v-if="showHoaDonChoModal">
+    <PosPendingModal
+      :show="showHoaDonChoModal"
+      :list="danhSachHoaDonCho"
+      :loading="dangTaiHoaDonCho"
+      :cart-has-items="cart.length > 0"
+      :format-money="formatMoney"
+      @close="showHoaDonChoModal = false"
+      @restore="goiLaiHoaDonCho"
+      @remove="xoaHoaDonCho"
+    />
+
+    <PosInvoiceModal
+      :show="showInvoice"
+      :data="invoiceData"
+      :format-money="formatMoney"
+      @close="showInvoice = false"
+      @print="printInvoice"
+    />
+
+    <!--
+      Modal nhập ghi chú khi Lưu tạm hóa đơn chờ
+      (thay cho prompt() xấu của trình duyệt)
+    -->
+    <template v-if="showNoteModal">
       <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title fw-bold">Danh sách hóa đơn chờ</h5>
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title fw-bold">Lưu hóa đơn chờ</h5>
+              <button type="button" class="btn-close" @click="showNoteModal = false"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-secondary small mb-3">
+                Giỏ hàng sẽ được cất tạm để phục vụ khách khác. Bạn có thể thêm ghi chú (không bắt buộc).
+              </p>
+              <label class="form-label small fw-semibold">Ghi chú</label>
+              <input
+                v-model.trim="pendingNote"
+                type="text"
+                class="form-control"
+                placeholder='Ví dụ: khách đi thử size, chờ thanh toán...'
+                @keyup.enter="xacNhanLuuHoaDonCho"
+              />
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-outline-secondary" @click="showNoteModal = false">
+                Hủy
+              </button>
               <button
                 type="button"
-                class="btn-close"
-                aria-label="Đóng"
-                @click="showHoaDonChoModal = false"
-              ></button>
-            </div>
-
-            <div class="modal-body">
-              <div v-if="dangTaiHoaDonCho" class="text-center py-4">
-                <div class="spinner-border" role="status"></div>
-              </div>
-
-              <div v-else-if="danhSachHoaDonCho.length === 0" class="text-muted text-center py-4">
-                Chưa có hóa đơn chờ nào. Bấm "Lưu tạm" ở giỏ hàng để cất lại 1 đơn đang dở dang.
-              </div>
-
-              <table v-else class="table table-hover align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th>Khách hàng</th>
-                    <th>Số SP</th>
-                    <th>Tổng tiền</th>
-                    <th>Ghi chú</th>
-                    <th>Thời gian lưu</th>
-                    <th>Người lưu</th>
-                    <th class="text-end">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="hd in danhSachHoaDonCho" :key="hd.id">
-                    <td>
-                      <div class="fw-semibold">{{ hd.tenKhachHang || 'Khách lẻ' }}</div>
-                      <div class="small text-muted">{{ hd.soDienThoai || '—' }}</div>
-                    </td>
-                    <td>{{ hd.soLuongSanPham }}</td>
-                    <td class="fw-semibold">{{ formatMoney(hd.tongTien) }}</td>
-                    <td class="small text-muted">{{ hd.ghiChu || '—' }}</td>
-                    <td class="small">{{ new Date(hd.ngayTao).toLocaleString('vi-VN') }}</td>
-                    <td class="small">{{ hd.tenNguoiTao }}</td>
-                    <td class="text-end">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-success me-2"
-                        @click="goiLaiHoaDonCho(hd.id)"
-                      >
-                        Gọi lại
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        @click="xoaHoaDonCho(hd.id)"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div v-if="cart.length > 0" class="alert alert-warning small mb-0">
-                Lưu ý: giỏ hàng hiện tại đang có {{ cart.length }} sản phẩm. Nếu bạn "Gọi lại" 1
-                hóa đơn chờ, giỏ hàng hiện tại sẽ bị thay thế hoàn toàn.
-              </div>
+                class="btn btn-primary"
+                :disabled="dangLuuTam"
+                @click="xacNhanLuuHoaDonCho"
+              >
+                {{ dangLuuTam ? 'Đang lưu...' : 'Lưu tạm' }}
+              </button>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-backdrop fade show"></div>
     </template>
-    <!-- =========================================================================== -->
 
-    <!-- MODAL HÓA ĐƠN -->
-    <template v-if="showInvoice && invoiceData">
+    <!--
+      Modal xác nhận (Gọi lại / Xóa hóa đơn chờ)
+      thay cho confirm() của trình duyệt
+    -->
+    <template v-if="showConfirmModal">
       <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title fw-bold">Hóa đơn bán hàng</h5>
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-body text-center py-4 px-3">
+              <div
+                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                :class="confirmTone === 'danger' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'"
+                style="width: 48px; height: 48px; font-size: 22px"
+              >
+                !
+              </div>
+              <h6 class="fw-bold mb-2">{{ confirmTitle }}</h6>
+              <p class="text-secondary small mb-0">{{ confirmMessage }}</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
+              <button type="button" class="btn btn-outline-secondary btn-sm px-3" @click="huyXacNhan">
+                Hủy
+              </button>
               <button
                 type="button"
-                class="btn-close"
-                aria-label="Đóng"
-                @click="showInvoice = false"
-              ></button>
-            </div>
-
-            <div class="modal-body">
-              <div class="invoice-paper p-3">
-                <h2 class="text-center fw-bold mb-4">HÓA ĐƠN BÁN HÀNG</h2>
-
-                <div class="row g-2 mb-3">
-                  <div class="col-12 col-md-6">
-                    <p class="mb-1"><strong>Mã hóa đơn:</strong> {{ invoiceData.code }}</p>
-                    <p class="mb-1"><strong>Ngày tạo:</strong> {{ invoiceData.date }}</p>
-                    <p class="mb-1"><strong>Khách hàng:</strong> {{ invoiceData.customer }}</p>
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <p class="mb-1"><strong>Số điện thoại:</strong> {{ invoiceData.phone }}</p>
-                    <p class="mb-1"><strong>Thanh toán:</strong> {{ invoiceData.paymentMethod }}</p>
-                  </div>
-                </div>
-
-                <div class="table-responsive">
-                  <table class="invoice-table table table-bordered align-middle">
-                    <thead class="table-light">
-                      <tr>
-                        <th class="text-center">STT</th>
-                        <th>Mã SP</th>
-                        <th>Sản phẩm</th>
-                        <th class="text-center">SL</th>
-                        <th class="text-end">Giá</th>
-                        <th class="text-end">Tổng</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      <tr v-for="(item, index) in invoiceData.items" :key="index">
-                        <td class="text-center">{{ index + 1 }}</td>
-                        <td>{{ item.maSku || '—' }}</td>
-                        <td>
-                          {{ item.name }}
-                          <br />
-                          <small class="text-secondary"
-                            >{{ item.tenKichCo }} - {{ item.tenMau }}</small
-                          >
-                        </td>
-                        <td class="text-center">{{ item.qty }}</td>
-                        <td class="text-end">{{ formatMoney(item.price) }}</td>
-                        <td class="text-end">{{ formatMoney(item.total) }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div class="invoice-summary border-top pt-3 mt-3">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span>Tổng tiền hàng</span>
-                    <strong>{{ formatMoney(invoiceData.totalAmount) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2">
-                    <span>Giảm giá</span>
-                    <strong>{{ formatMoney(invoiceData.discount) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2">
-                    <span>Khách cần trả</span>
-                    <strong>{{ formatMoney(invoiceData.payable) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2">
-                    <span>Khách đã đưa</span>
-                    <strong>{{ formatMoney(invoiceData.paid) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <span>Tiền thừa</span>
-                    <strong>{{ formatMoney(invoiceData.change) }}</strong>
-                  </div>
-                </div>
-
-                <p class="invoice-thanks text-center fw-bold text-primary mt-4 mb-0">
-                  Cảm ơn quý khách đã mua hàng tại TrendFit!
-                </p>
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="showInvoice = false">
-                Đóng
-              </button>
-              <button type="button" class="btn btn-primary" @click="printInvoice">
-                In hóa đơn
+                class="btn btn-sm px-3"
+                :class="confirmTone === 'danger' ? 'btn-danger' : 'btn-warning'"
+                @click="dongYXacNhan"
+              >
+                Đồng ý
               </button>
             </div>
           </div>
         </div>
       </div>
-
       <div class="modal-backdrop fade show"></div>
     </template>
+
+    <!-- Toast thông báo đẹp (thay alert) — góc phải dưới -->
+    <div class="pos-toast-wrap">
+      <transition name="pos-toast">
+        <div
+          v-if="toast.visible"
+          class="pos-toast shadow"
+          :class="'pos-toast-' + toast.type"
+          role="status"
+        >
+          <div class="pos-toast-icon">{{ toastIcon }}</div>
+          <div class="pos-toast-body">
+            <div class="pos-toast-title">{{ toast.title }}</div>
+            <div class="pos-toast-msg">{{ toast.message }}</div>
+          </div>
+          <button type="button" class="btn-close btn-close-white ms-2" @click="toast.visible = false"></button>
+        </div>
+      </transition>
+    </div>
   </div>
 </template>
 
@@ -741,6 +194,10 @@
 // trang khác dùng axios có thể tự động gắn qua interceptor.
 import { computed, onMounted, ref, watch } from 'vue'
 import { getAuthHeaders } from '@/utils/adminAuth'
+import PosProductPanel from './components/PosProductPanel.vue'
+import PosCartPanel from './components/PosCartPanel.vue'
+import PosPendingModal from './components/PosPendingModal.vue'
+import PosInvoiceModal from './components/PosInvoiceModal.vue'
 
 const API_BASE = 'http://localhost:8080/api'
 
@@ -883,10 +340,6 @@ watch(totalAmount, () => {
   }
 })
 
-onMounted(() => {
-  loadProducts()
-  loadVoucherSuggestions()
-})
 
 function extractArray(payload) {
   if (Array.isArray(payload)) return payload
@@ -1297,18 +750,74 @@ function moModalHoaDonCho() {
   })
 }
 
-// Lưu giỏ hàng hiện tại thành 1 "Hóa đơn chờ" mới, sau đó dọn trống giỏ hàng
-// và thông tin khách hàng để màn hình sẵn sàng phục vụ khách tiếp theo ngay.
-async function luuHoaDonCho() {
+// ===================== UI thông báo đẹp (toast + modal) =====================
+// Thay alert/prompt/confirm của trình duyệt — xấu và không đồng bộ với admin UI.
+const toast = ref({
+  visible: false,
+  type: 'success', // success | error | warning | info
+  title: '',
+  message: '',
+})
+let toastTimer = null
+
+const toastIcon = computed(() => {
+  if (toast.value.type === 'success') return '✓'
+  if (toast.value.type === 'error') return '!'
+  if (toast.value.type === 'warning') return '!'
+  return 'i'
+})
+
+function showToast(type, title, message, duration = 3200) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { visible: true, type, title, message }
+  toastTimer = setTimeout(() => {
+    toast.value.visible = false
+  }, duration)
+}
+
+// Modal ghi chú khi lưu tạm
+const showNoteModal = ref(false)
+const pendingNote = ref('')
+
+// Modal xác nhận gọi lại / xóa
+const showConfirmModal = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+const confirmTone = ref('warning') // warning | danger
+const confirmAction = ref(null) // callback khi bấm Đồng ý
+
+function moXacNhan({ title, message, tone = 'warning', onConfirm }) {
+  confirmTitle.value = title
+  confirmMessage.value = message
+  confirmTone.value = tone
+  confirmAction.value = onConfirm
+  showConfirmModal.value = true
+}
+
+function huyXacNhan() {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+async function dongYXacNhan() {
+  const fn = confirmAction.value
+  showConfirmModal.value = false
+  confirmAction.value = null
+  if (typeof fn === 'function') await fn()
+}
+
+// Mở modal ghi chú thay vì prompt()
+function luuHoaDonCho() {
   if (!cart.value.length) {
-    alert('Giỏ hàng đang trống, không có gì để lưu tạm!')
+    showToast('warning', 'Giỏ hàng trống', 'Chưa có sản phẩm nào để lưu tạm.')
     return
   }
+  pendingNote.value = ''
+  showNoteModal.value = true
+}
 
-  const ghiChu = prompt('Ghi chú cho hóa đơn chờ này (không bắt buộc), ví dụ "khách đi thử size":', '')
-  // Người dùng bấm Cancel ở prompt -> ghiChu === null -> hủy thao tác lưu tạm
-  if (ghiChu === null) return
-
+// Xác nhận lưu tạm sau khi nhập ghi chú (hoặc bỏ trống)
+async function xacNhanLuuHoaDonCho() {
   dangLuuTam.value = true
   try {
     const payload = {
@@ -1317,7 +826,7 @@ async function luuHoaDonCho() {
       phuongThucThanhToan: paymentMethod.value,
       maVoucher: appliedVoucher.value?.ma || null,
       voucherId: appliedVoucher.value?.id || null,
-      ghiChu: ghiChu,
+      ghiChu: pendingNote.value || '',
       items: cart.value.map((i) => ({
         bienTheId: Number(i.bienTheId),
         ten: i.ten,
@@ -1341,10 +850,7 @@ async function luuHoaDonCho() {
 
     if (!res.ok) throw new Error(await res.text())
 
-    alert('Đã lưu tạm hóa đơn! Giỏ hàng đã được dọn trống để phục vụ khách tiếp theo.')
-
-    // Dọn trống giỏ hàng + thông tin khách hàng + voucher đang áp dụng,
-    // giống hệt trạng thái sau khi thanh toán xong 1 đơn.
+    // Dọn trống giỏ + khách + voucher
     cart.value = []
     customerName.value = ''
     customerPhone.value = ''
@@ -1352,83 +858,93 @@ async function luuHoaDonCho() {
     voucherCode.value = ''
     voucherMessage.value = ''
 
-    // Cập nhật lại số lượng hiển thị trên badge "Hóa đơn chờ"
+    showNoteModal.value = false
     taiDanhSachHoaDonCho()
+    showToast('success', 'Đã lưu hóa đơn chờ', 'Giỏ hàng đã được dọn trống, có thể phục vụ khách tiếp theo.')
   } catch (err) {
-    alert('Lưu tạm thất bại: ' + err.message)
+    showToast('error', 'Lưu tạm thất bại', err.message || 'Không thể lưu hóa đơn chờ.')
   } finally {
     dangLuuTam.value = false
   }
 }
 
-// Gọi lại 1 hóa đơn chờ: nạp lại đúng giỏ hàng/khách hàng/voucher đã lưu vào
-// màn hình hiện tại để tiếp tục thanh toán, sau đó xóa bản nháp này đi (vì
-// nó đã được "kích hoạt" lại thành giỏ hàng đang xử lý, không còn "chờ" nữa).
-async function goiLaiHoaDonCho(id) {
-  if (
-    cart.value.length > 0 &&
-    !confirm('Giỏ hàng hiện tại sẽ bị THAY THẾ hoàn toàn bởi hóa đơn chờ này. Tiếp tục?')
-  ) {
+// Gọi lại 1 hóa đơn chờ vào giỏ hiện tại
+function goiLaiHoaDonCho(id) {
+  const run = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+        headers: getAuthHeaders(),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const chiTiet = await res.json()
+
+      customerName.value = chiTiet.tenKhachHang || ''
+      customerPhone.value = chiTiet.soDienThoai || ''
+      paymentMethod.value = chiTiet.phuongThucThanhToan || 'TIEN_MAT'
+      cart.value = (chiTiet.items || []).map((i) => ({
+        bienTheId: i.bienTheId,
+        ten: i.ten,
+        maSku: i.maSku || '',
+        tenKichCo: i.tenKichCo,
+        tenMau: i.tenMau,
+        quantity: i.quantity,
+        gia: i.gia,
+        soLuongTon: i.soLuongTon,
+      }))
+
+      if (chiTiet.maVoucher) {
+        // Không tự áp voucher — yêu cầu bấm "Áp dụng" lại để kiểm tra còn hiệu lực
+        voucherCode.value = chiTiet.maVoucher
+        voucherMessage.value =
+          'Vui lòng bấm "Áp dụng" lại để kiểm tra mã giảm giá này còn hiệu lực không.'
+      }
+
+      await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      })
+
+      showHoaDonChoModal.value = false
+      taiDanhSachHoaDonCho()
+      showToast('success', 'Đã gọi lại hóa đơn', 'Giỏ hàng đã được khôi phục, tiếp tục thanh toán.')
+    } catch (err) {
+      showToast('error', 'Gọi lại thất bại', err.message || 'Không thể gọi lại hóa đơn chờ.')
+    }
+  }
+
+  // Nếu giỏ đang có hàng → hỏi xác nhận trước khi thay thế
+  if (cart.value.length > 0) {
+    moXacNhan({
+      title: 'Thay thế giỏ hàng?',
+      message: 'Giỏ hàng hiện tại sẽ bị thay thế hoàn toàn bởi hóa đơn chờ này.',
+      tone: 'warning',
+      onConfirm: run,
+    })
     return
   }
-
-  try {
-    const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
-      headers: getAuthHeaders(),
-    })
-    if (!res.ok) throw new Error(await res.text())
-    const chiTiet = await res.json()
-
-    // Khôi phục lại toàn bộ trạng thái giỏ hàng như lúc tạm lưu
-    customerName.value = chiTiet.tenKhachHang || ''
-    customerPhone.value = chiTiet.soDienThoai || ''
-    paymentMethod.value = chiTiet.phuongThucThanhToan || 'TIEN_MAT'
-    cart.value = (chiTiet.items || []).map((i) => ({
-      bienTheId: i.bienTheId,
-      ten: i.ten,
-      maSku: i.maSku || '',
-      tenKichCo: i.tenKichCo,
-      tenMau: i.tenMau,
-      quantity: i.quantity,
-      gia: i.gia,
-      soLuongTon: i.soLuongTon,
-    }))
-
-    if (chiTiet.maVoucher) {
-      // Voucher đã áp trước đó có thể đã hết hạn/hết lượt trong lúc chờ, nên
-      // không tự phục hồi appliedVoucher trực tiếp mà điền lại mã để nhân
-      // viên bấm "Áp dụng" kiểm tra lại cho chắc chắn.
-      voucherCode.value = chiTiet.maVoucher
-      voucherMessage.value = 'Vui lòng bấm "Áp dụng" lại để kiểm tra mã giảm giá này còn hiệu lực không.'
-    }
-
-    // Xóa bản nháp trên server vì đã được gọi lại vào giỏ hàng đang xử lý
-    await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    })
-
-    showHoaDonChoModal.value = false
-    taiDanhSachHoaDonCho()
-  } catch (err) {
-    alert('Gọi lại hóa đơn chờ thất bại: ' + err.message)
-  }
+  run()
 }
 
-// Xóa hẳn 1 hóa đơn chờ (thu ngân chủ động hủy, không cần giữ nữa)
-async function xoaHoaDonCho(id) {
-  if (!confirm('Xóa hẳn hóa đơn chờ này? Thao tác này không thể hoàn tác.')) return
-
-  try {
-    const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    })
-    if (!res.ok) throw new Error(await res.text())
-    taiDanhSachHoaDonCho()
-  } catch (err) {
-    alert('Xóa thất bại: ' + err.message)
-  }
+// Xóa hẳn 1 hóa đơn chờ
+function xoaHoaDonCho(id) {
+  moXacNhan({
+    title: 'Xóa hóa đơn chờ?',
+    message: 'Thao tác này không thể hoàn tác. Bạn chắc chắn muốn xóa?',
+    tone: 'danger',
+    onConfirm: async () => {
+      try {
+        const res = await fetch(`${API_BASE}/admin/hoa-don-cho/${id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        })
+        if (!res.ok) throw new Error(await res.text())
+        taiDanhSachHoaDonCho()
+        showToast('success', 'Đã xóa', 'Hóa đơn chờ đã được xóa khỏi danh sách.')
+      } catch (err) {
+        showToast('error', 'Xóa thất bại', err.message || 'Không thể xóa hóa đơn chờ.')
+      }
+    },
+  })
 }
 // ===================================================================================
 
@@ -1634,6 +1150,7 @@ function printInvoice() {
 
 onMounted(() => {
   loadProducts()
+  loadVoucherSuggestions()
   taiDanhSachHoaDonCho()
 })
 </script>
@@ -1685,4 +1202,47 @@ onMounted(() => {
 .min-w-0 {
   min-width: 0;
 }
+
+/* Toast góc phải dưới — thay alert() */
+.pos-toast-wrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1080;
+  max-width: 380px;
+}
+.pos-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+.pos-toast-success { background: linear-gradient(135deg, #059669, #10b981); }
+.pos-toast-error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.pos-toast-warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.pos-toast-info { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+.pos-toast-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.pos-toast-title { font-weight: 700; font-size: 14px; }
+.pos-toast-msg { font-size: 13px; opacity: 0.95; margin-top: 2px; }
+.pos-toast-enter-active,
+.pos-toast-leave-active { transition: all 0.25s ease; }
+.pos-toast-enter-from,
+.pos-toast-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
 </style>
+

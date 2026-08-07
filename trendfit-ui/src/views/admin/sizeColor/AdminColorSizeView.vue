@@ -1,40 +1,62 @@
 <template>
   <div class="container-fluid py-4">
-    <h2 class="mb-4">Quản lý Kích cỡ & Màu sắc</h2>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Quản lý kích cỡ & màu sắc</h4>
+        <p class="text-secondary small mb-0">Quản lý thuộc tính biến thể sản phẩm</p>
+      </div>
+    </div>
 
     <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
 
-    <div class="row">
-      <!-- Quản lý Kích cỡ -->
+    <div class="row g-4">
+      <!-- Kích cỡ — bỏ h-100 để không bị kéo cao theo cột bên cạnh -->
       <div class="col-lg-6">
-        <div class="card mb-4">
-          <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">📏 Danh sách Kích cỡ</h5>
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <div
+            class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3"
+          >
+            <span class="fw-semibold">Danh sách kích cỡ</span>
+            <span class="badge text-bg-primary rounded-pill">Tổng: {{ sizes.length }}</span>
           </div>
-          <div class="card-body">
-            <div class="input-group mb-3">
+
+          <!-- Form thêm: padding gọn, không tạo khoảng trắng lớn -->
+          <div class="px-3 pt-3 pb-2">
+            <div class="input-group input-group-sm">
               <input
                 v-model="newSize"
                 class="form-control"
                 placeholder="Nhập kích cỡ mới (S, M, L...)"
+                @keyup.enter="addSize"
               />
-              <button @click="addSize" class="btn btn-success">Thêm</button>
+              <button type="button" class="btn btn-primary" @click="addSize">Thêm</button>
             </div>
+          </div>
 
-            <table class="table table-hover">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>ID</th>
-                  <th>Tên Kích cỡ</th>
-                  <th>Thao tác</th>
+                  <th style="width: 70px">ID</th>
+                  <th>Tên kích cỡ</th>
+                  <th class="text-center" style="width: 100px">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
+                <tr v-if="sizes.length === 0">
+                  <td colspan="3" class="text-center text-muted py-3">Chưa có kích cỡ</td>
+                </tr>
                 <tr v-for="size in sizes" :key="size.id">
-                  <td>{{ size.id }}</td>
+                  <td class="fw-semibold">#{{ size.id }}</td>
                   <td>{{ size.tenKichCo }}</td>
-                  <td>
-                    <button @click="deleteSize(size.id)" class="btn btn-danger btn-sm">Xóa</button>
+                  <td class="text-center">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteSize(size.id)"
+                    >
+                      Xóa
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -43,42 +65,63 @@
         </div>
       </div>
 
-      <!-- Quản lý Màu sắc -->
+      <!-- Màu sắc -->
       <div class="col-lg-6">
-        <div class="card mb-4">
-          <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">🎨 Danh sách Màu sắc</h5>
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <div
+            class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3"
+          >
+            <span class="fw-semibold">Danh sách màu sắc</span>
+            <span class="badge text-bg-primary rounded-pill">Tổng: {{ colors.length }}</span>
           </div>
-          <div class="card-body">
-            <div class="input-group mb-3">
+
+          <div class="px-3 pt-3 pb-2">
+            <div class="input-group input-group-sm">
               <input
                 v-model="newColor"
                 class="form-control"
                 placeholder="Nhập tên màu (Đỏ, Xanh...)"
+                @keyup.enter="addColor"
               />
-              <button @click="addColor" class="btn btn-success">Thêm</button>
+              <button type="button" class="btn btn-primary" @click="addColor">Thêm</button>
             </div>
+          </div>
 
-            <table class="table table-hover">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
-                  <th>ID</th>
-                  <th>Tên Màu</th>
+                  <th style="width: 70px">ID</th>
+                  <th>Tên màu</th>
                   <th>Mã màu</th>
-                  <th>Thao tác</th>
+                  <th class="text-center" style="width: 100px">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
+                <tr v-if="colors.length === 0">
+                  <td colspan="4" class="text-center text-muted py-3">Chưa có màu sắc</td>
+                </tr>
                 <tr v-for="color in colors" :key="color.id">
-                  <td>{{ color.id }}</td>
+                  <td class="fw-semibold">#{{ color.id }}</td>
                   <td>{{ color.tenMau }}</td>
                   <td>
                     <span
-                      :style="{ background: color.maMau, padding: '4px 12px', borderRadius: '4px' }"
+                      class="d-inline-block rounded border"
+                      :style="{
+                        background: color.maMau || '#ccc',
+                        width: '28px',
+                        height: '20px',
+                      }"
+                      :title="color.maMau"
                     ></span>
+                    <small class="text-muted ms-1">{{ color.maMau || '—' }}</small>
                   </td>
-                  <td>
-                    <button @click="deleteColor(color.id)" class="btn btn-danger btn-sm">
+                  <td class="text-center">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteColor(color.id)"
+                    >
                       Xóa
                     </button>
                   </td>
@@ -93,15 +136,11 @@
 </template>
 
 <script setup>
-// Trang CRUD Kích cỡ & Màu sắc, dùng chung được bởi ADMIN và EMPLOYEE.
-// Mọi request đều phải gắn header xác thực (getAuthHeaders) vì
-// "/api/admin/**" đã được AuthInterceptor bảo vệ toàn bộ.
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
 const API_BASE = 'http://localhost:8080/api/admin'
-
 const sizes = ref([])
 const colors = ref([])
 const newSize = ref('')

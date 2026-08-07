@@ -1,129 +1,168 @@
 <template>
-  <div class="container py-5">
-    <h3 class="fw-bold mb-4">QUẢN LÝ NHÂN VIÊN</h3>
-
-    <!-- Chỉ ADMIN mới thấy được trang này (được chặn ở router + backend),
-         nên form dưới đây luôn cho phép tạo/sửa nhân viên. -->
-    <div class="card p-4 mb-5 shadow-sm">
-      <h5>{{ isEditing ? 'Cập nhật nhân viên' : 'Tạo tài khoản nhân viên' }}</h5>
-
-      <!-- Khu vực hiển thị lỗi từ server (ví dụ email đã tồn tại) -->
-      <div v-if="errorMsg" class="alert alert-danger py-2 mt-2 mb-0">{{ errorMsg }}</div>
-
-      <div class="row g-3 mt-1">
-        <div class="col-md-3">
-          <input
-            v-model.trim="newStaff.hoTen"
-            placeholder="Họ tên *"
-            class="form-control"
-            required
-          />
-        </div>
-        <div class="col-md-3">
-          <!--
-            LƯU Ý: Email BẮT BUỘC và phải DUY NHẤT trong toàn hệ thống, vì cột
-            "email" ở bảng nguoi_dung có ràng buộc UNIQUE (dùng chung cho cả
-            khách hàng lẫn nhân viên/admin - xem NguoiDung.java).
-            Khi đang SỬA (isEditing), khoá không cho đổi email để tránh trùng
-            với 1 tài khoản khác đã tồn tại; muốn đổi email hãy xoá và tạo lại.
-          -->
-          <input
-            v-model.trim="newStaff.email"
-            type="email"
-            placeholder="Email *"
-            class="form-control"
-            :disabled="isEditing"
-            required
-          />
-        </div>
-        <div class="col-md-2" v-if="!isEditing">
-          <input
-            v-model="newStaff.matKhau"
-            type="password"
-            placeholder="Mật khẩu *"
-            class="form-control"
-            required
-          />
-        </div>
-        <div class="col-md-2">
-          <input
-            v-model.trim="newStaff.maNhanVien"
-            placeholder="Mã NV *"
-            class="form-control"
-            required
-          />
-        </div>
-        <div class="col-md-2">
-          <input v-model.trim="newStaff.soDienThoai" placeholder="Số ĐT" class="form-control" />
-        </div>
-        <div class="col-md-2">
-          <input v-model="newStaff.ngayVaoLam" type="date" class="form-control" />
-        </div>
-        <div class="col-md-2">
-          <button
-            @click="isEditing ? updateStaff() : createStaff()"
-            class="btn btn-dark w-100"
-            :disabled="submitting"
-          >
-            {{ submitting ? 'Đang xử lý...' : isEditing ? 'Cập nhật' : 'Tạo mới' }}
-          </button>
-        </div>
-        <div class="col-md-2" v-if="isEditing">
-          <button @click="resetForm" class="btn btn-outline-secondary w-100">Hủy</button>
-        </div>
+  <div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div>
+        <h4 class="fw-bold mb-1">Quản lý nhân viên</h4>
+        <p class="text-secondary small mb-0">Tạo tài khoản và quản lý nhân viên cửa hàng</p>
       </div>
-      <small class="text-muted d-block mt-2">(*) Bắt buộc nhập</small>
     </div>
 
-    <div class="input-group mb-3 w-50">
-      <input
-        v-model="searchQuery"
-        @input="searchStaff"
-        placeholder="Tìm theo mã NV..."
-        class="form-control"
-      />
+    <!-- Form -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          {{ isEditing ? 'Cập nhật nhân viên' : 'Tạo tài khoản nhân viên' }}
+        </h6>
+
+        <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
+
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Họ tên *</label>
+            <input v-model.trim="newStaff.hoTen" class="form-control" placeholder="Họ tên" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Email *</label>
+            <input
+              v-model.trim="newStaff.email"
+              type="email"
+              class="form-control"
+              placeholder="Email"
+              :disabled="isEditing"
+            />
+          </div>
+          <div class="col-md-2" v-if="!isEditing">
+            <label class="form-label small fw-semibold">Mật khẩu *</label>
+            <input
+              v-model="newStaff.matKhau"
+              type="password"
+              class="form-control"
+              placeholder="Mật khẩu"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Mã NV *</label>
+            <input
+              v-model.trim="newStaff.maNhanVien"
+              class="form-control"
+              placeholder="Mã NV"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Số ĐT</label>
+            <input
+              v-model.trim="newStaff.soDienThoai"
+              class="form-control"
+              placeholder="Số điện thoại"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Ngày vào làm</label>
+            <input v-model="newStaff.ngayVaoLam" type="date" class="form-control" />
+          </div>
+          <div class="col-md-auto d-flex align-items-end gap-2">
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="submitting"
+              @click="isEditing ? updateStaff() : createStaff()"
+            >
+              {{ submitting ? 'Đang xử lý...' : isEditing ? 'Cập nhật' : 'Tạo mới' }}
+            </button>
+            <button
+              v-if="isEditing"
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="resetForm"
+            >
+              Hủy
+            </button>
+          </div>
+        </div>
+        <small class="text-muted d-block mt-2">(*) Bắt buộc nhập</small>
+      </div>
     </div>
 
-    <div v-if="loading" class="text-center py-4">
-      <div class="spinner-border" role="status"></div>
+    <!-- Search -->
+    <div class="mb-3" style="max-width: 360px">
+      <div class="input-group">
+        <input
+          v-model="searchQuery"
+          class="form-control"
+          placeholder="Tìm theo mã NV..."
+          @input="searchStaff"
+        />
+        <button type="button" class="btn btn-outline-secondary" @click="fetchStaff">
+          Làm mới
+        </button>
+      </div>
     </div>
 
-    <table v-else class="table table-bordered table-hover align-middle">
-      <thead class="table-dark">
-        <tr>
-          <th>STT</th>
-          <th>Mã NV</th>
-          <th>Họ tên</th>
-          <th>Email</th>
-          <th>Số ĐT</th>
-          <th>Trạng thái</th>
-          <th>Ngày vào làm</th>
-          <th>Hành động</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="staffList.length === 0">
-          <td colspan="8" class="text-center text-muted py-3">Chưa có nhân viên nào</td>
-        </tr>
-        <tr v-for="(nv, index) in staffList" :key="nv.id">
-          <td>{{ index + 1 }}</td>
-          <td>{{ nv.maNhanVien }}</td>
-          <td>{{ nv.nguoiDung?.hoTen }}</td>
-          <td>{{ nv.nguoiDung?.email }}</td>
-          <td>{{ nv.nguoiDung?.soDienThoai }}</td>
-          <td>
-            <span class="badge" :class="nv.nguoiDung?.dangHoatDong ? 'bg-success' : 'bg-secondary'">
-              {{ nv.nguoiDung?.dangHoatDong ? 'Hoạt động' : 'Khóa' }}
-            </span>
-          </td>
-          <td>{{ formatDate(nv.ngayVaoLam) }}</td>
-          <td>
-            <button @click="editStaff(nv)" class="btn btn-sm btn-warning me-2">Sửa</button>
-            <button @click="deleteStaff(nv.id)" class="btn btn-sm btn-danger">Xóa</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+
+    <!-- Table -->
+    <div v-else class="card border-0 shadow-sm overflow-hidden">
+      <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold">Danh sách nhân viên</span>
+        <span class="badge text-bg-primary rounded-pill">Tổng NV: {{ staffList.length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 60px">STT</th>
+              <th>Mã NV</th>
+              <th>Họ tên</th>
+              <th>Email</th>
+              <th>Số ĐT</th>
+              <th class="text-center">Trạng thái</th>
+              <th>Ngày vào làm</th>
+              <th class="text-center" style="width: 140px">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="staffList.length === 0">
+              <td colspan="8" class="text-center text-muted py-4">Chưa có nhân viên nào</td>
+            </tr>
+            <tr v-for="(nv, index) in staffList" :key="nv.id">
+              <td>{{ index + 1 }}</td>
+              <td class="fw-semibold">{{ nv.maNhanVien }}</td>
+              <td>{{ nv.nguoiDung?.hoTen }}</td>
+              <td>{{ nv.nguoiDung?.email }}</td>
+              <td>{{ nv.nguoiDung?.soDienThoai || '—' }}</td>
+              <td class="text-center">
+                <span
+                  class="badge"
+                  :class="nv.nguoiDung?.dangHoatDong ? 'bg-success' : 'bg-secondary'"
+                >
+                  {{ nv.nguoiDung?.dangHoatDong ? 'Hoạt động' : 'Khóa' }}
+                </span>
+              </td>
+              <td>{{ formatDate(nv.ngayVaoLam) }}</td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning me-1"
+                  @click="editStaff(nv)"
+                >
+                  Sửa
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  @click="deleteStaff(nv.id)"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
