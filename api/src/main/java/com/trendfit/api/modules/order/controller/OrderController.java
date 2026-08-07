@@ -1,6 +1,7 @@
 package com.trendfit.api.modules.order.controller;
 
 import com.trendfit.api.modules.order.dto.OrderRequestDTO;
+import com.trendfit.api.modules.order.dto.ReturnRequestDTO;
 import com.trendfit.api.modules.order.entity.DonHang;
 import com.trendfit.api.modules.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,4 +48,34 @@ public ResponseEntity<?> updateOrderStatus(
     }
 }
 
+@PutMapping("/{id}/request-return")
+public ResponseEntity<?> requestReturn(
+        @PathVariable Integer id,
+        @RequestBody ReturnRequestDTO dto) {
+    try {
+        orderService.yeuCauTraHang(id, dto.getLyDo(), dto.getAnhMinhChung());
+        return ResponseEntity.ok("Gửi yêu cầu trả hàng thành công!");
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}
+
+@GetMapping("/{id}/return-details")
+public ResponseEntity<?> getReturnDetails(@PathVariable Integer id) {
+    // Gọi thông qua orderService thay vì gọi trực tiếp repository
+    Object chiTiet = orderService.getChiTietHoanTra(id);
+    if (chiTiet != null) {
+        return ResponseEntity.ok(chiTiet);
+    }
+    return ResponseEntity.notFound().build();
+}
+
+@GetMapping("/admin/orders/{id}/return-details")
+public ResponseEntity<?> getAdminReturnDetails(@PathVariable Integer id) {
+    Object chiTiet = orderService.getChiTietHoanTra(id);
+    if (chiTiet != null) {
+        return ResponseEntity.ok(chiTiet);
+    }
+    return ResponseEntity.notFound().build();
+}
 }
