@@ -10,15 +10,19 @@
     <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
 
     <div class="row g-4">
-      <!-- Kích cỡ -->
+      <!-- Kích cỡ — bỏ h-100 để không bị kéo cao theo cột bên cạnh -->
       <div class="col-lg-6">
-        <div class="card border-0 shadow-sm overflow-hidden h-100">
-          <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <div
+            class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3"
+          >
             <span class="fw-semibold">Danh sách kích cỡ</span>
             <span class="badge text-bg-primary rounded-pill">Tổng: {{ sizes.length }}</span>
           </div>
-          <div class="card-body border-bottom">
-            <div class="input-group">
+
+          <!-- Form thêm: padding gọn, không tạo khoảng trắng lớn -->
+          <div class="px-3 pt-3 pb-2">
+            <div class="input-group input-group-sm">
               <input
                 v-model="newSize"
                 class="form-control"
@@ -28,6 +32,7 @@
               <button type="button" class="btn btn-primary" @click="addSize">Thêm</button>
             </div>
           </div>
+
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
@@ -45,7 +50,13 @@
                   <td class="fw-semibold">#{{ size.id }}</td>
                   <td>{{ size.tenKichCo }}</td>
                   <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteSize(size.id)">Xóa</button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteSize(size.id)"
+                    >
+                      Xóa
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -56,13 +67,16 @@
 
       <!-- Màu sắc -->
       <div class="col-lg-6">
-        <div class="card border-0 shadow-sm overflow-hidden h-100">
-          <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <div
+            class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3"
+          >
             <span class="fw-semibold">Danh sách màu sắc</span>
             <span class="badge text-bg-primary rounded-pill">Tổng: {{ colors.length }}</span>
           </div>
-          <div class="card-body border-bottom">
-            <div class="input-group">
+
+          <div class="px-3 pt-3 pb-2">
+            <div class="input-group input-group-sm">
               <input
                 v-model="newColor"
                 class="form-control"
@@ -72,6 +86,7 @@
               <button type="button" class="btn btn-primary" @click="addColor">Thêm</button>
             </div>
           </div>
+
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
@@ -92,13 +107,23 @@
                   <td>
                     <span
                       class="d-inline-block rounded border"
-                      :style="{ background: color.maMau || '#ccc', width: '28px', height: '20px' }"
+                      :style="{
+                        background: color.maMau || '#ccc',
+                        width: '28px',
+                        height: '20px',
+                      }"
                       :title="color.maMau"
                     ></span>
                     <small class="text-muted ms-1">{{ color.maMau || '—' }}</small>
                   </td>
                   <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteColor(color.id)">Xóa</button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteColor(color.id)"
+                    >
+                      Xóa
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -149,7 +174,11 @@ const loadColors = async () => {
 const addSize = async () => {
   if (!newSize.value) return
   try {
-    await axios.post(`${API_BASE}/products/sizes`, { tenKichCo: newSize.value }, { headers: getAuthHeaders() })
+    await axios.post(
+      `${API_BASE}/products/sizes`,
+      { tenKichCo: newSize.value },
+      { headers: getAuthHeaders() },
+    )
     newSize.value = ''
     loadSizes()
   } catch (err) {
@@ -160,7 +189,11 @@ const addSize = async () => {
 const addColor = async () => {
   if (!newColor.value) return
   try {
-    await axios.post(`${API_BASE}/products/colors`, { tenMau: newColor.value }, { headers: getAuthHeaders() })
+    await axios.post(
+      `${API_BASE}/products/colors`,
+      { tenMau: newColor.value },
+      { headers: getAuthHeaders() },
+    )
     newColor.value = ''
     loadColors()
   } catch (err) {

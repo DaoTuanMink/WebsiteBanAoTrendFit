@@ -125,14 +125,11 @@
               </td>
               <td>
                 <ul class="list-unstyled mb-0 small">
-                  <li v-for="ct in (item.chiTietDonHangs || [])" :key="ct.id">
+                  <li v-for="ct in item.chiTietDonHangs || []" :key="ct.id">
                     {{ ct.soLuong }}x {{ ct.tenSanPham || 'Sản phẩm' }}
                     <span v-if="ct.kichCoSize || ct.mauSac">
                       ({{ ct.kichCoSize || '-' }} / {{ ct.mauSac || '-' }})
                     </span>
-                  </li>
-                  <li v-if="!item.chiTietDonHangs || item.chiTietDonHangs.length === 0" class="text-muted">
-                    Không có chi tiết
                   </li>
                 </ul>
               </td>
@@ -152,7 +149,7 @@
                   "
                   :value="item.donHang.trangThai"
                 >
-                  <option :value="item.donHang.trangThai">-- Giữ nguyên --</option>
+                  <option :value="item.donHang.trangThai">-- Chuyển trạng thái --</option>
                   <option
                     v-for="status in getAvailableStatuses(item.donHang.trangThai)"
                     :key="status"
@@ -235,6 +232,73 @@
         </ul>
       </div>
     </div>
+
+    <!-- ===================== MODAL XEM CHI TIẾT YÊU CẦU TRẢ HÀNG ===================== -->
+    <div
+      v-if="showReturnDetailModal"
+      class="history-overlay"
+      @click.self="showReturnDetailModal = false"
+    >
+      <div class="history-modal bg-white rounded-3 shadow p-4" style="max-width: 600px">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0 text-danger">
+            🔄 Chi tiết yêu cầu trả hàng (#{{ activeReturnOrderId }})
+          </h5>
+          <button class="btn-close" @click="showReturnDetailModal = false"></button>
+        </div>
+
+        <div v-if="loadingReturnDetail" class="text-center py-4">
+          <div class="spinner-border text-danger" role="status"></div>
+        </div>
+
+        <div v-else>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small"
+              >Lý do khách hàng yêu cầu:</label
+            >
+            <div class="p-3 bg-light rounded border text-dark">
+              {{ returnDetailData.lyDo || 'Không có lý do chi tiết.' }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small"
+              >Ảnh / Video minh chứng:</label
+            >
+            <div
+              v-if="returnDetailData.moTaChiTiet"
+              class="text-center border rounded p-2 bg-black bg-opacity-10"
+            >
+              <!-- Nếu là Video -->
+              <video
+                v-if="isVideoFile(returnDetailData.moTaChiTiet)"
+                :src="returnDetailData.moTaChiTiet"
+                controls
+                class="w-100 rounded"
+                style="max-height: 350px"
+              ></video>
+              <!-- Nếu là Ảnh -->
+              <img
+                v-else
+                :src="returnDetailData.moTaChiTiet"
+                alt="Minh chứng trả hàng"
+                class="img-fluid rounded"
+                style="max-height: 350px; object-fit: contain"
+              />
+            </div>
+            <div v-else class="text-muted fst-italic small">
+              Không có tệp hình ảnh hoặc video minh chứng được tải lên.
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-secondary btn-sm" @click="showReturnDetailModal = false">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -257,17 +321,12 @@ const historyOrderId = ref(null)
 const orderHistory = ref([])
 const loadingHistory = ref(false)
 
-// Thống kê số lượng đơn theo từng tab
-const stats = computed(() => {
-  const all = danhSachDonHang.value.length
-  const pos = danhSachDonHang.value.filter((item) => isPosOrder(item)).length
-  const online = all - pos
-  // Đơn vãng lai (khách vãng lai tính trên danh sách hoặc gọi riêng API)
-  const nullUser = danhSachDonHang.value.filter((item) => !item.donHang.nguoiDung).length
-  return { all, online, pos, nullUser }
-})
+// State cho modal xem chi tiết trả hàng (Ảnh/Video)
+const showReturnDetailModal = ref(false)
+const activeReturnOrderId = ref(null)
+const returnDetailData = ref({ lyDo: '', moTaChiTiet: '' })
+const loadingReturnDetail = ref(false)
 
-// Kiểm tra xem có phải đơn POS (tại quầy) hay không
 const isPosOrder = (item) => {
   const address = item.donHang.diaChiGiao || ''
   return address.toLowerCase().includes('quầy') || address.toLowerCase().includes('pos')
@@ -337,58 +396,38 @@ const clearDateFilter = () => {
   filterToDate.value = ''
 }
 
-// Lấy dữ liệu từ Backend
 const fetchError = ref('')
 
-const fetchOrders = async (type = 'all') => {
+const fetchOrders = async () => {
   loading.value = true
   fetchError.value = ''
   try {
-    // Kiểm tra đã đăng nhập admin/nhân viên chưa
     const headers = getAuthHeaders()
     if (!headers['User-Role']) {
-      fetchError.value =
-        'Chưa đăng nhập hoặc phiên hết hạn. Vui lòng đăng nhập bằng tài khoản admin / nhanvien.'
+      fetchError.value = 'Chưa đăng nhập hoặc phiên hết hạn. Vui lòng đăng nhập lại.'
       danhSachDonHang.value = []
       return
     }
 
-    let url = 'http://localhost:8080/api/admin/orders'
-    if (type === 'null-user') {
-      url = 'http://localhost:8080/api/admin/orders/null-user'
-    }
-
-    const res = await axios.get(url, { headers })
-    // Đảm bảo luôn là mảng
+    const res = await axios.get('http://localhost:8080/api/admin/orders', { headers })
     danhSachDonHang.value = Array.isArray(res.data) ? res.data : []
   } catch (err) {
     console.error('Lỗi tải đơn hàng:', err)
-    const status = err.response?.status
-    const msg = err.response?.data
-    if (status === 401) {
-      fetchError.value = 'Thiếu xác thực. Đăng nhập lại (admin/nhanvien - mật khẩu 123).'
-    } else if (status === 403) {
-      fetchError.value =
-        'Không có quyền xem đơn hàng. Cần tài khoản ADMIN hoặc EMPLOYEE (đã mở quyền cho nhân viên).'
-    } else if (!err.response) {
-      fetchError.value = 'Không kết nối được backend (localhost:8080). Hãy chạy API rồi F5.'
-    } else {
-      fetchError.value =
-        typeof msg === 'string' ? msg : `Lỗi tải đơn hàng (${status || 'network'})`
-    }
+    fetchError.value = err.response?.data || 'Không thể kết nối đến máy chủ.'
     danhSachDonHang.value = []
   } finally {
     loading.value = false
   }
 }
 
-// Trạng thái đơn hàng hợp lệ
 const getAvailableStatuses = (currentStatus) => {
   const transitions = {
     CHO_XAC_NHAN: ['DA_XAC_NHAN', 'DA_HUY'],
     DA_XAC_NHAN: ['DANG_VAN_CHUYEN', 'DA_HUY'],
     DANG_VAN_CHUYEN: ['DA_THANH_CONG'],
     DA_THANH_CONG: [],
+    YEU_CAU_TRA_HANG: ['DA_TRA_HANG', 'DA_THANH_CONG'],
+    DA_TRA_HANG: [],
     DA_HUY: [],
   }
   return transitions[currentStatus] || []
@@ -403,7 +442,7 @@ const capNhatTrangThai = async (id, currentStatus, newStatus) => {
     return
   }
 
-  if (!confirm(`Xác nhận đổi trạng thái đơn hàng #${id}?`)) return
+  if (!confirm(`Xác nhận đổi trạng thái đơn hàng #${id} sang ${getStatusLabel(newStatus)}?`)) return
 
   try {
     await axios.put(
@@ -412,7 +451,7 @@ const capNhatTrangThai = async (id, currentStatus, newStatus) => {
       { headers: getAuthHeaders() },
     )
     alert('✅ Cập nhật trạng thái thành công!')
-    fetchOrders(currentTab.value === 'null-user' ? 'null-user' : 'all')
+    fetchOrders()
   } catch (err) {
     alert('❌ Lỗi cập nhật: ' + (err.response?.data || err.message))
   }
@@ -436,12 +475,46 @@ const xemLichSu = async (id) => {
   }
 }
 
+// Mở form modal hiển thị chi tiết lý do và ảnh/video trả hàng
+const xemChiTietTraHang = async (id) => {
+  activeReturnOrderId.value = id
+  showReturnDetailModal.value = true
+  loadingReturnDetail.value = true
+  returnDetailData.value = { lyDo: '', moTaChiTiet: '' }
+
+  try {
+    const res = await axios.get(`http://localhost:8080/api/admin/orders/${id}/return-details`, {
+      headers: getAuthHeaders(),
+    })
+    returnDetailData.value = res.data || {}
+  } catch (e) {
+    console.error('Lỗi tải thông tin trả hàng:', e)
+    alert('Không thể lấy chi tiết yêu cầu trả hàng của đơn này!')
+  } finally {
+    loadingReturnDetail.value = false
+  }
+}
+
+// Kiểm tra xem URL có phải là video hay không
+const isVideoFile = (url) => {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  return (
+    lower.endsWith('.mp4') ||
+    lower.endsWith('.webm') ||
+    lower.endsWith('.ogg') ||
+    lower.includes('/video/upload/')
+  )
+}
+
 const getStatusClass = (status) => {
   const classes = {
     CHO_XAC_NHAN: 'bg-warning text-dark',
     DA_XAC_NHAN: 'bg-info',
     DANG_VAN_CHUYEN: 'bg-primary',
     DA_THANH_CONG: 'bg-success',
+    YEU_CAU_TRA_HANG: 'bg-secondary text-white',
+    DA_TRA_HANG: 'bg-dark text-white',
     DA_HUY: 'bg-danger',
   }
   return classes[status] || 'bg-secondary'
@@ -453,6 +526,8 @@ const getStatusLabel = (status) => {
     DA_XAC_NHAN: 'Đã xác nhận',
     DANG_VAN_CHUYEN: 'Đang vận chuyển',
     DA_THANH_CONG: 'Đã thành công',
+    YEU_CAU_TRA_HANG: 'Yêu cầu trả hàng',
+    DA_TRA_HANG: 'Đã trả hàng',
     DA_HUY: 'Đã hủy',
   }
   return labels[status] || status
@@ -573,7 +648,7 @@ const formatDate = (dateString) => {
   })
 }
 
-onMounted(() => fetchOrders('all'))
+onMounted(() => fetchOrders())
 </script>
 
 <style scoped>
