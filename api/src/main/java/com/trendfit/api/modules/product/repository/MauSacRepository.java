@@ -6,4 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MauSacRepository extends JpaRepository<MauSac, Integer> {
+
+    // Thêm hàm tìm kiếm màu sắc theo tên để kiểm tra trùng lặp
+    MauSac findByTenMau(String tenMau);
 }

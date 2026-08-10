@@ -147,12 +147,33 @@ public ResponseEntity<?> getAllColors() {
 
 @PostMapping("/colors")
 public ResponseEntity<?> saveColor(@RequestBody MauSac mauSac) {
+    if (mauSac.getTenMau() == null || mauSac.getTenMau().trim().isEmpty()) {
+        return ResponseEntity.badRequest().body("Vui lòng nhập tên màu sắc!");
+    }
+
+    // Kiểm tra xem tên màu đã tồn tại trong hệ thống hay chưa
+    MauSac existingColor = mauSacRepository.findByTenMau(mauSac.getTenMau().trim());
+    if (existingColor != null) {
+        // Nếu là thêm mới (id null) hoặc đang sửa cho một ID khác -> Bị trùng tên
+        if (mauSac.getId() == null || !existingColor.getId().equals(mauSac.getId())) {
+            return ResponseEntity.badRequest().body("Tên màu sắc này đã tồn tại trong hệ thống!");
+        }
+    }
+
+    if (mauSac.getMaMau() == null || mauSac.getMaMau().trim().isEmpty()) {
+        mauSac.setMaMau("#000000");
+    }
+
     return ResponseEntity.ok(mauSacRepository.save(mauSac));
 }
 
 @DeleteMapping("/colors/{id}")
 public ResponseEntity<?> deleteColor(@PathVariable Integer id) {
-    mauSacRepository.deleteById(id);
-    return ResponseEntity.ok("Xóa màu sắc thành công");
+    try {
+        mauSacRepository.deleteById(id);
+        return ResponseEntity.ok("Xóa màu sắc thành công");
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body("Không thể xóa vì màu sắc này đang được sử dụng bởi biến thể sản phẩm!");
+    }
 }
 }

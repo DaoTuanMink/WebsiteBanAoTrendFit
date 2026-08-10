@@ -65,15 +65,12 @@ const router = createRouter({
           name: 'admin-products',
           component: () => import('@/views/admin/product/AdminProductView.vue'),
         },
-        {
-          path: 'categories',
-          name: 'admin-categories',
-          component: () => import('@/views/admin/product/AdminCategoryView.vue'),
-        },
+        // Đã xóa đường dẫn 'categories' riêng biệt ở đây
         {
           path: 'brands',
           name: 'admin-brands',
-          component: () => import('@/views/admin/product/AdminBrandView.vue'),
+          // Trỏ đến component gộp Thương hiệu & Danh mục vừa tạo
+          component: () => import('@/views/admin/product/AdminBrandCategoryView.vue'),
         },
         {
           path: 'sizes-colors',
@@ -115,15 +112,6 @@ const router = createRouter({
 })
 
 // ==================== NAVIGATION GUARD ====================
-// Bảo vệ khu vực "/admin" ở phía Frontend. Đây chỉ là lớp bảo vệ TRẢI NGHIỆM
-// (UX) - ẩn đi các trang người dùng không có quyền xem; lớp bảo vệ THẬT SỰ
-// (bắt buộc) nằm ở Backend trong AuthInterceptor, vì Frontend luôn có thể bị
-// vượt qua (sửa localStorage bằng tay). Cả 2 lớp phải khớp logic với nhau:
-//   - ADMIN    : vào được TẤT CẢ route trong /admin
-//   - EMPLOYEE : vào được vận hành + đơn hàng (duyệt/cập nhật trạng thái)
-//                nhưng KHÔNG vào được route meta.requiresAdmin (nhân viên, voucher)
-//                — khớp AuthInterceptor.java
-//   - CUSTOMER (hoặc chưa đăng nhập) : không vào được /admin dưới bất kỳ hình thức nào
 router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem('user_role')
   const isLoggedIn = !!localStorage.getItem('user_id')
