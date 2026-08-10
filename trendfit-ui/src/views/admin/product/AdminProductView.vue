@@ -1,213 +1,372 @@
 <template>
-  <div class="container-fluid py-4">
+  <div class="container-fluid py-4 position-relative">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
       <div>
         <h4 class="fw-bold mb-1">Quản lý sản phẩm</h4>
         <p class="text-secondary small mb-0">Thêm, sửa, xóa sản phẩm và biến thể</p>
       </div>
-      <button type="button" class="btn btn-primary" @click="moFormThemMoi">+ Thêm sản phẩm mới</button>
+      <button
+        v-if="!hienThiForm"
+        type="button"
+        class="btn btn-primary shadow-sm"
+        @click="moFormThemMoi"
+      >
+        + Thêm sản phẩm mới
+      </button>
     </div>
 
-    <!-- Form thêm/sửa -->
-    <div v-if="hienThiForm" class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-        <h6 class="fw-bold mb-3">
-          {{ dangSua ? 'Sửa sản phẩm #' + (formData.sanPham.id || 'N/A') : 'Thêm sản phẩm mới' }}
-        </h6>
+    <!-- BỐ CỤC CHIA ĐÔI MÀN HÌNH -->
+    <div class="row g-4 align-items-start position-relative">
+      <!-- BÊN TRÁI: BẢNG DANH SÁCH SẢN PHẨM & BỘ LỌC -->
+      <div :class="hienThiForm ? 'col-lg-7' : 'col-12'" class="transition-all">
+        <div class="card border-0 shadow-sm overflow-hidden">
+          <div
+            class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2 py-3"
+          >
+            <span class="fw-semibold">Danh sách sản phẩm ({{ danhSachHienThi.length }})</span>
 
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">Tên sản phẩm</label>
-            <input v-model="formData.sanPham.ten" class="form-control" required />
+            <!-- Ô BỘ LỌC & SẮP XẾP -->
+            <div class="d-flex align-items-center gap-2">
+              <label class="small text-secondary text-nowrap mb-0">Sắp xếp:</label>
+              <select v-model="sortBy" class="form-select form-select-sm" style="width: 210px">
+                <option value="default">Mặc định</option>
+                <option value="stock-desc">Tồn kho: Nhiều đến ít</option>
+                <option value="stock-asc">Tồn kho: Ít đến nhiều</option>
+                <option value="id-asc">Tạo đầu tiên đến cuối</option>
+                <option value="id-desc">Tạo cuối cùng đến đầu</option>
+              </select>
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Danh mục</label>
-            <select v-model="formData.sanPham.danhMuc" class="form-select">
-              <option :value="null">-- Chọn Danh mục --</option>
-              <option v-for="dm in metadata.danhMucs" :key="dm.id" :value="dm">{{ dm.ten }}</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Thương hiệu</label>
-            <select v-model="formData.sanPham.thuongHieu" class="form-select">
-              <option :value="null">-- Chọn Thương hiệu --</option>
-              <option v-for="th in metadata.thuongHieus" :key="th.id" :value="th">{{ th.ten }}</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Giới tính</label>
-            <select v-model="formData.sanPham.gioiTinh" class="form-select">
-              <option value="Nam">Nam</option>
-              <option value="Nữ">Nữ</option>
-              <option value="Unisex">Unisex</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Chất liệu</label>
-            <input v-model="formData.sanPham.chatLieu" class="form-control" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Xuất xứ</label>
-            <input v-model="formData.sanPham.xuatXu" class="form-control" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Năm ra mắt</label>
-            <input v-model.number="formData.sanPham.namRaMat" type="number" class="form-control" />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Trạng thái</label>
-            <button
-              type="button"
-              class="btn btn-sm w-100"
-              :class="formData.sanPham.dangBan !== false ? 'btn-success' : 'btn-secondary'"
-              @click="formData.sanPham.dangBan = formData.sanPham.dangBan === false ? true : false"
-            >
-              {{ formData.sanPham.dangBan !== false ? 'Đang bán' : 'Ngừng bán' }}
-            </button>
-          </div>
-        </div>
 
-        <div class="mt-3">
-          <label class="form-label small fw-semibold">Mô tả chi tiết</label>
-          <textarea v-model="formData.sanPham.moTa" class="form-control" rows="3"></textarea>
-        </div>
-
-        <!-- Biến thể -->
-        <div class="mt-4">
-          <h6 class="fw-bold">Biến thể (Size / Màu / SKU / Giá / Trạng thái)</h6>
           <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle">
-              <thead class="table-light text-center">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
                 <tr>
-                  <th>Size</th>
-                  <th>Màu</th>
-                  <th>Mã SKU</th>
-                  <th>Tồn kho</th>
-                  <th>Giá nhập</th>
-                  <th>Giá gốc</th>
-                  <th>Giá sale</th>
-                  <th>Trạng thái</th>
-                  <th></th>
+                  <th style="width: 50px" class="text-center">STT</th>
+                  <th style="width: 70px">ID</th>
+                  <th>Tên sản phẩm</th>
+                  <th>Danh mục</th>
+                  <th>Thương hiệu</th>
+                  <th class="text-center">Tổng tồn kho</th>
+                  <th class="text-center" style="width: 130px">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(v, idx) in formData.bienTheSanPhams" :key="idx">
+                <tr v-if="danhSachHienThi.length === 0">
+                  <td colspan="7" class="text-center text-muted py-4">Chưa có sản phẩm nào</td>
+                </tr>
+                <tr
+                  v-for="(sp, index) in danhSachHienThi"
+                  :key="sp.sanPham.id"
+                  :class="{ 'table-active': hienThiForm && formData.sanPham.id === sp.sanPham.id }"
+                >
+                  <td class="text-center text-muted small">{{ index + 1 }}</td>
+                  <td class="fw-semibold">#{{ sp.sanPham.id }}</td>
                   <td>
+                    <div class="fw-semibold text-dark">{{ sp.sanPham.ten }}</div>
+                    <small class="text-muted">{{ sp.sanPham.gioiTinh || 'Unisex' }}</small>
+                  </td>
+                  <td>{{ sp.sanPham.danhMuc?.ten || '—' }}</td>
+                  <td>{{ sp.sanPham.thuongHieu?.ten || '—' }}</td>
+                  <td class="text-center">
+                    <span class="badge bg-light text-dark border px-2 py-1">
+                      {{ tinhTongTonKho(sp.bienTheSanPhams) }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-warning me-1"
+                      @click="kichHoatSuaForm(sp.sanPham)"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="deleteProduct(sp.sanPham.id)"
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BÊN PHẢI: FORM THÊM / SỬA GHIM CỐ ĐỊNH -->
+      <div v-if="hienThiForm" class="col-lg-5">
+        <div class="card border-0 shadow-sm always-fixed-form">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+              <h5 class="fw-bold m-0 text-primary">
+                {{
+                  dangSua ? 'Sửa sản phẩm #' + (formData.sanPham.id || 'N/A') : 'Thêm sản phẩm mới'
+                }}
+              </h5>
+              <button type="button" class="btn-close" @click="hienThiForm = false"></button>
+            </div>
+
+            <!-- THÔNG TIN CHUNG -->
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Tên sản phẩm</label>
+                <input
+                  v-model="formData.sanPham.ten"
+                  class="form-control form-control-sm"
+                  required
+                  placeholder="Nhập tên sản phẩm..."
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Danh mục</label>
+                <select v-model="formData.sanPham.danhMuc" class="form-select form-select-sm">
+                  <option :value="null">-- Chọn Danh mục --</option>
+                  <option v-for="dm in metadata.danhMucs" :key="dm.id" :value="dm">
+                    {{ dm.ten }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Thương hiệu</label>
+                <select v-model="formData.sanPham.thuongHieu" class="form-select form-select-sm">
+                  <option :value="null">-- Chọn Thương hiệu --</option>
+                  <option v-for="th in metadata.thuongHieus" :key="th.id" :value="th">
+                    {{ th.ten }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Giới tính</label>
+                <select v-model="formData.sanPham.gioiTinh" class="form-select form-select-sm">
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                  <option value="Unisex">Unisex</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Chất liệu</label>
+                <input v-model="formData.sanPham.chatLieu" class="form-control form-control-sm" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Xuất xứ</label>
+                <input v-model="formData.sanPham.xuatXu" class="form-control form-control-sm" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Năm ra mắt</label>
+                <input
+                  v-model.number="formData.sanPham.namRaMat"
+                  type="number"
+                  class="form-control form-control-sm"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Trạng thái chung</label>
+                <button
+                  type="button"
+                  class="btn btn-sm w-100"
+                  :class="formData.sanPham.dangBan !== false ? 'btn-success' : 'btn-secondary'"
+                  @click="
+                    formData.sanPham.dangBan = formData.sanPham.dangBan === false ? true : false
+                  "
+                >
+                  {{ formData.sanPham.dangBan !== false ? 'Đang bán' : 'Ngừng bán' }}
+                </button>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Mô tả chi tiết</label>
+                <textarea
+                  v-model="formData.sanPham.moTa"
+                  class="form-control form-control-sm"
+                  rows="2"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- BIẾN THỂ -->
+            <div class="mt-4 pt-3 border-top">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold m-0 small text-uppercase text-secondary">Biến thể sản phẩm</h6>
+                <button type="button" class="btn btn-outline-dark btn-sm" @click="themBienTheMoi">
+                  + Thêm biến thể
+                </button>
+              </div>
+
+              <div
+                v-if="formData.bienTheSanPhams.length === 0"
+                class="text-muted small fst-italic text-center py-2 bg-light rounded"
+              >
+                Chưa có biến thể nào được thêm.
+              </div>
+
+              <div
+                v-for="(v, idx) in formData.bienTheSanPhams"
+                :key="idx"
+                class="p-2 border rounded mb-2 bg-light bg-opacity-50"
+              >
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-5">
                     <select v-model="v.kichCo" class="form-select form-select-sm">
                       <option :value="null">-- Size --</option>
-                      <option v-for="kc in metadata.kichCos" :key="kc.id" :value="kc">{{ kc.tenKichCo }}</option>
+                      <option v-for="kc in metadata.kichCos" :key="kc.id" :value="kc">
+                        {{ kc.tenKichCo }}
+                      </option>
                     </select>
-                  </td>
-                  <td>
+                  </div>
+                  <div class="col-md-5">
                     <select v-model="v.mauSac" class="form-select form-select-sm">
                       <option :value="null">-- Màu --</option>
-                      <option v-for="ms in metadata.mauSacs" :key="ms.id" :value="ms">{{ ms.tenMau }}</option>
+                      <option v-for="ms in metadata.mauSacs" :key="ms.id" :value="ms">
+                        {{ ms.tenMau }}
+                      </option>
                     </select>
-                  </td>
-                  <td><input v-model="v.maSku" class="form-control form-control-sm" /></td>
-                  <td><input v-model.number="v.soLuongTon" type="number" class="form-control form-control-sm text-center" /></td>
-                  <td><input v-model.number="v.giaNhap" type="number" class="form-control form-control-sm" /></td>
-                  <td><input v-model.number="v.gia" type="number" class="form-control form-control-sm" /></td>
-                  <td><input v-model.number="v.giaSale" type="number" class="form-control form-control-sm" /></td>
-                  <td class="text-center">
+                  </div>
+                  <div class="col-md-2 text-end">
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm w-100"
+                      @click="formData.bienTheSanPhams.splice(idx, 1)"
+                    >
+                      X
+                    </button>
+                  </div>
+                  <div class="col-md-4">
+                    <input
+                      v-model="v.maSku"
+                      class="form-control form-control-sm"
+                      placeholder="Mã SKU"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <input
+                      v-model.number="v.soLuongTon"
+                      type="number"
+                      class="form-control form-control-sm text-center"
+                      placeholder="Tồn kho"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <input
+                      v-model.number="v.giaNhap"
+                      type="number"
+                      class="form-control form-control-sm"
+                      placeholder="Giá nhập"
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <input
+                      v-model.number="v.gia"
+                      type="number"
+                      class="form-control form-control-sm"
+                      placeholder="Giá bán"
+                    />
+                  </div>
+                  <div class="col-md-6">
                     <button
                       type="button"
                       class="btn btn-sm w-100"
                       :class="v.dangBan ? 'btn-success' : 'btn-secondary'"
                       @click="v.dangBan = !v.dangBan"
                     >
-                      {{ v.dangBan ? 'Bán' : 'Ẩn' }}
+                      {{ v.dangBan ? 'Đang bán' : 'Ẩn' }}
                     </button>
-                  </td>
-                  <td class="text-center">
-                    <button type="button" class="btn btn-outline-danger btn-sm" @click="formData.bienTheSanPhams.splice(idx, 1)">Xóa</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ẢNH SẢN PHẨM -->
+            <div class="mt-4 pt-3 border-top">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold m-0 small text-uppercase text-secondary">Ảnh sản phẩm</h6>
+                <button type="button" class="btn btn-outline-dark btn-sm" @click="themAnhMoi">
+                  + Thêm dòng ảnh
+                </button>
+              </div>
+
+              <div
+                v-if="formData.anhSanPhams.length === 0"
+                class="text-muted small fst-italic text-center py-2 bg-light rounded"
+              >
+                Chưa có ảnh nào được thêm.
+              </div>
+
+              <div
+                v-for="(img, idx) in formData.anhSanPhams"
+                :key="idx"
+                class="input-group input-group-sm mb-2"
+              >
+                <input
+                  v-model="img.urlAnh"
+                  class="form-control"
+                  placeholder="Dán link ảnh hoặc upload..."
+                />
+                <label :for="'upload-' + idx" class="btn btn-outline-primary mb-0">File</label>
+                <input
+                  :id="'upload-' + idx"
+                  type="file"
+                  accept="image/*"
+                  class="d-none"
+                  @change="handleImageUpload($event, idx)"
+                />
+                <div class="input-group-text bg-white">
+                  <input
+                    type="checkbox"
+                    v-model="img.laAnhChinh"
+                    class="form-check-input mt-0"
+                    title="Ảnh chính"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger"
+                  @click="formData.anhSanPhams.splice(idx, 1)"
+                >
+                  X
+                </button>
+              </div>
+            </div>
+
+            <!-- NÚT HÀNH ĐỘNG -->
+            <div class="d-flex gap-2 mt-4 pt-3 border-top">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm flex-grow-1"
+                @click="saveFullProduct"
+              >
+                Lưu thay đổi
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @click="hienThiForm = false"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
-          <button type="button" class="btn btn-outline-dark btn-sm" @click="themBienTheMoi">+ Thêm biến thể</button>
-        </div>
-
-        <!-- Ảnh -->
-        <div class="mt-4">
-          <h6 class="fw-bold">Ảnh sản phẩm</h6>
-          <table class="table table-sm table-bordered align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>URL ảnh</th>
-                <th class="text-center">Ảnh chính</th>
-                <th>Upload</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(img, idx) in formData.anhSanPhams" :key="idx">
-                <td><input v-model="img.urlAnh" class="form-control form-control-sm" /></td>
-                <td class="text-center"><input type="checkbox" v-model="img.laAnhChinh" /></td>
-                <td>
-                  <label :for="'upload-' + idx" class="btn btn-outline-primary btn-sm mb-0">Chọn file</label>
-                  <input :id="'upload-' + idx" type="file" accept="image/*" class="d-none" @change="handleImageUpload($event, idx)" />
-                </td>
-                <td>
-                  <button type="button" class="btn btn-outline-danger btn-sm" @click="formData.anhSanPhams.splice(idx, 1)">Xóa</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <button type="button" class="btn btn-outline-dark btn-sm" @click="themAnhMoi">+ Thêm dòng ảnh</button>
-        </div>
-
-        <div class="d-flex gap-2 mt-4">
-          <button type="button" class="btn btn-primary" @click="saveFullProduct">Lưu</button>
-          <button type="button" class="btn btn-outline-secondary" @click="hienThiForm = false">Hủy</button>
         </div>
       </div>
     </div>
 
-    <!-- Bảng danh sách + tổng số -->
-    <div class="card border-0 shadow-sm overflow-hidden">
-      <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3">
-        <span class="fw-semibold">Danh sách sản phẩm</span>
-        <span class="badge text-bg-primary rounded-pill">Tổng: {{ danhSachSanPham.length }}</span>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 70px">ID</th>
-              <th>Tên</th>
-              <th>Danh mục</th>
-              <th>Thương hiệu</th>
-              <th>Giới tính</th>
-              <th class="text-center" style="width: 140px">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="danhSachSanPham.length === 0">
-              <td colspan="6" class="text-center text-muted py-4">Chưa có sản phẩm nào</td>
-            </tr>
-            <tr v-for="sp in danhSachSanPham" :key="sp.sanPham.id">
-              <td class="fw-semibold">#{{ sp.sanPham.id }}</td>
-              <td>{{ sp.sanPham.ten }}</td>
-              <td>{{ sp.sanPham.danhMuc?.ten || '—' }}</td>
-              <td>{{ sp.sanPham.thuongHieu?.ten || '—' }}</td>
-              <td>{{ sp.sanPham.gioiTinh || '—' }}</td>
-              <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-warning me-1" @click="kichHoatSuaForm(sp.sanPham)">Sửa</button>
-                <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteProduct(sp.sanPham.id)">Xóa</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- NÚT CUỘN VỀ ĐẦU TRANG Ở GÓC DƯỚI BÊN PHẢI -->
+    <button
+      v-show="showScrollTopBtn"
+      type="button"
+      class="btn btn-dark shadow rounded-circle scroll-top-btn"
+      @click="scrollToTop"
+      title="Về đầu trang"
+    >
+      ↑
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
@@ -226,12 +385,43 @@ const danhSachSanPham = ref([])
 const metadata = ref({ danhMucs: [], thuongHieus: [], kichCos: [], mauSacs: [] })
 const hienThiForm = ref(false)
 const dangSua = ref(false)
+const sortBy = ref('default')
+const showScrollTopBtn = ref(false)
 
 const formData = ref({
   sanPham: {},
   bienTheSanPhams: [],
   anhSanPhams: [],
 })
+
+const tinhTongTonKho = (bienThes) => {
+  if (!bienThes || !Array.isArray(bienThes)) return 0
+  return bienThes.reduce((sum, v) => sum + (Number(v.soLuongTon) || 0), 0)
+}
+
+const danhSachHienThi = computed(() => {
+  let list = [...danhSachSanPham.value]
+
+  if (sortBy.value === 'stock-desc') {
+    list.sort((a, b) => tinhTongTonKho(b.bienTheSanPhams) - tinhTongTonKho(a.bienTheSanPhams))
+  } else if (sortBy.value === 'stock-asc') {
+    list.sort((a, b) => tinhTongTonKho(a.bienTheSanPhams) - tinhTongTonKho(b.bienTheSanPhams))
+  } else if (sortBy.value === 'id-asc') {
+    list.sort((a, b) => (a.sanPham.id || 0) - (b.sanPham.id || 0))
+  } else if (sortBy.value === 'id-desc') {
+    list.sort((a, b) => (b.sanPham.id || 0) - (a.sanPham.id || 0))
+  }
+
+  return list
+})
+
+const handleScroll = () => {
+  showScrollTopBtn.value = window.scrollY > 300
+}
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const loadData = async () => {
   try {
@@ -266,17 +456,15 @@ const handleImageUpload = async (event, idx) => {
   }
 }
 
-// Cập nhật hàm thêm biến thể mới đầy đủ các trường khớp với Entity Java
 const themBienTheMoi = () => {
   formData.value.bienTheSanPhams.push({
     kichCo: null,
     mauSac: null,
     maSku: '',
-    soLuongTon: 0,
-    giaNhap: 0,
-    gia: 0,
-    giaSale: null,
-    dangBan: true, // Mặc định là đang bán hiển thị cho khách
+    soLuongTon: '',
+    giaNhap: '',
+    gia: '',
+    dangBan: true,
   })
 }
 
@@ -312,7 +500,7 @@ const kichHoatSuaForm = async (sp) => {
     formData.value = {
       sanPham: {
         ...sp,
-        dangBan: sp.dangBan !== false, // Đảm bảo luôn nhận đúng true/false
+        dangBan: sp.dangBan !== false,
       },
       bienTheSanPhams: resVariants.data || [],
       anhSanPhams: resImages.data || [],
@@ -325,6 +513,7 @@ const kichHoatSuaForm = async (sp) => {
 const moFormThemMoi = () => {
   dangSua.value = false
   hienThiForm.value = true
+
   formData.value = {
     sanPham: {
       ten: '',
@@ -353,13 +542,71 @@ const deleteProduct = async (id) => {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <style scoped>
-/* Tùy chỉnh nhỏ giúp bảng biến thể gọn gàng hơn trên màn hình quản trị */
 .table th,
 .table td {
   vertical-align: middle;
+}
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Ghim cố định form bên phải */
+.always-fixed-form {
+  position: fixed;
+  top: 20px;
+  right: 25px;
+  width: 40%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  z-index: 1020;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+  background-color: #ffffff;
+}
+
+.always-fixed-form::-webkit-scrollbar {
+  width: 6px;
+}
+.always-fixed-form::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Nút cuộn về đầu trang ở góc dưới bên phải */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 45px;
+  height: 45px;
+  font-size: 20px;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.scroll-top-btn:hover {
+  transform: translateY(-3px);
+}
+
+@media (max-width: 991.98px) {
+  .always-fixed-form {
+    position: relative;
+    top: 0;
+    right: 0;
+    width: 100%;
+  }
 }
 </style>
