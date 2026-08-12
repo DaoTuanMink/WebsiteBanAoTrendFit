@@ -657,7 +657,29 @@ const getStatusLabel = (status) => {
 
 const getVoucherCode = (item) => {
   const order = item?.donHang || {}
-  return order.maVoucher || order.maGiamGia || order.voucher?.ma || order.maCode || null
+  const rawVoucher = order.maVoucher || order.maGiamGia || order.voucher || order.maCode || null
+
+  if (!rawVoucher) return null
+
+  // Nếu backend trả về dạng object hoặc chuỗi JSON
+  if (typeof rawVoucher === 'object') {
+    return rawVoucher.ma || rawVoucher.ten || rawVoucher.code || 'Mã giảm giá'
+  }
+
+  if (typeof rawVoucher === 'string') {
+    // Nếu chuỗi có dạng JSON (bắt đầu bằng dấu ngoặc nhọn)
+    if (rawVoucher.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(rawVoucher)
+        return parsed.ma || parsed.ten || parsed.code || 'Mã giảm giá'
+      } catch (e) {
+        return rawVoucher
+      }
+    }
+    return rawVoucher
+  }
+
+  return null
 }
 
 const getTamTinh = (item) => {
