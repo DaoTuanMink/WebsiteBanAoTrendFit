@@ -83,10 +83,7 @@
       </div>
     </div>
 
-    <!--
-      Bảng đơn hàng — đã GỘP cột "Hành Động" + "Lịch Sử" + "In Ấn"
-      thành 1 cột "Thao tác" (tránh trùng nút Xem lịch sử).
-    -->
+    <!-- Bảng danh sách đơn hàng -->
     <div v-else class="card border-0 shadow-sm overflow-hidden">
       <div
         class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center py-3"
@@ -103,7 +100,7 @@
               <th>Sản phẩm</th>
               <th class="text-end">Tổng tiền</th>
               <th>Trạng thái</th>
-              <th class="text-center" style="min-width: 150px">Thao tác</th>
+              <th class="text-center" style="min-width: 160px">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -166,36 +163,162 @@
                   <em>Cố định</em>
                 </div>
               </td>
-              <!-- Một cột Thao tác: lịch sử + trả hàng (nếu có) + in hóa đơn -->
+              <!-- Cột Thao tác với màu sắc nút hài hòa, dễ nhìn -->
               <td class="text-center">
                 <div class="d-flex flex-column gap-1 align-items-center">
                   <button
                     type="button"
-                    class="btn btn-sm btn-outline-secondary text-nowrap"
+                    class="btn btn-sm btn-info text-dark fw-semibold text-nowrap w-100 py-1"
+                    @click="xemChiTietDonHang(item)"
+                  >
+                    🔍 Xem chi tiết
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary text-nowrap w-100 py-1"
                     @click="xemLichSu(item.donHang.id)"
                   >
-                    Lịch sử
+                    🕒 Lịch sử
                   </button>
                   <button
                     v-if="item.donHang.trangThai === 'YEU_CAU_TRA_HANG'"
                     type="button"
-                    class="btn btn-sm btn-outline-danger text-nowrap"
+                    class="btn btn-sm btn-outline-danger text-nowrap w-100 py-1"
                     @click="xemChiTietTraHang(item.donHang.id)"
                   >
-                    Yêu cầu trả
+                    🔄 Yêu cầu trả
                   </button>
                   <button
                     type="button"
-                    class="btn btn-sm btn-outline-primary text-nowrap"
+                    class="btn btn-sm btn-outline-dark text-nowrap w-100 py-1"
                     @click="printInvoice(item)"
                   >
-                    In hóa đơn
+                    🖨️ In hóa đơn
                   </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ===================== MODAL XEM CHI TIẾT ĐƠN HÀNG ===================== -->
+    <div v-if="showDetailModal" class="history-overlay" @click.self="showDetailModal = false">
+      <div class="checkout-style-modal bg-white rounded-4 shadow-lg p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h4 class="fw-bold mb-1 text-dark">
+              Chi tiết đơn hàng #{{ activeDetailItem?.donHang?.id }}
+            </h4>
+            <p class="text-secondary small mb-0">
+              Ngày đặt: {{ formatDate(activeDetailItem?.donHang?.ngayDat) }}
+            </p>
+          </div>
+          <button class="btn-close" @click="showDetailModal = false"></button>
+        </div>
+
+        <div class="row g-4 align-items-start">
+          <div class="col-lg-7">
+            <div class="p-3 border rounded-3 bg-light mb-3">
+              <h6 class="fw-bold text-primary mb-3">📦 Thông tin giao hàng</h6>
+              <div class="row g-2 small">
+                <div class="col-6">
+                  <span class="text-muted">Họ tên người nhận:</span><br />
+                  <strong>{{ activeDetailItem?.donHang?.tenNguoiNhan || '—' }}</strong>
+                </div>
+                <div class="col-6">
+                  <span class="text-muted">Số điện thoại:</span><br />
+                  <strong>{{ activeDetailItem?.donHang?.soDienThoaiGiao || '—' }}</strong>
+                </div>
+                <div class="col-12 mt-2">
+                  <span class="text-muted">Địa chỉ giao hàng:</span><br />
+                  <strong>{{ activeDetailItem?.donHang?.diaChiGiao || 'Mua tại quầy' }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3 border rounded-3 bg-light mb-3">
+              <h6 class="fw-bold text-primary mb-3">💳 Phương thức thanh toán</h6>
+              <div class="small">
+                <strong>{{
+                  activeDetailItem?.donHang?.phuongThucThanhToan || 'Tiền mặt (COD)'
+                }}</strong>
+              </div>
+            </div>
+
+            <div v-if="getVoucherCode(activeDetailItem)" class="p-3 border rounded-3 bg-light">
+              <h6 class="fw-bold text-primary mb-2">🏷️ Mã giảm giá đã dùng</h6>
+              <span class="badge bg-success">{{ getVoucherCode(activeDetailItem) }}</span>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="p-4 border rounded-3 bg-white shadow-sm">
+              <h6 class="fw-bold mb-3 border-bottom pb-2">🛍️ Tóm tắt đơn hàng</h6>
+
+              <div class="product-list-scroll mb-3" style="max-height: 200px; overflow-y: auto">
+                <div
+                  v-for="d in activeDetailItem?.chiTietDonHangs || []"
+                  :key="d.id"
+                  class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom small"
+                >
+                  <div>
+                    <strong class="text-dark">{{ d.tenSanPham || 'Sản phẩm' }}</strong>
+                    <div class="text-muted" style="font-size: 11px">
+                      Size: {{ d.kichCoSize || '-' }} | Màu: {{ d.mauSac || '-' }} (SL:
+                      {{ d.soLuong }})
+                    </div>
+                  </div>
+                  <div class="text-end fw-semibold">
+                    {{ formatPrice(Number(d.soLuong || 0) * Number(d.donGia || 0)) }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between small mb-2">
+                <span class="text-secondary">Tạm tính:</span>
+                <strong class="text-dark">{{ formatPrice(getTamTinh(activeDetailItem)) }}</strong>
+              </div>
+              <div class="d-flex justify-content-between small mb-2">
+                <span class="text-secondary">Phí vận chuyển:</span>
+                <strong class="text-dark">{{
+                  formatPrice(activeDetailItem?.donHang?.phiVanChuyen)
+                }}</strong>
+              </div>
+              <div class="d-flex justify-content-between small mb-3 pb-2 border-bottom">
+                <span class="text-secondary">Giảm giá:</span>
+                <strong class="text-danger"
+                  >- {{ formatPrice(getTienGiam(activeDetailItem)) }}</strong
+                >
+              </div>
+
+              <div class="d-flex justify-content-between mb-4">
+                <span class="fw-bold text-dark">Tổng thanh toán:</span>
+                <strong class="text-danger fs-5">{{
+                  formatPrice(activeDetailItem?.donHang?.tongThanhToan)
+                }}</strong>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button
+                  type="button"
+                  class="btn btn-dark w-100 py-2 fw-semibold"
+                  @click="printInvoice(activeDetailItem)"
+                >
+                  🖨️ In hóa đơn
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary px-3"
+                  @click="showDetailModal = false"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -273,7 +396,6 @@
               v-if="returnDetailData.moTaChiTiet"
               class="text-center border rounded p-2 bg-black bg-opacity-10"
             >
-              <!-- Nếu là Video -->
               <video
                 v-if="isVideoFile(returnDetailData.moTaChiTiet)"
                 :src="returnDetailData.moTaChiTiet"
@@ -281,7 +403,6 @@
                 class="w-100 rounded"
                 style="max-height: 350px"
               ></video>
-              <!-- Nếu là Ảnh -->
               <img
                 v-else
                 :src="returnDetailData.moTaChiTiet"
@@ -314,18 +435,18 @@ import { getAuthHeaders } from '@/utils/adminAuth'
 
 const danhSachDonHang = ref([])
 const loading = ref(true)
-const currentTab = ref('all') // 'all', 'online', 'return', 'null-user'
-// Lọc theo khoảng ngày (input type="date" → chuỗi YYYY-MM-DD)
+const currentTab = ref('all')
 const filterFromDate = ref('')
 const filterToDate = ref('')
 
-// State cho modal lịch sử
+const showDetailModal = ref(false)
+const activeDetailItem = ref(null)
+
 const showHistoryModal = ref(false)
 const historyOrderId = ref(null)
 const orderHistory = ref([])
 const loadingHistory = ref(false)
 
-// State cho modal xem chi tiết trả hàng (Ảnh/Video)
 const showReturnDetailModal = ref(false)
 const activeReturnOrderId = ref(null)
 const returnDetailData = ref({ lyDo: '', moTaChiTiet: '' })
@@ -336,7 +457,6 @@ const isPosOrder = (item) => {
   return address.toLowerCase().includes('quầy') || address.toLowerCase().includes('pos')
 }
 
-// Thống kê số lượng đơn theo từng tab phân loại
 const stats = computed(() => {
   const all = danhSachDonHang.value.length
   const online = danhSachDonHang.value.filter(
@@ -351,11 +471,9 @@ const stats = computed(() => {
   return { all, online, returnOrders, nullUser }
 })
 
-// Lọc theo tab + khoảng ngày, rồi sắp xếp đơn mới nhất lên đầu
 const filteredOrders = computed(() => {
   let list = danhSachDonHang.value
 
-  // 1) Lọc theo tab
   if (currentTab.value === 'online') {
     list = list.filter((item) => !isPosOrder(item) && item.donHang.nguoiDung)
   } else if (currentTab.value === 'return') {
@@ -364,14 +482,12 @@ const filteredOrders = computed(() => {
     list = list.filter((item) => isPosOrder(item) || !item.donHang.nguoiDung)
   }
 
-  // 2) Lọc theo ngày đặt (so sánh theo ngày local, bỏ qua giờ)
   if (filterFromDate.value || filterToDate.value) {
     list = list.filter((item) => {
       const raw = item.donHang?.ngayDat
       if (!raw) return false
       const d = new Date(raw)
       if (Number.isNaN(d.getTime())) return false
-      // Chuẩn hóa về YYYY-MM-DD theo local
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')
@@ -382,7 +498,6 @@ const filteredOrders = computed(() => {
     })
   }
 
-  // 3) Mới nhất lên đầu (ngayDat giảm dần; fallback theo id)
   return [...list].sort((a, b) => {
     const ta = new Date(a.donHang?.ngayDat || 0).getTime()
     const tb = new Date(b.donHang?.ngayDat || 0).getTime()
@@ -461,6 +576,11 @@ const capNhatTrangThai = async (id, currentStatus, newStatus) => {
   }
 }
 
+const xemChiTietDonHang = (item) => {
+  activeDetailItem.value = item
+  showDetailModal.value = true
+}
+
 const xemLichSu = async (id) => {
   historyOrderId.value = id
   showHistoryModal.value = true
@@ -479,7 +599,6 @@ const xemLichSu = async (id) => {
   }
 }
 
-// Mở form modal hiển thị chi tiết lý do và ảnh/video trả hàng
 const xemChiTietTraHang = async (id) => {
   activeReturnOrderId.value = id
   showReturnDetailModal.value = true
@@ -499,7 +618,6 @@ const xemChiTietTraHang = async (id) => {
   }
 }
 
-// Kiểm tra xem URL có phải là video hay không
 const isVideoFile = (url) => {
   if (!url) return false
   const lower = url.toLowerCase()
@@ -537,8 +655,34 @@ const getStatusLabel = (status) => {
   return labels[status] || status
 }
 
-// In hóa đơn từ trang Quản lý đơn hàng.
-// Bổ sung đầy đủ: tạm tính, phí ship, mã giảm giá + số tiền giảm, tổng thanh toán.
+const getVoucherCode = (item) => {
+  const order = item?.donHang || {}
+  return order.maVoucher || order.maGiamGia || order.voucher?.ma || order.maCode || null
+}
+
+const getTamTinh = (item) => {
+  const details = item?.chiTietDonHangs || []
+  const order = item?.donHang || {}
+  const sumItems = details.reduce(
+    (sum, d) => sum + Number(d.soLuong || 0) * Number(d.donGia || 0),
+    0,
+  )
+  return Number(order.tongTienHang || 0) || sumItems
+}
+
+const getTienGiam = (item) => {
+  const order = item?.donHang || {}
+  let tienGiam = Number(order.tienGiam || 0)
+  if (tienGiam <= 0) {
+    const tamTinh = getTamTinh(item)
+    const phiShip = Number(order.phiVanChuyen || 0)
+    const tongThanhToan = Number(order.tongThanhToan || 0)
+    const inferred = tamTinh + phiShip - tongThanhToan
+    if (inferred > 0.5) tienGiam = inferred
+  }
+  return tienGiam
+}
+
 const printInvoice = (item) => {
   const order = item.donHang
   const details = item.chiTietDonHangs || []
@@ -558,24 +702,11 @@ const printInvoice = (item) => {
     )
     .join('')
 
-  // Mã giảm giá: ưu tiên maVoucher / maGiamGia / voucher.ma (tùy backend trả về)
-  const maGiamGia = order.maVoucher || order.maGiamGia || order.voucher?.ma || order.maCode || null
-
-  // ---- Tính tiền in hóa đơn cho khớp số liệu ----
-  // Có đơn backend để tienGiam = 0 nhưng tongThanhToan đã trừ giảm → suy ra số giảm
-  // để hóa đơn không bị "Tạm tính 269k + giảm 0 = tổng 242k" (vô lý).
+  const maGiamGia = getVoucherCode(item)
   const phiShip = Number(order.phiVanChuyen || 0)
-  const tongHangFromItems = details.reduce(
-    (sum, d) => sum + Number(d.soLuong || 0) * Number(d.donGia || 0),
-    0,
-  )
-  const tamTinh = Number(order.tongTienHang || 0) || tongHangFromItems
+  const tamTinh = getTamTinh(item)
   const tongThanhToan = Number(order.tongThanhToan || 0)
-  let tienGiam = Number(order.tienGiam || 0)
-  if (tienGiam <= 0) {
-    const inferred = tamTinh + phiShip - tongThanhToan
-    if (inferred > 0.5) tienGiam = inferred
-  }
+  const tienGiam = getTienGiam(item)
 
   const printContent = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto;">
@@ -665,6 +796,13 @@ onMounted(() => fetchOrders())
   width: 90%;
   max-width: 520px;
   max-height: 80vh;
+  overflow-y: auto;
+}
+
+.checkout-style-modal {
+  width: 92%;
+  max-width: 900px;
+  max-height: 85vh;
   overflow-y: auto;
 }
 </style>

@@ -11,8 +11,7 @@ const loading = ref(false)
 
 /**
  * Đăng nhập TrendFit
- * - Backend nhận { username, password } trong đó username = email (hoặc alias demo)
- * - Tài khoản demo: admin / nhanvien / khachhang — mật khẩu 123
+ * - Backend nhận { username, password } trong đó username = email (hoặc alias)
  * - Sau login lưu user_id, user_role, username vào localStorage
  */
 const xuLyDangNhap = async () => {
@@ -54,7 +53,6 @@ const xuLyDangNhap = async () => {
     if (error.code === 'ECONNABORTED') {
       errorMsg.value = 'Hết thời gian chờ. Kiểm tra backend đang chạy chưa (port 8080).'
     } else if (error.response) {
-      // Backend có thể trả string hoặc object
       const d = error.response.data
       if (typeof d === 'string') {
         errorMsg.value = d
@@ -70,7 +68,6 @@ const xuLyDangNhap = async () => {
       errorMsg.value = error.message || 'Lỗi không xác định'
     }
   } finally {
-    // QUAN TRỌNG: luôn tắt loading — trước đây thiếu finally nên nút kẹt "Đang xác thực..."
     loading.value = false
   }
 }
@@ -92,7 +89,7 @@ const xuLyDangNhap = async () => {
         <input
           v-model="username"
           type="text"
-          placeholder="admin · nhanvien · khachhang hoặc email"
+          placeholder="Nhập email hoặc tài khoản"
           autocomplete="username"
           :disabled="loading"
           required
@@ -121,16 +118,6 @@ const xuLyDangNhap = async () => {
         Chưa có tài khoản?
         <router-link to="/register">Đăng ký ngay</router-link>
       </p>
-
-      <div class="login-demo">
-        <strong>Tài khoản demo (mật khẩu: <code>123</code>)</strong>
-        <ul>
-          <li><code>admin</code> — Quản trị viên</li>
-          <li><code>nhanvien</code> — Nhân viên (duyệt đơn được)</li>
-          <li><code>khachhang</code> — Khách mua hàng</li>
-        </ul>
-        <small>Backend phải chạy tại <code>http://localhost:8080</code></small>
-      </div>
     </div>
   </div>
 </template>
@@ -144,8 +131,7 @@ const xuLyDangNhap = async () => {
   padding: 24px;
   background:
     radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.12), transparent 40%),
-    #0f172a;
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.12), transparent 40%), #0f172a;
   font-family: 'Inter', system-ui, sans-serif;
 }
 .login-card {
@@ -240,7 +226,9 @@ const xuLyDangNhap = async () => {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
 }
 .login-btn:hover:not(:disabled) {
@@ -259,30 +247,5 @@ const xuLyDangNhap = async () => {
 .login-register a {
   color: #4f46e5;
   font-weight: 700;
-}
-.login-demo {
-  margin-top: 20px;
-  padding: 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #475569;
-}
-.login-demo strong {
-  display: block;
-  margin-bottom: 6px;
-  color: #0f172a;
-}
-.login-demo ul {
-  margin: 0 0 8px;
-  padding-left: 18px;
-}
-.login-demo code {
-  background: #e2e8f0;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-weight: 700;
-  color: #0f172a;
 }
 </style>
