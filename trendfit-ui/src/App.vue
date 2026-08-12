@@ -1,4 +1,9 @@
+<script setup>
+import ChatBot from "./components/ChatBot.vue";
+</script>
+
 <template>
+  <ChatBot />
   <!-- KHU VỰC CHUYỂN TRANG ĐỘNG CỦA VUE -->
   <!-- Mọi giao diện Header, Banner, Ruột sản phẩm, Footer của từng trang sẽ tự động lốt vào đây -->
   <main class="mt-0 overflow-hidden">
