@@ -53,6 +53,7 @@
             {{ product.sanPham.moTa }}
           </p>
 
+          <!-- CHỌN MÀU SẮC -->
           <div class="mb-3">
             <label class="form-label">
               Màu sắc: <b>{{ selectedColor || 'Chưa chọn' }}</b>
@@ -72,32 +73,55 @@
             </div>
           </div>
 
-          <div class="mb-4">
+          <!-- CHỌN KÍCH CỠ (Vẫn hiện size hết hàng nhưng bị mờ/disable) -->
+          <div class="mb-3">
             <label class="form-label">
               Kích cỡ: <b>{{ selectedSize || 'Chưa chọn' }}</b>
             </label>
 
             <div class="d-flex gap-2 flex-wrap">
               <button
-                v-for="size in availableSizes"
-                :key="size"
+                v-for="item in allSizesForSelectedColor"
+                :key="item.size"
                 type="button"
-                @click="selectedSize = size"
-                class="btn"
-                :class="selectedSize === size ? 'btn-dark' : 'btn-outline-dark'"
+                @click="item.stock > 0 ? (selectedSize = item.size) : null"
+                class="btn position-relative"
+                :class="[
+                  selectedSize === item.size ? 'btn-dark' : 'btn-outline-dark',
+                  item.stock === 0
+                    ? 'opacity-50 text-decoration-line-through bg-light text-muted'
+                    : '',
+                ]"
+                :title="item.stock === 0 ? 'Đã hết hàng' : ''"
               >
-                {{ size }}
+                {{ item.size }}
               </button>
             </div>
           </div>
 
+          <!-- HIỂN THỊ TRẠNG THÁI SỐ LƯỢNG TỒN KHO -->
+          <div class="mb-4 small fw-semibold">
+            <div v-if="selectedVariant">
+              <span v-if="selectedVariant.soLuongTon > 0" class="text-success">
+                📦 Còn lại: <span class="fw-bold">{{ selectedVariant.soLuongTon }}</span> sản phẩm
+              </span>
+              <span v-else class="text-danger fw-bold"> ❌ Biến thể này hiện đã hết hàng! </span>
+            </div>
+            <span v-else class="text-muted"> Vui lòng chọn màu sắc và kích cỡ. </span>
+          </div>
+
+          <!-- NÚT THÊM VÀO GIỎ (BỊ VÔ HIỆU HÓA NẾU HẾT HÀNG HOẶC CHƯA CHỌN) -->
           <button
             type="button"
             @click="addToCart"
             class="btn btn-dark btn-lg w-100 py-3 text-uppercase"
-            :disabled="!selectedVariant"
+            :disabled="!selectedVariant || selectedVariant.soLuongTon <= 0"
           >
-            Thêm vào giỏ hàng
+            {{
+              selectedVariant && selectedVariant.soLuongTon <= 0
+                ? 'Đã hết hàng'
+                : 'Thêm vào giỏ hàng'
+            }}
           </button>
         </div>
       </div>
@@ -111,7 +135,7 @@
           </span>
         </div>
 
-        <!-- FORM ĐÁNH GIÁ LUÔN HIỆN ĐỂ TEST -->
+        <!-- FORM ĐÁNH GIÁ -->
         <div class="review-form mb-4">
           <h6 class="fw-bold mb-3">Viết đánh giá của bạn</h6>
 
@@ -257,7 +281,8 @@ const currentUserId = computed(() => {
   return id ? Number(id) : null
 })
 
-const validVariants = computed(() => {
+// Lấy tất cả biến thể đang bán (cho phép stock = 0 hiển thị lên giao diện)
+const allVariants = computed(() => {
   const variants = product.value?.bienTheSanPhams
 
   if (!Array.isArray(variants)) {
@@ -267,32 +292,33 @@ const validVariants = computed(() => {
   return variants.filter((variant) => {
     const color = String(variant?.mauSac?.tenMau || '').trim()
     const size = String(variant?.kichCo?.tenKichCo || '').trim()
-    const stock = Number(variant?.soLuongTon || 0)
 
-    return color && size && stock > 0 && variant?.dangBan !== false
+    return color && size && variant?.dangBan !== false
   })
 })
 
 const uniqueColors = computed(() => {
-  return [...new Set(validVariants.value.map((variant) => String(variant.mauSac.tenMau).trim()))]
+  return [...new Set(allVariants.value.map((variant) => String(variant.mauSac.tenMau).trim()))]
 })
 
-const availableSizes = computed(() => {
+// Liệt kê mọi size của màu đang chọn kèm theo trạng thái tồn kho để hiển thị mờ/disable nếu hết
+const allSizesForSelectedColor = computed(() => {
   if (!selectedColor.value) {
     return []
   }
 
-  return [
-    ...new Set(
-      validVariants.value
-        .filter((variant) => String(variant.mauSac.tenMau).trim() === selectedColor.value)
-        .map((variant) => String(variant.kichCo.tenKichCo).trim()),
-    ),
-  ]
+  const filtered = allVariants.value.filter(
+    (variant) => String(variant.mauSac.tenMau).trim() === selectedColor.value,
+  )
+
+  return filtered.map((variant) => ({
+    size: String(variant.kichCo.tenKichCo).trim(),
+    stock: Number(variant?.soLuongTon || 0),
+  }))
 })
 
 const selectedVariant = computed(() => {
-  return validVariants.value.find((variant) => {
+  return allVariants.value.find((variant) => {
     return (
       String(variant.mauSac.tenMau).trim() === selectedColor.value &&
       String(variant.kichCo.tenKichCo).trim() === selectedSize.value
@@ -307,7 +333,7 @@ const selectedPrice = computed(() => {
     return Number(variant.giaSale ?? variant.gia ?? 0)
   }
 
-  return getMinPrice(validVariants.value)
+  return getMinPrice(allVariants.value)
 })
 
 const relatedProducts = computed(() => {
@@ -317,9 +343,8 @@ const relatedProducts = computed(() => {
 const loadProduct = async () => {
   const id = route.params.id
 
-  // 1. Chặn ngay nếu id không tồn tại hoặc bằng 'undefined'
-  if (!id || id === 'undefined' || id === undefined) {
-    console.warn('ID sản phẩm chưa sẵn sàng, đợi router...')
+  if (!id || id === 'undefined') {
+    console.warn('ID sản phẩm chưa sẵn sàng...')
     return
   }
 
@@ -331,7 +356,8 @@ const loadProduct = async () => {
 
     mainImage.value = images.find((image) => image.laAnhChinh)?.urlAnh || images[0]?.urlAnh || ''
 
-    const firstVariant = validVariants.value[0]
+    // Chọn sẵn biến thể đầu tiên có hàng (hoặc biến thể đầu tiên trong danh sách)
+    const firstVariant = allVariants.value[0]
 
     if (firstVariant) {
       selectedColor.value = String(firstVariant.mauSac.tenMau).trim()
@@ -396,7 +422,13 @@ const submitReview = async () => {
 
 const selectColor = (color) => {
   selectedColor.value = color
-  selectedSize.value = availableSizes.value[0] || null
+  // Tự động chọn size đầu tiên có sẵn của màu mới, nếu không có thì lấy size đầu tiên
+  const availableSizesForNewColor = allVariants.value.filter(
+    (v) => String(v.mauSac.tenMau).trim() === color,
+  )
+  selectedSize.value = availableSizesForNewColor[0]
+    ? String(availableSizesForNewColor[0].kichCo.tenKichCo).trim()
+    : null
 }
 
 const getMinPrice = (variants) => {
@@ -447,9 +479,12 @@ const addToCart = async () => {
 
   const variant = selectedVariant.value
 
-  if (!variant) return alert('Sản phẩm không hợp lệ!')
+  if (!variant || variant.soLuongTon <= 0) {
+    return alert('Sản phẩm đã hết hàng, không thể thêm vào giỏ!')
+  }
 
   const cartItem = {
+    sanPhamId: Number(route.params.id),
     bienTheId: variant.id,
     ten: product.value.sanPham.ten,
     anhChinh: mainImage.value,
@@ -464,15 +499,16 @@ const addToCart = async () => {
   const existingItem = cart.find((i) => i.bienTheId === cartItem.bienTheId)
 
   if (existingItem) {
+    if (existingItem.quantity + 1 > variant.soLuongTon) {
+      return alert('Số lượng trong giỏ hàng đã đạt giới hạn tồn kho của sản phẩm này!')
+    }
     existingItem.quantity += 1
   } else {
     cart.push(cartItem)
   }
 
-  // 1. Lưu bản sao vào localStorage để dự phòng
   localStorage.setItem('cart', JSON.stringify(cart))
 
-  // 2. NẾU ĐÃ ĐĂNG NHẬP (có user_id) -> ĐỒNG BỘ NGAY LẬP TỨC LÊN DATABASE
   const userId = localStorage.getItem('user_id')
   if (userId) {
     try {
@@ -506,12 +542,11 @@ const initPage = async () => {
 watch(
   () => route.params.id,
   (newId) => {
-    // Chỉ gọi khi newId tồn tại và không phải là 'undefined'
     if (newId && newId !== 'undefined') {
       initPage()
     }
   },
-  { immediate: true }, // Gọi ngay lần đầu nếu id đã có
+  { immediate: true },
 )
 </script>
 
@@ -615,19 +650,5 @@ watch(
 .btn.active {
   background-color: #000;
   color: #fff;
-}
-
-.variant-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.variant-options .btn {
-  min-width: 72px;
-  min-height: 42px;
-  padding: 8px 16px;
-  font-size: 15px;
-  font-weight: 600;
 }
 </style>

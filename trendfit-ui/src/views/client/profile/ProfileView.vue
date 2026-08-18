@@ -74,8 +74,7 @@
                     <span v-if="dc.laMacDinh" class="badge bg-success ms-2">Mặc định</span>
                   </h6>
                   <p class="small text-secondary mb-1">
-                    Đường: {{ dc.duong }} | Xã/Phường: {{ dc.phuongXa }} | Tỉnh/Thành:
-                    {{ dc.tinhThanh }}
+                    Địa chỉ: {{ dc.chiTiet || dc.duong }}, {{ dc.xaPhuong }}, {{ dc.tinhThanh }}
                   </p>
                 </div>
                 <div>
@@ -92,7 +91,7 @@
       </div>
     </div>
 
-    <!-- Modal Thêm/Sửa Địa Chỉ (Có tích hợp Combobox Tỉnh/Thành chuẩn như Checkout) -->
+    <!-- Modal Thêm/Sửa Địa Chỉ -->
     <div
       v-if="showModal"
       class="modal show d-block"
@@ -113,7 +112,7 @@
             <input v-model="addressForm.soDienThoai" class="form-control" />
           </div>
 
-          <!-- COMBOBOX TỈNH / THÀNH PHỐ Y HỆT TRANG CHECKOUT -->
+          <!-- TÌM KIẾM & CHỌN TỈNH / THÀNH PHỐ -->
           <div class="mb-2 combobox-wrap" ref="tinhThanhWrapRef">
             <label class="form-label small d-block mb-1">Tỉnh / Thành phố</label>
             <div class="combobox">
@@ -121,39 +120,58 @@
                 v-model="tinhThanhSearch"
                 @focus="openTinhThanhDropdown = true"
                 @blur="onTinhThanhBlur"
-                class="form-control"
+                class="form-control form-control-sm"
                 autocomplete="off"
-                placeholder="Gõ để tìm... (VD: Hà Nội, Đà Nẵng, Hồ Chí Minh)"
+                placeholder="Gõ để tìm tỉnh/thành..."
               />
-              <div v-if="openTinhThanhDropdown" class="combobox-list">
+              <div v-if="openTinhThanhDropdown && tinhThanhGoiY.length > 0" class="combobox-list">
                 <div
-                  v-for="tt in tinhThanhGoiY"
-                  :key="tt.ten"
+                  v-for="tinh in tinhThanhGoiY"
+                  :key="tinh.code"
                   class="combobox-item"
-                  :class="{ active: addressForm.tinhThanh === tt.ten }"
-                  @mousedown.prevent="chonTinhThanh(tt)"
+                  :class="{ active: addressForm.tinhThanh === tinh.name }"
+                  @mousedown.prevent="chonTinhThanh(tinh)"
                 >
-                  {{ tt.ten }}
-                </div>
-                <div v-if="tinhThanhGoiY.length === 0" class="combobox-empty">
-                  Không tìm thấy tỉnh/thành phù hợp
+                  {{ tinh.name }}
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="mb-2">
-            <label class="form-label small">Phường / Xã</label>
-            <input
-              v-model="addressForm.phuongXa"
-              placeholder="VD: Phường Dịch Vọng"
-              class="form-control"
-            />
+          <!-- TÌM KIẾM & CHỌN XÃ / PHƯỜNG -->
+          <div class="mb-2 combobox-wrap" ref="xaPhuongWrapRef">
+            <label class="form-label small d-block mb-1">Xã / Phường</label>
+            <div class="combobox">
+              <input
+                v-model="xaPhuongSearch"
+                :disabled="!addressForm.tinhThanh || loadingXa"
+                @focus="openXaPhuongDropdown = true"
+                @blur="onXaPhuongBlur"
+                class="form-control form-control-sm"
+                autocomplete="off"
+                :placeholder="loadingXa ? 'Đang tải xã/phường...' : 'Gõ để tìm xã/phường...'"
+              />
+              <div v-if="openXaPhuongDropdown && xaPhuongGoiY.length > 0" class="combobox-list">
+                <div
+                  v-for="xa in xaPhuongGoiY"
+                  :key="xa.code"
+                  class="combobox-item"
+                  :class="{ active: addressForm.xaPhuong === xa.name }"
+                  @mousedown.prevent="chonXaPhuong(xa)"
+                >
+                  {{ xa.name }}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="mb-2">
-            <label class="form-label small">Địa chỉ cụ thể (Đường / Số nhà)</label>
-            <input v-model="addressForm.duong" placeholder="VD: Số 10 ngõ 5" class="form-control" />
+          <div class="mb-3">
+            <label class="form-label small">Địa chỉ cụ thể (Số nhà / Tên đường)</label>
+            <input
+              v-model="addressForm.chiTiet"
+              placeholder="VD: Số 21 ngõ 70"
+              class="form-control"
+            />
           </div>
 
           <div class="form-check mb-3">
@@ -194,88 +212,105 @@ const addressForm = ref({
   tenNguoiNhan: '',
   soDienThoai: '',
   tinhThanh: '',
-  phuongXa: '',
-  duong: '',
+  xaPhuong: '',
+  chiTiet: '',
   laMacDinh: false,
 })
 
-// ===================== DANH SÁCH TỈNH THÀNH (Chuẩn giống Checkout) =====================
-const danhSachTinhThanh = [
-  { ten: 'Tuyên Quang', mien: 'BAC' },
-  { ten: 'Cao Bằng', mien: 'BAC' },
-  { ten: 'Lai Châu', mien: 'BAC' },
-  { ten: 'Lào Cai', mien: 'BAC' },
-  { ten: 'Thái Nguyên', mien: 'BAC' },
-  { ten: 'Điện Biên', mien: 'BAC' },
-  { ten: 'Lạng Sơn', mien: 'BAC' },
-  { ten: 'Sơn La', mien: 'BAC' },
-  { ten: 'Phú Thọ', mien: 'BAC' },
-  { ten: 'TP. Hà Nội', mien: 'BAC' },
-  { ten: 'TP. Hải Phòng', mien: 'BAC' },
-  { ten: 'Bắc Ninh', mien: 'BAC' },
-  { ten: 'Quảng Ninh', mien: 'BAC' },
-  { ten: 'Hưng Yên', mien: 'BAC' },
-  { ten: 'Ninh Bình', mien: 'BAC' },
-  { ten: 'Thanh Hóa', mien: 'TRUNG' },
-  { ten: 'Nghệ An', mien: 'TRUNG' },
-  { ten: 'Hà Tĩnh', mien: 'TRUNG' },
-  { ten: 'Quảng Trị', mien: 'TRUNG' },
-  { ten: 'TP. Huế', mien: 'TRUNG' },
-  { ten: 'TP. Đà Nẵng', mien: 'TRUNG' },
-  { ten: 'Quảng Ngãi', mien: 'TRUNG' },
-  { ten: 'Gia Lai', mien: 'TRUNG' },
-  { ten: 'Đắk Lắk', mien: 'TRUNG' },
-  { ten: 'Khánh Hòa', mien: 'TRUNG' },
-  { ten: 'Lâm Đồng', mien: 'TRUNG' },
-  { ten: 'Đồng Nai', mien: 'NAM' },
-  { ten: 'Tây Ninh', mien: 'NAM' },
-  { ten: 'TP. Hồ Chí Minh', mien: 'NAM' },
-  { ten: 'Đồng Tháp', mien: 'NAM' },
-  { ten: 'An Giang', mien: 'NAM' },
-  { ten: 'Vĩnh Long', mien: 'NAM' },
-  { ten: 'TP. Cần Thơ', mien: 'NAM' },
-  { ten: 'Cà Mau', mien: 'NAM' },
-]
+const danhSachTinhThanh = ref([])
+const danhSachXaPhuong = ref([])
+const loadingXa = ref(false)
 
-const boThauKhongDau = (s) =>
-  (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
 const tinhThanhSearch = ref('')
 const openTinhThanhDropdown = ref(false)
 const tinhThanhWrapRef = ref(null)
 
+const xaPhuongSearch = ref('')
+const openXaPhuongDropdown = ref(false)
+const xaPhuongWrapRef = ref(null)
+
+const boDauTiengViet = (str) => {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
 const tinhThanhGoiY = computed(() => {
-  const kw = boThauKhongDau(tinhThanhSearch.value)
-  if (!kw) return danhSachTinhThanh
-  return danhSachTinhThanh.filter((tt) => boThauKhongDau(tt.ten).includes(kw))
+  const kw = boDauTiengViet(tinhThanhSearch.value)
+  if (!kw) return danhSachTinhThanh.value
+  return danhSachTinhThanh.value.filter((t) => boDauTiengViet(t.name).includes(kw))
 })
 
-function chonTinhThanh(tt) {
-  addressForm.value.tinhThanh = tt.ten
-  tinhThanhSearch.value = tt.ten
+const xaPhuongGoiY = computed(() => {
+  const kw = boDauTiengViet(xaPhuongSearch.value)
+  if (!kw) return danhSachXaPhuong.value
+  return danhSachXaPhuong.value.filter((x) => boDauTiengViet(x.name).includes(kw))
+})
+
+const loadTinhThanh = async () => {
+  try {
+    const res = await axios.get('https://provinces.open-api.vn/api/?depth=1')
+    danhSachTinhThanh.value = res.data || []
+  } catch (err) {
+    console.error('Không thể tải tỉnh thành:', err)
+  }
+}
+
+const chonTinhThanh = async (tinh) => {
+  addressForm.value.tinhThanh = tinh.name
+  tinhThanhSearch.value = tinh.name
   openTinhThanhDropdown.value = false
+
+  addressForm.value.xaPhuong = ''
+  xaPhuongSearch.value = ''
+  danhSachXaPhuong.value = []
+
+  loadingXa.value = true
+  try {
+    const resTinh = await axios.get(`https://provinces.open-api.vn/api/p/${tinh.code}?depth=2`)
+    const districts = resTinh.data?.districts || []
+    let allWards = []
+    for (const dist of districts) {
+      try {
+        const resHuyen = await axios.get(`https://provinces.open-api.vn/api/d/${dist.code}?depth=2`)
+        if (resHuyen.data && resHuyen.data.wards) {
+          allWards = allWards.concat(resHuyen.data.wards)
+        }
+      } catch (e) {}
+    }
+    allWards.sort((a, b) => a.name.localeCompare(b.name))
+    danhSachXaPhuong.value = allWards
+  } catch (err) {
+    console.error('Không thể tải xã phường:', err)
+  } finally {
+    loadingXa.value = false
+  }
+}
+
+const chonXaPhuong = (xa) => {
+  addressForm.value.xaPhuong = xa.name
+  xaPhuongSearch.value = xa.name
+  openXaPhuongDropdown.value = false
 }
 
 function onTinhThanhBlur() {
-  openTinhThanhDropdown.value = false
-  if (tinhThanhSearch.value !== addressForm.value.tinhThanh) {
-    tinhThanhSearch.value = addressForm.value.tinhThanh || ''
-  }
+  setTimeout(() => {
+    openTinhThanhDropdown.value = false
+    if (tinhThanhSearch.value !== addressForm.value.tinhThanh) {
+      tinhThanhSearch.value = addressForm.value.tinhThanh || ''
+    }
+  }, 250)
 }
 
-function onClickNgoaiCombobox(e) {
-  if (tinhThanhWrapRef.value && !tinhThanhWrapRef.value.contains(e.target)) {
-    openTinhThanhDropdown.value = false
-  }
+function onXaPhuongBlur() {
+  setTimeout(() => {
+    openXaPhuongDropdown.value = false
+    if (xaPhuongSearch.value !== addressForm.value.xaPhuong) {
+      xaPhuongSearch.value = addressForm.value.xaPhuong || ''
+    }
+  }, 250)
 }
-onMounted(() => {
-  loadProfile()
-  document.addEventListener('mousedown', onClickNgoaiCombobox)
-})
-onUnmounted(() => document.removeEventListener('mousedown', onClickNgoaiCombobox))
-// ======================================================================================
 
 const loadProfile = async () => {
   if (!userId) return
@@ -324,36 +359,86 @@ const moFormThemDC = () => {
     tenNguoiNhan: profile.value.hoTen,
     soDienThoai: profile.value.soDienThoai,
     tinhThanh: '',
-    phuongXa: '',
-    duong: '',
+    xaPhuong: '',
+    chiTiet: '',
     laMacDinh: false,
   }
   tinhThanhSearch.value = ''
+  xaPhuongSearch.value = ''
+  danhSachXaPhuong.value = []
   showModal.value = true
 }
 
-const suaDiaChi = (dc) => {
+const suaDiaChi = async (dc) => {
   editingAddressId.value = dc.id
-  addressForm.value = { ...dc }
+  addressForm.value = {
+    id: dc.id,
+    tenNguoiNhan: dc.tenNguoiNhan,
+    soDienThoai: dc.soDienThoai,
+    tinhThanh: dc.tinhThanh || '',
+    xaPhuong: dc.xaPhuong || '',
+    chiTiet: dc.chiTiet || dc.duong || '',
+    laMacDinh: dc.laMacDinh || false,
+  }
   tinhThanhSearch.value = dc.tinhThanh || ''
+  xaPhuongSearch.value = dc.xaPhuong || ''
   showModal.value = true
+
+  if (dc.tinhThanh) {
+    const selectedTinh = danhSachTinhThanh.value.find((t) => t.name === dc.tinhThanh)
+    if (selectedTinh) {
+      try {
+        const resTinh = await axios.get(
+          `https://provinces.open-api.vn/api/p/${selectedTinh.code}?depth=2`,
+        )
+        const districts = resTinh.data?.districts || []
+        let allWards = []
+        for (const dist of districts) {
+          try {
+            const resHuyen = await axios.get(
+              `https://provinces.open-api.vn/api/d/${dist.code}?depth=2`,
+            )
+            if (resHuyen.data && resHuyen.data.wards) {
+              allWards = allWards.concat(resHuyen.data.wards)
+            }
+          } catch (e) {}
+        }
+        allWards.sort((a, b) => a.name.localeCompare(b.name))
+        danhSachXaPhuong.value = allWards
+      } catch (e) {}
+    }
+  }
 }
 
 const saveAddress = async () => {
-  if (!addressForm.value.tinhThanh) {
-    alert('Vui lòng chọn Tỉnh / Thành phố!')
+  // Lấy dự phòng từ ô tìm kiếm nếu form chưa kịp cập nhật giá trị
+  if (!addressForm.value.xaPhuong && xaPhuongSearch.value) {
+    addressForm.value.xaPhuong = xaPhuongSearch.value
+  }
+
+  if (!addressForm.value.tinhThanh || !addressForm.value.xaPhuong || !addressForm.value.chiTiet) {
+    alert('Vui lòng điền đủ Tỉnh/Thành, Xã/Phường và Địa chỉ cụ thể!')
     return
   }
+
   try {
-    await axios.post(
-      `http://localhost:8080/api/public/profile/${userId}/address`,
-      addressForm.value,
-    )
+    const payload = {
+      id: addressForm.value.id || null,
+      tenNguoiNhan: addressForm.value.tenNguoiNhan,
+      soDienThoai: addressForm.value.soDienThoai,
+      tinhThanh: addressForm.value.tinhThanh,
+      xaPhuong: addressForm.value.xaPhuong,
+      duong: addressForm.value.chiTiet,
+      laMacDinh: addressForm.value.laMacDinh || false,
+    }
+
+    await axios.post(`http://localhost:8080/api/public/profile/${userId}/address`, payload)
     alert('Lưu địa chỉ thành công!')
     showModal.value = false
     loadProfile()
   } catch (err) {
     alert('Lỗi lưu địa chỉ!')
+    console.error(err)
   }
 }
 
@@ -367,6 +452,11 @@ const xoaDiaChi = async (id) => {
     }
   }
 }
+
+onMounted(() => {
+  loadProfile()
+  loadTinhThanh()
+})
 </script>
 
 <style scoped>
@@ -374,7 +464,6 @@ const xoaDiaChi = async (id) => {
   display: block;
 }
 
-/* ===================== COMBOBOX TỈNH/THÀNH ===================== */
 .combobox-wrap {
   position: relative;
 }
@@ -410,11 +499,5 @@ const xoaDiaChi = async (id) => {
   background: #212529;
   color: #fff;
   font-weight: 600;
-}
-.combobox-empty {
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  color: #adb5bd;
-  text-align: center;
 }
 </style>

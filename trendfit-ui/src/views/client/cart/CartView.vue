@@ -31,7 +31,7 @@
               <th>Sản phẩm</th>
               <th>Chi tiết</th>
               <th>Đơn giá</th>
-              <th>Số lượng</th>
+              <th style="width: 120px">Số lượng</th>
               <th>Thành tiền</th>
               <th></th>
             </tr>
@@ -39,7 +39,6 @@
           <tbody>
             <tr v-for="(item, index) in cart" :key="index">
               <td>
-                <!-- Dùng thẻ div custom làm nút tích chọn giống hệt ảnh mẫu, màu xanh dương -->
                 <div
                   class="custom-checkbox-btn"
                   :class="{ checked: item.selected }"
@@ -51,29 +50,31 @@
                 </div>
               </td>
               <td>
-                <div class="d-flex align-items-center">
+                <router-link
+                  :to="getProductLink(item)"
+                  class="d-flex align-items-center text-decoration-none text-dark product-link"
+                >
                   <img
                     :src="item.anhChinh || 'https://via.placeholder.com/50'"
                     width="50"
-                    class="me-2 rounded"
+                    height="50"
+                    class="me-2 rounded object-fit-cover"
                   />
-                  <span>{{ item.ten }}</span>
-                </div>
+                  <span class="fw-semibold product-name-hover">{{ item.ten }}</span>
+                </router-link>
               </td>
               <td>{{ item.mauSac }} / {{ item.kichCoSize }}</td>
               <td>{{ formatPrice(item.gia) }}</td>
               <td>
-                <div class="btn-group btn-group-sm">
-                  <button @click="updateQuantity(index, -1)" class="btn btn-outline-secondary">
-                    -
-                  </button>
-                  <span class="px-3 border d-flex align-items-center">{{ item.quantity }}</span>
-                  <button @click="updateQuantity(index, 1)" class="btn btn-outline-secondary">
-                    +
-                  </button>
-                </div>
+                <input
+                  type="number"
+                  min="1"
+                  v-model.number="item.quantity"
+                  @change="handleQuantityChange(index)"
+                  class="form-control form-control-sm text-center"
+                />
               </td>
-              <td class="fw-bold">{{ formatPrice(item.gia * item.quantity) }}</td>
+              <td class="fw-bold">{{ formatPrice(item.gia * (item.quantity || 1)) }}</td>
               <td>
                 <button @click="removeItem(index)" class="btn btn-sm btn-outline-danger">
                   Xóa
@@ -88,7 +89,7 @@
         <div class="card p-4 shadow-sm border-0 bg-light">
           <h5 class="mb-3">Thanh toán</h5>
           <div class="d-flex justify-content-between mb-3 fw-bold h5">
-            <span>Đã chọn ({{ selectedCount }}):</span>
+            <span>Đã chọn ({{ selectedCount }}) :</span>
             <span class="text-danger">{{ formatPrice(selectedTotalPrice) }}</span>
           </div>
           <button
@@ -149,13 +150,16 @@ const saveCart = async () => {
   }
 }
 
-// Hàm click vào từng nút chọn sản phẩm
+const getProductLink = (item) => {
+  const id = item.sanPhamId || item.idSanPham || item.sanPham?.id
+  return id ? `/product/${id}` : '#'
+}
+
 const toggleItemSelection = (index) => {
   cart.value[index].selected = !cart.value[index].selected
   saveCart()
 }
 
-// Checkbox "Chọn tất cả"
 const isAllSelected = computed(() => {
   return cart.value.length > 0 && cart.value.every((i) => i.selected)
 })
@@ -171,12 +175,13 @@ const selectedCount = computed(() => cart.value.filter((i) => i.selected).length
 const selectedTotalPrice = computed(() =>
   cart.value
     .filter((i) => i.selected)
-    .reduce((sum, item) => sum + Number(item.gia) * Number(item.quantity), 0),
+    .reduce((sum, item) => sum + Number(item.gia) * Number(item.quantity || 1), 0),
 )
 
-const updateQuantity = (index, delta) => {
-  cart.value[index].quantity += delta
-  if (cart.value[index].quantity < 1) cart.value[index].quantity = 1
+const handleQuantityChange = (index) => {
+  if (!cart.value[index].quantity || cart.value[index].quantity < 1) {
+    cart.value[index].quantity = 1
+  }
   saveCart()
 }
 
@@ -199,7 +204,11 @@ const formatPrice = (v) =>
 </script>
 
 <style scoped>
-/* Thiết kế nút chọn dạng hình vuông bo góc giống hệt ảnh mẫu */
+.product-name-hover:hover {
+  color: #0d6efd !important;
+  text-decoration: underline;
+}
+
 .custom-checkbox-btn {
   width: 24px;
   height: 24px;
@@ -214,16 +223,14 @@ const formatPrice = (v) =>
 }
 
 .custom-checkbox-btn:hover {
-  border-color: #0d6efd; /* Màu xanh dương chủ đạo của trang */
+  border-color: #0d6efd;
 }
 
-/* Khi được chọn (checked) -> Đổi sang nền xanh dương chuẩn giao diện web */
 .custom-checkbox-btn.checked {
   background-color: #0d6efd;
   border-color: #0d6efd;
 }
 
-/* Vẽ dấu tích trắng bên trong khi được chọn */
 .checkmark {
   width: 14px;
   height: 14px;
