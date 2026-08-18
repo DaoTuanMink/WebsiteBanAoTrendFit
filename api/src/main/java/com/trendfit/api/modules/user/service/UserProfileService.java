@@ -35,7 +35,7 @@ public class UserProfileService {
             d.setTenNguoiNhan(dc.getTenNguoiNhan());
             d.setSoDienThoai(dc.getSoDienThoai());
             d.setTinhThanh(dc.getTinhThanh());
-            d.setPhuongXa(dc.getPhuongXa());
+            d.setXaPhuong(dc.getPhuongXa());
             d.setDuong(dc.getDuong());
             d.setLaMacDinh(dc.getLaMacDinh());
             return d;
@@ -63,6 +63,7 @@ public class UserProfileService {
         DiaChi dc;
         if (dcDto.getId() != null) {
             dc = diaChiRepository.findById(dcDto.getId()).orElse(new DiaChi());
+            dc.setNguoiDung(user);
         } else {
             dc = new DiaChi();
             dc.setNguoiDung(user);
@@ -71,15 +72,15 @@ public class UserProfileService {
         dc.setTenNguoiNhan(dcDto.getTenNguoiNhan());
         dc.setSoDienThoai(dcDto.getSoDienThoai());
         dc.setTinhThanh(dcDto.getTinhThanh());
-        dc.setPhuongXa(dcDto.getPhuongXa());
+        dc.setPhuongXa(dcDto.getXaPhuong()); // Gán rõ ràng giá trị xã/phường
         dc.setDuong(dcDto.getDuong());
         dc.setLaMacDinh(dcDto.getLaMacDinh() != null ? dcDto.getLaMacDinh() : false);
 
-        // Nếu chọn là mặc định thì bỏ mặc định của các địa chỉ khác
+        // Nếu chọn là địa chỉ mặc định thì các địa chỉ khác chuyển về false
         if (Boolean.TRUE.equals(dc.getLaMacDinh())) {
             List<DiaChi> all = diaChiRepository.findByNguoiDungId(userId);
             for (DiaChi item : all) {
-                if (!item.getId().equals(dc.getId())) {
+                if (item.getId() != null && !item.getId().equals(dc.getId())) {
                     item.setLaMacDinh(false);
                     diaChiRepository.save(item);
                 }

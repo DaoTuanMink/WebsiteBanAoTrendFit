@@ -18,6 +18,8 @@ public class DiaChi {
     private String tenNguoiNhan;
     private String soDienThoai;
     private String tinhThanh;
+
+    @Column(name = "phuong_xa")
     private String phuongXa;
     private String duong;
     private Boolean laMacDinh = false;

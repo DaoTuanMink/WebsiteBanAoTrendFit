@@ -20,7 +20,7 @@ public class UserProfileDTO {
         private String tenNguoiNhan;
         private String soDienThoai;
         private String tinhThanh;
-        private String phuongXa;
+        private String xaPhuong;
         private String duong;
         private Boolean laMacDinh;
     }
