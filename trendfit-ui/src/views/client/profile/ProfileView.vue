@@ -8,7 +8,7 @@
         <div class="card p-4 shadow-sm border-0 bg-white">
           <h5 class="fw-bold mb-3">Thông tin tài khoản</h5>
 
-          <!-- Avatar và Nút đổi ảnh từ máy qua Cloudinary -->
+          <!-- Avatar và Nút đổi ảnh -->
           <div class="text-center mb-3 position-relative">
             <img
               :src="
@@ -21,7 +21,7 @@
             <div>
               <label class="btn btn-sm btn-outline-dark mt-1" style="cursor: pointer">
                 📁 Chọn ảnh từ máy
-                <input type="file" @change="uploadAvatar" accept="image/*" class="d-none" />
+                <input type="file" @change="onFileSelected" accept="image/*" class="d-none" />
               </label>
             </div>
           </div>
@@ -91,6 +91,79 @@
       </div>
     </div>
 
+    <!-- ===================== MODAL CẮT ẢNH AVATAR ===================== -->
+    <div
+      v-if="showCropModal"
+      class="modal show d-block"
+      tabindex="-1"
+      style="background: rgba(0, 0, 0, 0.75)"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-4 text-center">
+          <h5 class="fw-bold mb-3">Điều chỉnh ảnh đại diện</h5>
+
+          <div
+            class="crop-container position-relative mx-auto mb-3 overflow-hidden border rounded bg-dark"
+            style="width: 300px; height: 300px; cursor: grab; user-select: none"
+          >
+            <canvas
+              ref="cropCanvas"
+              width="300"
+              height="300"
+              @mousedown="startDrag"
+              @mousemove="onDrag"
+              @mouseup="stopDrag"
+              @mouseleave="stopDrag"
+              @touchstart="startDrag"
+              @touchmove="onDrag"
+              @touchend="stopDrag"
+              style="display: block"
+            ></canvas>
+            <!-- Lớp phủ khung tròn cắt ảnh -->
+            <div
+              class="crop-overlay position-absolute top-0 start-0 w-100 h-100"
+              style="
+                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+                border-radius: 50%;
+                width: 220px;
+                height: 220px;
+                margin: 40px auto;
+                pointer-events: none;
+              "
+            ></div>
+          </div>
+
+          <!-- Thanh trượt Zoom -->
+          <div class="d-flex align-items-center gap-3 px-4 mb-4">
+            <span class="fs-5 text-muted">⊖</span>
+            <input
+              type="range"
+              class="form-range"
+              min="1"
+              max="3"
+              step="0.05"
+              v-model.number="zoom"
+              @input="drawCanvas"
+            />
+            <span class="fs-5 text-muted">⊕</span>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button @click="showCropModal = false" class="btn btn-secondary btn-sm px-3">
+              Hủy
+            </button>
+            <button
+              @click="confirmCropAndUpload"
+              class="btn btn-dark btn-sm px-3"
+              :disabled="uploading"
+            >
+              {{ uploading ? 'Đang tải lên...' : 'Áp dụng & Lưu' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal Thêm/Sửa Địa Chỉ -->
     <div
       v-if="showModal"
@@ -138,31 +211,14 @@
             </div>
           </div>
 
-          <!-- TÌM KIẾM & CHỌN XÃ / PHƯỜNG -->
-          <div class="mb-2 combobox-wrap" ref="xaPhuongWrapRef">
-            <label class="form-label small d-block mb-1">Xã / Phường</label>
-            <div class="combobox">
-              <input
-                v-model="xaPhuongSearch"
-                :disabled="!addressForm.tinhThanh || loadingXa"
-                @focus="openXaPhuongDropdown = true"
-                @blur="onXaPhuongBlur"
-                class="form-control form-control-sm"
-                autocomplete="off"
-                :placeholder="loadingXa ? 'Đang tải xã/phường...' : 'Gõ để tìm xã/phường...'"
-              />
-              <div v-if="openXaPhuongDropdown && xaPhuongGoiY.length > 0" class="combobox-list">
-                <div
-                  v-for="xa in xaPhuongGoiY"
-                  :key="xa.code"
-                  class="combobox-item"
-                  :class="{ active: addressForm.xaPhuong === xa.name }"
-                  @mousedown.prevent="chonXaPhuong(xa)"
-                >
-                  {{ xa.name }}
-                </div>
-              </div>
-            </div>
+          <!-- NHẬP TỰ DO XÃ / PHƯỜNG, QUẬN / HUYỆN -->
+          <div class="mb-2">
+            <label class="form-label small d-block mb-1">Xã/Phường, Quận/Huyện</label>
+            <input
+              v-model="addressForm.xaPhuong"
+              class="form-control form-control-sm"
+              placeholder="VD: Phường Bến Nghé, Quận 1"
+            />
           </div>
 
           <div class="mb-3">
@@ -170,7 +226,7 @@
             <input
               v-model="addressForm.chiTiet"
               placeholder="VD: Số 21 ngõ 70"
-              class="form-control"
+              class="form-control form-control-sm"
             />
           </div>
 
@@ -197,7 +253,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 
 const CLOUD_NAME = 'dqciew3rk'
@@ -205,6 +261,20 @@ const UPLOAD_PRESET = 'trendfit_preset'
 
 const userId = localStorage.getItem('user_id')
 const profile = ref({ hoTen: '', email: '', soDienThoai: '', anhDaiDien: '', danhSachDiaChi: [] })
+
+// Biến cho tính năng cắt ảnh Avatar
+const showCropModal = ref(false)
+const cropCanvas = ref(null)
+const uploading = ref(false)
+let imageObj = null
+const zoom = ref(1)
+const offsetX = ref(0)
+const offsetY = ref(0)
+let baseW = 300
+let baseH = 300
+let isDragging = false
+let startX = 0
+let startY = 0
 
 const showModal = ref(false)
 const editingAddressId = ref(null)
@@ -218,16 +288,10 @@ const addressForm = ref({
 })
 
 const danhSachTinhThanh = ref([])
-const danhSachXaPhuong = ref([])
-const loadingXa = ref(false)
 
 const tinhThanhSearch = ref('')
 const openTinhThanhDropdown = ref(false)
 const tinhThanhWrapRef = ref(null)
-
-const xaPhuongSearch = ref('')
-const openXaPhuongDropdown = ref(false)
-const xaPhuongWrapRef = ref(null)
 
 const boDauTiengViet = (str) => {
   return (str || '')
@@ -242,12 +306,6 @@ const tinhThanhGoiY = computed(() => {
   return danhSachTinhThanh.value.filter((t) => boDauTiengViet(t.name).includes(kw))
 })
 
-const xaPhuongGoiY = computed(() => {
-  const kw = boDauTiengViet(xaPhuongSearch.value)
-  if (!kw) return danhSachXaPhuong.value
-  return danhSachXaPhuong.value.filter((x) => boDauTiengViet(x.name).includes(kw))
-})
-
 const loadTinhThanh = async () => {
   try {
     const res = await axios.get('https://provinces.open-api.vn/api/?depth=1')
@@ -257,41 +315,10 @@ const loadTinhThanh = async () => {
   }
 }
 
-const chonTinhThanh = async (tinh) => {
+const chonTinhThanh = (tinh) => {
   addressForm.value.tinhThanh = tinh.name
   tinhThanhSearch.value = tinh.name
   openTinhThanhDropdown.value = false
-
-  addressForm.value.xaPhuong = ''
-  xaPhuongSearch.value = ''
-  danhSachXaPhuong.value = []
-
-  loadingXa.value = true
-  try {
-    const resTinh = await axios.get(`https://provinces.open-api.vn/api/p/${tinh.code}?depth=2`)
-    const districts = resTinh.data?.districts || []
-    let allWards = []
-    for (const dist of districts) {
-      try {
-        const resHuyen = await axios.get(`https://provinces.open-api.vn/api/d/${dist.code}?depth=2`)
-        if (resHuyen.data && resHuyen.data.wards) {
-          allWards = allWards.concat(resHuyen.data.wards)
-        }
-      } catch (e) {}
-    }
-    allWards.sort((a, b) => a.name.localeCompare(b.name))
-    danhSachXaPhuong.value = allWards
-  } catch (err) {
-    console.error('Không thể tải xã phường:', err)
-  } finally {
-    loadingXa.value = false
-  }
-}
-
-const chonXaPhuong = (xa) => {
-  addressForm.value.xaPhuong = xa.name
-  xaPhuongSearch.value = xa.name
-  openXaPhuongDropdown.value = false
 }
 
 function onTinhThanhBlur() {
@@ -299,15 +326,6 @@ function onTinhThanhBlur() {
     openTinhThanhDropdown.value = false
     if (tinhThanhSearch.value !== addressForm.value.tinhThanh) {
       tinhThanhSearch.value = addressForm.value.tinhThanh || ''
-    }
-  }, 250)
-}
-
-function onXaPhuongBlur() {
-  setTimeout(() => {
-    openXaPhuongDropdown.value = false
-    if (xaPhuongSearch.value !== addressForm.value.xaPhuong) {
-      xaPhuongSearch.value = addressForm.value.xaPhuong || ''
     }
   }, 250)
 }
@@ -322,25 +340,124 @@ const loadProfile = async () => {
   }
 }
 
-const uploadAvatar = async (event) => {
+// Xử lý chọn file ảnh từ máy (Khởi tạo phủ kín khung 300x300 để có dư địa kéo thả mượt mà)
+const onFileSelected = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  const uploadForm = new FormData()
-  uploadForm.append('file', file)
-  uploadForm.append('upload_preset', UPLOAD_PRESET)
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    imageObj = new Image()
+    imageObj.onload = () => {
+      zoom.value = 1
+      const canvasSize = 300
+      const scale = Math.max(canvasSize / imageObj.width, canvasSize / imageObj.height)
+      baseW = imageObj.width * scale
+      baseH = imageObj.height * scale
 
-  try {
-    const res = await axios.post(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      uploadForm,
-    )
-    profile.value.anhDaiDien = res.data.secure_url
-    alert('Tải ảnh lên thành công! Bấm "Cập nhật thông tin" để lưu lại.')
-  } catch (err) {
-    alert('Upload ảnh thất bại!')
-    console.error(err)
+      // Căn giữa ảnh
+      offsetX.value = (canvasSize - baseW) / 2
+      offsetY.value = (canvasSize - baseH) / 2
+
+      showCropModal.value = true
+      nextTick(() => drawCanvas())
+    }
+    imageObj.src = e.target.result
   }
+  reader.readAsDataURL(file)
+  event.target.value = ''
+}
+
+const drawCanvas = () => {
+  const canvas = cropCanvas.value
+  if (!canvas || !imageObj) return
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  const canvasSize = 300
+  const currentW = baseW * zoom.value
+  const currentH = baseH * zoom.value
+
+  // Vùng khung tròn crop nằm ở giữa: x từ 40 đến 260, y từ 40 đến 260
+  const cropLeft = 40
+  const cropTop = 40
+  const cropRight = 260
+  const cropBottom = 260
+
+  // Giới hạn biên chuẩn Facebook: Vòng tròn cắt luôn nằm trọn trong ảnh, không bao giờ lộ khoảng trống
+  const minX = cropRight - currentW
+  const maxX = cropLeft
+  const minY = cropBottom - currentH
+  const maxY = cropTop
+
+  if (offsetX.value < minX) offsetX.value = minX
+  if (offsetX.value > maxX) offsetX.value = maxX
+  if (offsetY.value < minY) offsetY.value = minY
+  if (offsetY.value > maxY) offsetY.value = maxY
+
+  ctx.save()
+  ctx.drawImage(imageObj, offsetX.value, offsetY.value, currentW, currentH)
+  ctx.restore()
+}
+
+const startDrag = (e) => {
+  isDragging = true
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX)
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY)
+  startX = clientX - offsetX.value
+  startY = clientY - offsetY.value
+}
+
+const onDrag = (e) => {
+  if (!isDragging) return
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX)
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY)
+  if (clientX !== undefined && clientY !== undefined) {
+    offsetX.value = clientX - startX
+    offsetY.value = clientY - startY
+    drawCanvas()
+  }
+}
+
+const stopDrag = () => {
+  isDragging = false
+}
+
+// Cắt đúng vùng tròn trung tâm (220x220) và upload lên Cloudinary
+const confirmCropAndUpload = async () => {
+  const canvas = cropCanvas.value
+  if (!canvas) return
+
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = 220
+  tempCanvas.height = 220
+  const tCtx = tempCanvas.getContext('2d')
+
+  // Cắt chính xác vùng tròn trung tâm (x=40, y=40, w=220, h=220)
+  tCtx.drawImage(canvas, 40, 40, 220, 220, 0, 0, 220, 220)
+
+  tempCanvas.toBlob(async (blob) => {
+    if (!blob) return
+    const formData = new FormData()
+    formData.append('file', blob)
+    formData.append('upload_preset', UPLOAD_PRESET)
+
+    uploading.value = true
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        formData,
+      )
+      profile.value.anhDaiDien = res.data.secure_url
+      showCropModal.value = false
+      alert('Cắt và tải ảnh lên thành công! Bấm "Cập nhật thông tin" để lưu lại.')
+    } catch (err) {
+      alert('Tải ảnh lên thất bại!')
+      console.error(err)
+    } finally {
+      uploading.value = false
+    }
+  }, 'image/png')
 }
 
 const updateProfile = async () => {
@@ -364,12 +481,10 @@ const moFormThemDC = () => {
     laMacDinh: false,
   }
   tinhThanhSearch.value = ''
-  xaPhuongSearch.value = ''
-  danhSachXaPhuong.value = []
   showModal.value = true
 }
 
-const suaDiaChi = async (dc) => {
+const suaDiaChi = (dc) => {
   editingAddressId.value = dc.id
   addressForm.value = {
     id: dc.id,
@@ -381,41 +496,10 @@ const suaDiaChi = async (dc) => {
     laMacDinh: dc.laMacDinh || false,
   }
   tinhThanhSearch.value = dc.tinhThanh || ''
-  xaPhuongSearch.value = dc.xaPhuong || ''
   showModal.value = true
-
-  if (dc.tinhThanh) {
-    const selectedTinh = danhSachTinhThanh.value.find((t) => t.name === dc.tinhThanh)
-    if (selectedTinh) {
-      try {
-        const resTinh = await axios.get(
-          `https://provinces.open-api.vn/api/p/${selectedTinh.code}?depth=2`,
-        )
-        const districts = resTinh.data?.districts || []
-        let allWards = []
-        for (const dist of districts) {
-          try {
-            const resHuyen = await axios.get(
-              `https://provinces.open-api.vn/api/d/${dist.code}?depth=2`,
-            )
-            if (resHuyen.data && resHuyen.data.wards) {
-              allWards = allWards.concat(resHuyen.data.wards)
-            }
-          } catch (e) {}
-        }
-        allWards.sort((a, b) => a.name.localeCompare(b.name))
-        danhSachXaPhuong.value = allWards
-      } catch (e) {}
-    }
-  }
 }
 
 const saveAddress = async () => {
-  // Lấy dự phòng từ ô tìm kiếm nếu form chưa kịp cập nhật giá trị
-  if (!addressForm.value.xaPhuong && xaPhuongSearch.value) {
-    addressForm.value.xaPhuong = xaPhuongSearch.value
-  }
-
   if (!addressForm.value.tinhThanh || !addressForm.value.xaPhuong || !addressForm.value.chiTiet) {
     alert('Vui lòng điền đủ Tỉnh/Thành, Xã/Phường và Địa chỉ cụ thể!')
     return

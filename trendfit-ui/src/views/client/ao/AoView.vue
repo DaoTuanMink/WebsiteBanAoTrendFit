@@ -66,7 +66,7 @@
                 </div>
               </div>
 
-              <!-- 3. Màu sắc (Đã bổ sung đủ cấu trúc 4 thẻ div bọc chuẩn chỉnh) -->
+              <!-- 3. Màu sắc -->
               <div class="filter-section border-bottom py-3">
                 <div
                   class="d-flex justify-content-between align-items-center cursor-pointer"
@@ -170,13 +170,14 @@
               <div
                 class="trendfit-product-card h-100 border rounded-3 p-2 bg-white position-relative"
               >
+                <!-- Cập nhật aspect-ratio chuẩn khớp khung cắt ảnh -->
                 <div
                   class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light rounded-2"
                 >
                   <img
                     :src="getAnhChinh(item.anhSanPhams)"
                     class="w-100 img-product-dynamic"
-                    style="height: 320px; object-fit: cover"
+                    style="aspect-ratio: 300 / 350; object-fit: cover; object-position: center"
                     alt="product"
                   />
                   <router-link
@@ -245,7 +246,6 @@ const categories = ref([])
 const brands = ref([])
 const loading = ref(true)
 
-// Trạng thái thu gọn/mở rộng từng mục lọc
 const sections = ref({
   all: true,
   category: true,
@@ -262,7 +262,6 @@ const toggleSection = (key) => {
   }
 }
 
-// Thêm các hàm toggle cho danh mục và thương hiệu
 const toggleCategory = (catId) => {
   const idx = selectedCategories.value.indexOf(catId)
   if (idx > -1) selectedCategories.value.splice(idx, 1)
@@ -275,25 +274,12 @@ const toggleBrand = (brandId) => {
   else selectedBrands.value.push(brandId)
 }
 
-// Biến trạng thái bộ lọc
 const selectedCategories = ref([])
 const selectedBrands = ref([])
 const selectedColors = ref([])
 const selectedSizes = ref([])
 const sortBy = ref('default')
 
-// Map tên màu sang mã Hex
-const colorMap = {
-  Đen: '#000000',
-  Trắng: '#FFFFFF',
-  Xanh: '#0000FF',
-  Đỏ: '#FF0000',
-  Xám: '#808080',
-  Navy: '#000080',
-  Vàng: '#FFD700',
-}
-
-// Thay vì dùng mảng tĩnh colorMap, ta quét trực tiếp object màu từ biến thể
 const availableColors = computed(() => {
   const colorMap = new Map()
   sanPhams.value.forEach((item) => {
@@ -313,7 +299,6 @@ const availableColors = computed(() => {
   return Array.from(colorMap.values())
 })
 
-// Lấy danh sách kích cỡ động từ toàn bộ biến thể sản phẩm
 const availableSizes = computed(() => {
   const sizeSet = new Set()
   sanPhams.value.forEach((item) => {
@@ -354,7 +339,6 @@ const resetFilters = () => {
   sortBy.value = 'default'
 }
 
-// Logic lọc sản phẩm Realtime
 const filteredProducts = computed(() => {
   let result = [...sanPhams.value]
 
@@ -386,7 +370,6 @@ const filteredProducts = computed(() => {
     })
   }
 
-  // Sắp xếp
   if (sortBy.value === 'price-asc') {
     result.sort((a, b) => getMinPrice(a.bienTheSanPhams) - getMinPrice(b.bienTheSanPhams))
   } else if (sortBy.value === 'price-desc') {
@@ -402,7 +385,6 @@ const filteredProducts = computed(() => {
   return result
 })
 
-// Hàm lấy danh sách màu kèm mã hex để hiển thị lên card sản phẩm
 const getUniqueColorsWithHex = (variants) => {
   if (!variants || !Array.isArray(variants)) return []
   const map = new Map()
@@ -445,11 +427,9 @@ const getAnhChinh = (anhList) => {
 
 onMounted(async () => {
   try {
-    // Gọi API lấy toàn bộ sản phẩm đầy đủ (ProductDetailDTO)
     const res = await axios.get('http://localhost:8080/api/public/products')
     sanPhams.value = res.data
 
-    // Tự động quét và gom nhóm danh mục & thương hiệu từ danh sách sản phẩm trả về
     const catMap = new Map()
     const brandMap = new Map()
 
@@ -476,7 +456,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Lưới ô bấm cho Danh mục và Thương hiệu */
 .filter-pill-grid {
   display: flex;
   flex-direction: column;
@@ -517,7 +496,6 @@ onMounted(async () => {
   transition: transform 0.2s ease;
 }
 
-/* Lưới hiển thị các ô Size dạng nút bấm */
 .size-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -539,7 +517,6 @@ onMounted(async () => {
   border-color: #000 !important;
 }
 
-/* Kiểu hộp màu sắc */
 .color-pill {
   background: #f8f9fa;
   border-color: #dee2e6 !important;
