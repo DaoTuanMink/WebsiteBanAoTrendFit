@@ -278,10 +278,12 @@
               </div>
             </div>
 
-            <!-- ẢNH SẢN PHẨM -->
+            <!-- ẢNH SẢN PHẨM & Ô TÍCH CHỌN ẢNH CHÍNH -->
             <div class="mt-4 pt-3 border-top">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold m-0 small text-uppercase text-secondary">Ảnh sản phẩm</h6>
+                <h6 class="fw-bold m-0 small text-uppercase text-secondary">
+                  Ảnh sản phẩm (Tích chọn 1 ảnh chính)
+                </h6>
                 <button type="button" class="btn btn-outline-dark btn-sm" @click="themAnhMoi">
                   + Thêm dòng ảnh
                 </button>
@@ -297,14 +299,16 @@
               <div
                 v-for="(img, idx) in formData.anhSanPhams"
                 :key="idx"
-                class="input-group input-group-sm mb-2"
+                class="input-group input-group-sm mb-2 align-items-center gap-2"
               >
                 <input
                   v-model="img.urlAnh"
                   class="form-control"
                   placeholder="Dán link ảnh hoặc upload..."
                 />
-                <label :for="'upload-' + idx" class="btn btn-outline-primary mb-0">File</label>
+                <label :for="'upload-' + idx" class="btn btn-outline-primary mb-0 text-nowrap"
+                  >File</label
+                >
                 <input
                   :id="'upload-' + idx"
                   type="file"
@@ -312,17 +316,28 @@
                   class="d-none"
                   @change="handleImageUpload($event, idx)"
                 />
-                <div class="input-group-text bg-white">
+
+                <!-- Ô tích chọn ảnh chính rõ ràng -->
+                <div class="form-check m-0 d-flex align-items-center">
                   <input
                     type="checkbox"
-                    v-model="img.laAnhChinh"
-                    class="form-check-input mt-0"
-                    title="Ảnh chính"
+                    :checked="img.laAnhChinh"
+                    @change="chonAnhChinh(idx)"
+                    class="form-check-input custom-main-checkbox"
+                    :id="'main-img-' + idx"
                   />
+                  <label
+                    class="form-check-label small ms-2 fw-semibold text-nowrap"
+                    :for="'main-img-' + idx"
+                    style="cursor: pointer"
+                  >
+                    Ảnh chính
+                  </label>
                 </div>
+
                 <button
                   type="button"
-                  class="btn btn-outline-danger"
+                  class="btn btn-outline-danger btn-sm"
                   @click="formData.anhSanPhams.splice(idx, 1)"
                 >
                   X
@@ -363,10 +378,71 @@
       ↑
     </button>
   </div>
+
+  <!-- MODAL CẮT ẢNH SẢN PHẨM (KHẮC PHỤC HOÀN TOÀN LỖI MÀN HÌNH ĐEN) -->
+  <div
+    v-if="showProductCropModal"
+    class="modal show d-block"
+    tabindex="-1"
+    style="background: rgba(0, 0, 0, 0.75)"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 text-center">
+        <h5 class="fw-bold mb-3">Điều chỉnh khung hiển thị ảnh sản phẩm</h5>
+        <p class="text-muted small mb-3">
+          Kéo thả và thu phóng để chọn phần đẹp nhất hiển thị ngoài trang chủ.
+        </p>
+
+        <div
+          class="crop-container position-relative mx-auto mb-3 overflow-hidden border rounded bg-dark shadow-sm"
+          style="width: 300px; height: 350px; cursor: grab; user-select: none"
+        >
+          <canvas
+            ref="productCropCanvas"
+            width="300"
+            height="350"
+            @mousedown="startProductDrag"
+            @mousemove="onProductDrag"
+            @mouseup="stopProductDrag"
+            @mouseleave="stopProductDrag"
+            style="display: block"
+          ></canvas>
+        </div>
+
+        <!-- Thanh trượt Zoom -->
+        <div class="d-flex align-items-center gap-3 px-4 mb-4">
+          <span class="fs-5 text-muted">⊖</span>
+          <input
+            type="range"
+            class="form-range"
+            min="1"
+            max="3"
+            step="0.05"
+            v-model.number="productZoom"
+            @input="drawProductCanvas"
+          />
+          <span class="fs-5 text-muted">⊕</span>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button @click="showProductCropModal = false" class="btn btn-secondary btn-sm px-3">
+            Hủy
+          </button>
+          <button
+            @click="confirmCropProductImage"
+            class="btn btn-primary btn-sm px-3"
+            :disabled="uploadingImg"
+          >
+            {{ uploadingImg ? 'Đang tải lên...' : 'Xác nhận & Lưu' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import axios from 'axios'
 import { getAuthHeaders } from '@/utils/adminAuth'
 
@@ -436,24 +512,146 @@ const loadData = async () => {
   }
 }
 
-const handleImageUpload = async (event, idx) => {
+// Logic chọn ảnh chính độc lập (Tích chọn ảnh này thì các ảnh khác tự động bỏ tích)
+const chonAnhChinh = (index) => {
+  formData.value.anhSanPhams.forEach((img, idx) => {
+    img.laAnhChinh = idx === index
+  })
+}
+
+// Biến trạng thái cắt ảnh sản phẩm
+const showProductCropModal = ref(false)
+const productCropCanvas = ref(null)
+let activeImageIndex = null
+let rawProductImageObj = null
+const productZoom = ref(1)
+const productOffsetX = ref(0)
+const productOffsetY = ref(0)
+let baseProdW = 300
+let baseProdH = 350
+let isProdDragging = false
+let startProdX = 0
+let startProdY = 0
+const uploadingImg = ref(false)
+
+const handleImageUpload = (event, idx) => {
   const file = event.target.files[0]
   if (!file) return
+  activeImageIndex = idx
 
-  const uploadForm = new FormData()
-  uploadForm.append('file', file)
-  uploadForm.append('upload_preset', UPLOAD_PRESET)
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    rawProductImageObj = new Image()
+    rawProductImageObj.onload = async () => {
+      productZoom.value = 1
+      const canvasW = 300
+      const canvasH = 350
+      const scale = Math.max(
+        canvasW / rawProductImageObj.width,
+        canvasH / rawProductImageObj.height,
+      )
+      baseProdW = rawProductImageObj.width * scale
+      baseProdH = rawProductImageObj.height * scale
+      productOffsetX.value = (canvasW - baseProdW) / 2
+      productOffsetY.value = (canvasH - baseProdH) / 2
 
-  try {
-    const res = await axios.post(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      uploadForm,
-    )
-    formData.value.anhSanPhams[idx].urlAnh = res.data.secure_url
-  } catch (err) {
-    alert('Upload ảnh thất bại!')
-    console.error(err)
+      // Mở modal và chờ Vue render DOM hoàn tất
+      showProductCropModal.value = true
+      await nextTick()
+
+      // Đảm bảo thẻ canvas đã sẵn sàng trong DOM trước khi vẽ
+      setTimeout(() => {
+        drawProductCanvas()
+      }, 100)
+    }
+    rawProductImageObj.src = e.target.result
   }
+  reader.readAsDataURL(file)
+  event.target.value = ''
+}
+
+const drawProductCanvas = () => {
+  const canvas = productCropCanvas.value
+  if (!canvas || !rawProductImageObj) return
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+  const currentW = baseProdW * productZoom.value
+  const currentH = baseProdH * productZoom.value
+
+  const minX = canvas.width - currentW
+  const maxX = 0
+  const minY = canvas.height - currentH
+  const maxY = 0
+
+  if (currentW <= canvas.width) {
+    productOffsetX.value = (canvas.width - currentW) / 2
+  } else {
+    if (productOffsetX.value < minX) productOffsetX.value = minX
+    if (productOffsetX.value > maxX) productOffsetX.value = maxX
+  }
+
+  if (currentH <= canvas.height) {
+    productOffsetY.value = (canvas.height - currentH) / 2
+  } else {
+    if (productOffsetY.value < minY) productOffsetY.value = minY
+    if (productOffsetY.value > maxY) productOffsetY.value = maxY
+  }
+
+  ctx.save()
+  ctx.drawImage(rawProductImageObj, productOffsetX.value, productOffsetY.value, currentW, currentH)
+  ctx.restore()
+}
+
+const startProductDrag = (e) => {
+  isProdDragging = true
+  startProdX = e.clientX - productOffsetX.value
+  startProdY = e.clientY - productOffsetY.value
+}
+
+const onProductDrag = (e) => {
+  if (!isProdDragging) return
+  productOffsetX.value = e.clientX - startProdX
+  productOffsetY.value = e.clientY - startProdY
+  drawProductCanvas()
+}
+
+const stopProductDrag = () => {
+  isProdDragging = false
+}
+
+const confirmCropProductImage = () => {
+  const canvas = productCropCanvas.value
+  if (!canvas) return
+
+  canvas.toBlob(
+    async (blob) => {
+      if (!blob) return
+      const uploadForm = new FormData()
+      uploadForm.append('file', blob)
+      uploadForm.append('upload_preset', UPLOAD_PRESET)
+
+      uploadingImg.value = true
+      try {
+        const res = await axios.post(
+          `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+          uploadForm,
+        )
+        if (activeImageIndex !== null) {
+          formData.value.anhSanPhams[activeImageIndex].urlAnh = res.data.secure_url
+        }
+        showProductCropModal.value = false
+        alert('✅ Cắt và tải ảnh sản phẩm lên thành công!')
+      } catch (err) {
+        alert('❌ Upload ảnh thất bại!')
+        console.error(err)
+      } finally {
+        uploadingImg.value = false
+      }
+    },
+    'image/jpeg',
+    0.9,
+  )
 }
 
 const themBienTheMoi = () => {
@@ -469,7 +667,8 @@ const themBienTheMoi = () => {
 }
 
 const themAnhMoi = () => {
-  formData.value.anhSanPhams.push({ urlAnh: '', laAnhChinh: false })
+  const isFirst = formData.value.anhSanPhams.length === 0
+  formData.value.anhSanPhams.push({ urlAnh: '', laAnhChinh: isFirst })
 }
 
 const saveFullProduct = async () => {
@@ -559,6 +758,27 @@ onUnmounted(() => {
 }
 .transition-all {
   transition: all 0.3s ease;
+}
+
+/* Tùy chỉnh ô tích chọn (Checkbox) dạng bo góc xanh hiện đại */
+.form-check-input.custom-main-checkbox {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 6px;
+  border: 2px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  background-color: #fff;
+}
+
+.form-check-input.custom-main-checkbox:checked {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.form-check-input.custom-main-checkbox:focus {
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
+  border-color: #2563eb;
 }
 
 /* Ghim cố định form bên phải */

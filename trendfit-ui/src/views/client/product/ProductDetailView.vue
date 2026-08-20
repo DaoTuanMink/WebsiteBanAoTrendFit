@@ -4,10 +4,12 @@
 
     <div class="container py-5" v-if="product">
       <div class="row">
+        <!-- KHUNG ẢNH SẢN PHẨM -->
         <div class="col-md-6">
           <img
             :src="mainImage || fallbackImage"
-            class="img-fluid border mb-3 main-product-image"
+            class="img-fluid border mb-3 w-100 rounded-3 shadow-sm"
+            style="aspect-ratio: 300 / 350; object-fit: cover; object-position: center"
             alt="Ảnh sản phẩm"
           />
 
@@ -16,10 +18,8 @@
               v-for="(img, i) in product.anhSanPhams"
               :key="i"
               :src="img.urlAnh"
-              width="80"
-              height="80"
-              style="object-fit: cover"
-              class="border p-1 cursor-pointer thumb-image"
+              style="width: 80px; height: 80px; object-fit: cover"
+              class="border rounded-2 p-1 cursor-pointer thumb-image"
               :class="{ active: mainImage === img.urlAnh }"
               @click="mainImage = img.urlAnh"
               alt="Ảnh phụ"
@@ -73,7 +73,7 @@
             </div>
           </div>
 
-          <!-- CHỌN KÍCH CỠ (Vẫn hiện size hết hàng nhưng bị mờ/disable) -->
+          <!-- CHỌN KÍCH CỠ -->
           <div class="mb-3">
             <label class="form-label">
               Kích cỡ: <b>{{ selectedSize || 'Chưa chọn' }}</b>
@@ -100,7 +100,7 @@
           </div>
 
           <!-- HIỂN THỊ TRẠNG THÁI SỐ LƯỢNG TỒN KHO -->
-          <div class="mb-4 small fw-semibold">
+          <div class="mb-3 small fw-semibold">
             <div v-if="selectedVariant">
               <span v-if="selectedVariant.soLuongTon > 0" class="text-success">
                 📦 Còn lại: <span class="fw-bold">{{ selectedVariant.soLuongTon }}</span> sản phẩm
@@ -110,19 +110,54 @@
             <span v-else class="text-muted"> Vui lòng chọn màu sắc và kích cỡ. </span>
           </div>
 
-          <!-- NÚT THÊM VÀO GIỎ (BỊ VÔ HIỆU HÓA NẾU HẾT HÀNG HOẶC CHƯA CHỌN) -->
-          <button
-            type="button"
-            @click="addToCart"
-            class="btn btn-dark btn-lg w-100 py-3 text-uppercase"
-            :disabled="!selectedVariant || selectedVariant.soLuongTon <= 0"
-          >
-            {{
-              selectedVariant && selectedVariant.soLuongTon <= 0
-                ? 'Đã hết hàng'
-                : 'Thêm vào giỏ hàng'
-            }}
-          </button>
+          <!-- BỘ ĐIỀU CHỈNH SỐ LƯỢNG MUA -->
+          <div class="mb-4 d-flex align-items-center gap-3">
+            <label class="form-label mb-0 fw-semibold">Số lượng:</label>
+            <div class="input-group" style="width: 140px">
+              <button
+                class="btn btn-outline-secondary px-3 fw-bold"
+                type="button"
+                @click="decreaseQuantity"
+                :disabled="selectedQuantity <= 1"
+              >
+                -
+              </button>
+              <input
+                type="text"
+                class="form-control text-center fw-bold"
+                v-model.number="selectedQuantity"
+                readonly
+              />
+              <button
+                class="btn btn-outline-secondary px-3 fw-bold"
+                type="button"
+                @click="increaseQuantity"
+                :disabled="!selectedVariant || selectedQuantity >= selectedVariant.soLuongTon"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <!-- NÚT THÊM VÀO GIỎ & MUA NGAY -->
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              @click="addToCart(false)"
+              class="btn btn-outline-dark btn-lg w-50 py-3 text-uppercase fw-bold"
+              :disabled="!selectedVariant || selectedVariant.soLuongTon <= 0"
+            >
+              Thêm vào giỏ
+            </button>
+            <button
+              type="button"
+              @click="buyNow"
+              class="btn btn-dark btn-lg w-50 py-3 text-uppercase fw-bold"
+              :disabled="!selectedVariant || selectedVariant.soLuongTon <= 0"
+            >
+              Mua ngay
+            </button>
+          </div>
         </div>
       </div>
 
@@ -205,7 +240,7 @@
         <div v-else class="text-muted">Sản phẩm chưa có đánh giá nào.</div>
       </div>
 
-      <!-- Sản phẩm liên quan -->
+      <!-- SẢN PHẨM LIÊN QUAN -->
       <div v-if="relatedProducts.length" class="related-section mt-5">
         <h4 class="fw-bold mb-4">Sản phẩm liên quan</h4>
 
@@ -215,8 +250,13 @@
               :to="'/product/' + item.id"
               class="related-card text-decoration-none text-dark d-block"
             >
-              <div class="related-img-wrap bg-light mb-3">
-                <img :src="getProductImage(item)" class="related-img" alt="Sản phẩm liên quan" />
+              <div class="related-img-wrap bg-light mb-3 rounded-2">
+                <img
+                  :src="getProductImage(item)"
+                  class="related-img w-100"
+                  style="aspect-ratio: 300 / 350; object-fit: cover; object-position: center"
+                  alt="Sản phẩm liên quan"
+                />
               </div>
 
               <h6 class="related-name">
@@ -249,17 +289,19 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import LayoutFooter from '@/components/LayoutFooter.vue'
 
 const route = useRoute()
+const router = useRouter()
 
 const product = ref(null)
 const mainImage = ref('')
 const selectedColor = ref(null)
 const selectedSize = ref(null)
+const selectedQuantity = ref(1)
 
 const reviews = ref([])
 const canReview = ref(false)
@@ -281,7 +323,7 @@ const currentUserId = computed(() => {
   return id ? Number(id) : null
 })
 
-// Lấy tất cả biến thể đang bán (cho phép stock = 0 hiển thị lên giao diện)
+// Lấy tất cả biến thể đang bán
 const allVariants = computed(() => {
   const variants = product.value?.bienTheSanPhams
 
@@ -301,7 +343,6 @@ const uniqueColors = computed(() => {
   return [...new Set(allVariants.value.map((variant) => String(variant.mauSac.tenMau).trim()))]
 })
 
-// Liệt kê mọi size của màu đang chọn kèm theo trạng thái tồn kho để hiển thị mờ/disable nếu hết
 const allSizesForSelectedColor = computed(() => {
   if (!selectedColor.value) {
     return []
@@ -326,6 +367,27 @@ const selectedVariant = computed(() => {
   })
 })
 
+// Tự động reset và giới hạn số lượng khi đổi màu/size
+watch(selectedVariant, (newVariant) => {
+  if (!newVariant || newVariant.soLuongTon === 0) {
+    selectedQuantity.value = 1
+  } else if (selectedQuantity.value > newVariant.soLuongTon) {
+    selectedQuantity.value = newVariant.soLuongTon
+  }
+})
+
+const increaseQuantity = () => {
+  if (selectedVariant.value && selectedQuantity.value < selectedVariant.value.soLuongTon) {
+    selectedQuantity.value++
+  }
+}
+
+const decreaseQuantity = () => {
+  if (selectedQuantity.value > 1) {
+    selectedQuantity.value--
+  }
+}
+
 const selectedPrice = computed(() => {
   const variant = selectedVariant.value
 
@@ -344,7 +406,6 @@ const loadProduct = async () => {
   const id = route.params.id
 
   if (!id || id === 'undefined') {
-    console.warn('ID sản phẩm chưa sẵn sàng...')
     return
   }
 
@@ -356,7 +417,6 @@ const loadProduct = async () => {
 
     mainImage.value = images.find((image) => image.laAnhChinh)?.urlAnh || images[0]?.urlAnh || ''
 
-    // Chọn sẵn biến thể đầu tiên có hàng (hoặc biến thể đầu tiên trong danh sách)
     const firstVariant = allVariants.value[0]
 
     if (firstVariant) {
@@ -422,7 +482,6 @@ const submitReview = async () => {
 
 const selectColor = (color) => {
   selectedColor.value = color
-  // Tự động chọn size đầu tiên có sẵn của màu mới, nếu không có thì lấy size đầu tiên
   const availableSizesForNewColor = allVariants.value.filter(
     (v) => String(v.mauSac.tenMau).trim() === color,
   )
@@ -472,6 +531,8 @@ const renderStars = (value) => {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
 
+// Xử lý thêm vào giỏ hàng hoặc mua ngay (có kiểm tra giới hạn tồn kho)
+// Thay thế đoạn script cho hàm addToCart và buyNow trong ProductDetailView.vue
 const addToCart = async () => {
   if (!selectedColor.value || !selectedSize.value) {
     return alert('Vui lòng chọn đầy đủ màu và size!')
@@ -483,6 +544,10 @@ const addToCart = async () => {
     return alert('Sản phẩm đã hết hàng, không thể thêm vào giỏ!')
   }
 
+  if (selectedQuantity.value > variant.soLuongTon) {
+    return alert('Số lượng bạn chọn vượt quá số lượng tồn kho hiện có!')
+  }
+
   const cartItem = {
     sanPhamId: Number(route.params.id),
     bienTheId: variant.id,
@@ -492,17 +557,17 @@ const addToCart = async () => {
     kichCoSize: variant.kichCo.tenKichCo,
     gia: Number(variant.giaSale ?? variant.gia ?? 0),
     maSku: variant.maSku,
-    quantity: 1,
+    quantity: selectedQuantity.value,
   }
 
   let cart = JSON.parse(localStorage.getItem('cart') || '[]')
   const existingItem = cart.find((i) => i.bienTheId === cartItem.bienTheId)
 
   if (existingItem) {
-    if (existingItem.quantity + 1 > variant.soLuongTon) {
-      return alert('Số lượng trong giỏ hàng đã đạt giới hạn tồn kho của sản phẩm này!')
+    if (existingItem.quantity + selectedQuantity.value > variant.soLuongTon) {
+      return alert('Số lượng tổng trong giỏ hàng đã đạt giới hạn tồn kho của sản phẩm này!')
     }
-    existingItem.quantity += 1
+    existingItem.quantity += selectedQuantity.value
   } else {
     cart.push(cartItem)
   }
@@ -528,10 +593,46 @@ const addToCart = async () => {
   alert('Đã thêm sản phẩm vào giỏ hàng!')
 }
 
+// Xử lý nút Mua ngay: Gửi thẳng sản phẩm vào checkout_items
+const buyNow = () => {
+  if (!selectedColor.value || !selectedSize.value) {
+    return alert('Vui lòng chọn đầy đủ màu và size!')
+  }
+
+  const variant = selectedVariant.value
+
+  if (!variant || variant.soLuongTon <= 0) {
+    return alert('Sản phẩm đã hết hàng, không thể mua ngay!')
+  }
+
+  if (selectedQuantity.value > variant.soLuongTon) {
+    return alert('Số lượng bạn chọn vượt quá số lượng tồn kho hiện có!')
+  }
+
+  const cartItem = {
+    sanPhamId: Number(route.params.id),
+    bienTheId: variant.id,
+    ten: product.value.sanPham.ten,
+    anhChinh: mainImage.value,
+    mauSac: variant.mauSac.tenMau,
+    kichCoSize: variant.kichCo.tenKichCo,
+    gia: Number(variant.giaSale ?? variant.gia ?? 0),
+    maSku: variant.maSku,
+    quantity: selectedQuantity.value,
+  }
+
+  // Nạp trực tiếp vào biến thanh toán
+  sessionStorage.setItem('checkout_items', JSON.stringify([cartItem]))
+
+  // Chuyển hướng sang trang thanh toán
+  router.push('/checkout')
+}
+
 const initPage = async () => {
   product.value = null
   selectedColor.value = null
   selectedSize.value = null
+  selectedQuantity.value = 1
   mainImage.value = ''
 
   await loadProduct()
@@ -553,12 +654,6 @@ watch(
 <style scoped>
 .cursor-pointer {
   cursor: pointer;
-}
-
-.main-product-image {
-  width: 100%;
-  height: 500px;
-  object-fit: cover;
 }
 
 .thumb-image {
@@ -625,7 +720,6 @@ watch(
 
 .related-img-wrap {
   width: 100%;
-  height: 300px;
   overflow: hidden;
 }
 

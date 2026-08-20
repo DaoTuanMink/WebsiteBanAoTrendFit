@@ -1,20 +1,21 @@
 <template>
   <div class="checkout-view container py-5">
     <h2 class="fw-bold mb-4">THANH TOÁN ĐƠN HÀNG</h2>
-    <div class="row">
-      <div class="col-md-7">
+    <div class="row g-4">
+      <!-- CỘT TRÁI: THÔNG TIN GIAO HÀNG -->
+      <div class="col-lg-7">
         <div class="card p-4 shadow-sm border-0">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="m-0">Thông tin giao hàng</h5>
+            <h5 class="m-0 fw-bold">Thông tin giao hàng</h5>
             <div v-if="danhSachDiaChi.length > 0" class="dropdown">
               <button
-                class="btn btn-sm btn-outline-dark dropdown-toggle"
+                class="btn btn-sm btn-outline-dark dropdown-toggle fw-semibold"
                 type="button"
                 data-bs-toggle="dropdown"
               >
                 📍 Chọn từ sổ địa chỉ
               </button>
-              <ul class="dropdown-menu shadow">
+              <ul class="dropdown-menu shadow-sm">
                 <li v-for="dc in danhSachDiaChi" :key="dc.id">
                   <a class="dropdown-item small py-2" href="#" @click.prevent="chonDiaChiCoSan(dc)">
                     <strong>{{ dc.tenNguoiNhan }}</strong> ({{ dc.soDienThoai }})<br />
@@ -27,27 +28,35 @@
             </div>
           </div>
 
-          <input
-            v-model="form.hoTen"
-            class="form-control mb-3"
-            placeholder="Họ và tên người nhận"
-          />
-          <input v-model="form.sdt" class="form-control mb-3" placeholder="Số điện thoại" />
-          <input
-            v-model="form.soNhaDuong"
-            class="form-control mb-3"
-            placeholder="Số nhà, tên đường (ví dụ: Số 21 ngõ 70)"
-          />
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <input
+                v-model="form.hoTen"
+                class="form-control bg-light"
+                placeholder="Họ và tên người nhận"
+              />
+            </div>
+            <div class="col-md-6">
+              <input v-model="form.sdt" class="form-control bg-light" placeholder="Số điện thoại" />
+            </div>
+            <div class="col-12">
+              <input
+                v-model="form.soNhaDuong"
+                class="form-control bg-light"
+                placeholder="Số nhà, tên đường (ví dụ: Số 21 ngõ 70)"
+              />
+            </div>
+          </div>
 
-          <!-- ===================== TÌM KIẾM & CHỌN TỈNH / THÀNH PHỐ ===================== -->
+          <!-- TÌM KIẾM & CHỌN TỈNH / THÀNH PHỐ -->
           <div class="mb-3 combobox-wrap" ref="tinhThanhWrapRef">
-            <label class="form-label fw-semibold">Tỉnh / Thành phố nhận hàng</label>
+            <label class="form-label fw-semibold small">Tỉnh / Thành phố nhận hàng</label>
             <div class="combobox">
               <input
                 v-model="tinhThanhSearch"
                 @focus="openTinhThanhDropdown = true"
                 @blur="onTinhThanhBlur"
-                class="form-control"
+                class="form-control bg-light"
                 autocomplete="off"
                 placeholder="Gõ để tìm tỉnh/thành (VD: Hà Nội, Hồ Chí Minh)..."
               />
@@ -65,136 +74,163 @@
             </div>
           </div>
 
-          <!-- ===================== TÌM KIẾM & CHỌN XÃ / PHƯỜNG ===================== -->
-          <div class="mb-3 combobox-wrap" ref="xaPhuongWrapRef">
-            <label class="form-label fw-semibold">Xã / Phường</label>
-            <div class="combobox">
-              <input
-                v-model="xaPhuongSearch"
-                :disabled="!form.tinhThanh || loadingXa"
-                @focus="openXaPhuongDropdown = true"
-                @blur="onXaPhuongBlur"
-                class="form-control"
-                autocomplete="off"
-                :placeholder="
-                  loadingXa ? 'Đang tải danh sách xã/phường...' : 'Gõ để tìm xã/phường...'
-                "
-              />
-              <div v-if="openXaPhuongDropdown && xaPhuongGoiY.length > 0" class="combobox-list">
-                <div
-                  v-for="xa in xaPhuongGoiY"
-                  :key="xa.code"
-                  class="combobox-item"
-                  :class="{ active: form.xaPhuong === xa.name }"
-                  @mousedown.prevent="chonXaPhuong(xa)"
+          <!-- NHẬP TỰ DO QUẬN / HUYỆN & XÃ / PHƯỜNG -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Xã/Phường, Quận/Huyện</label>
+            <input
+              v-model="form.xaPhuong"
+              class="form-control bg-light"
+              placeholder="VD: Phường Bến Nghé, Quận 1"
+            />
+          </div>
+
+          <!-- PHÍ VẬN CHUYỂN -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+              <span>Phí vận chuyển</span>
+              <span v-if="totalPrice >= NGUONG_MIEN_PHI_SHIP" class="badge bg-success"
+                >Miễn phí ship</span
+              >
+            </label>
+            <div class="form-control bg-light fw-bold text-dark d-flex justify-content-between">
+              <span>Cước phí ước tính:</span>
+              <span
+                :class="{
+                  'text-decoration-line-through text-muted fw-normal':
+                    totalPrice >= NGUONG_MIEN_PHI_SHIP,
+                }"
+              >
+                {{ formatPrice(phiVanChuyen) }}
+              </span>
+            </div>
+            <div v-if="totalPrice >= NGUONG_MIEN_PHI_SHIP" class="form-text text-success mt-2">
+              🎉 Đơn hàng của bạn đã đạt điều kiện miễn phí vận chuyển!
+            </div>
+          </div>
+
+          <h5 class="fw-bold mb-3 mt-4">Phương thức thanh toán</h5>
+          <select v-model="form.phuongThucThanhToan" class="form-select bg-light mb-4">
+            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+            <option value="CHUYEN_KHOAN">Chuyển khoản ngân hàng</option>
+          </select>
+
+          <!-- QR THANH TOÁN (VietQR) -->
+          <div
+            v-if="form.phuongThucThanhToan === 'CHUYEN_KHOAN'"
+            class="text-center border border-primary rounded p-4 mb-4 bg-primary bg-opacity-10"
+          >
+            <h6 class="fw-bold text-primary mb-3">Quét mã QR để thanh toán</h6>
+            <img
+              :src="vietQrUrl"
+              alt="Mã QR chuyển khoản"
+              class="img-fluid border rounded shadow-sm bg-white p-2"
+              style="max-width: 220px"
+            />
+            <div class="mt-3">
+              <p class="fw-bold fs-4 mb-1 text-danger">{{ formatPrice(finalPrice) }}</p>
+              <p class="small text-muted mb-0">
+                Nội dung CK: <strong>{{ noiDungChuyenKhoan }}</strong>
+              </p>
+            </div>
+          </div>
+
+          <!-- MÃ GIẢM GIÁ -->
+          <label class="form-label fw-semibold small">Mã giảm giá (Nếu có)</label>
+          <div class="input-group mb-2">
+            <input
+              v-model="voucherCode"
+              class="form-control bg-light"
+              placeholder="Nhập mã giảm giá..."
+            />
+            <button @click="apDungVoucher" class="btn btn-dark px-4 fw-semibold" type="button">
+              Áp dụng
+            </button>
+          </div>
+          <div v-if="appliedVoucher" class="text-success small fw-semibold">
+            <i class="bi bi-check-circle-fill me-1"></i> Đã áp dụng mã:
+            {{ appliedVoucher.ma || appliedVoucher.ten }}
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI: CHI TIẾT ĐƠN HÀNG -->
+      <div class="col-lg-5">
+        <div class="card p-4 shadow-sm border-0 sticky-sidebar bg-white rounded-4">
+          <h5 class="fw-bold mb-4">Đơn hàng của bạn</h5>
+
+          <div v-if="cart.length === 0" class="text-center py-4 text-muted">
+            <p class="mb-2">Chưa có sản phẩm nào.</p>
+            <router-link to="/cart" class="btn btn-outline-dark btn-sm"
+              >Quay lại giỏ hàng</router-link
+            >
+          </div>
+
+          <!-- HIỂN THỊ DANH SÁCH SẢN PHẨM CHI TIẾT -->
+          <div class="order-items-wrap mb-4">
+            <div
+              v-for="(item, index) in cart"
+              :key="index"
+              class="d-flex align-items-center mb-3 pb-3 border-bottom"
+            >
+              <!-- Hình ảnh có số lượng -->
+              <div class="position-relative">
+                <img
+                  :src="item.anhChinh || 'https://placehold.co/100x100?text=TrendFit'"
+                  alt="Sản phẩm"
+                  class="rounded-3 border object-fit-cover"
+                  style="width: 70px; height: 80px"
+                />
+                <span
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark border border-white"
                 >
-                  {{ xa.name }}
+                  {{ item.quantity }}
+                </span>
+              </div>
+
+              <!-- Thông tin chi tiết -->
+              <div class="ms-3 flex-grow-1">
+                <h6 class="mb-1 fw-bold fs-6 text-truncate-2" style="font-size: 0.95rem">
+                  {{ item.ten }}
+                </h6>
+                <p class="mb-1 small text-muted">{{ item.mauSac }} / {{ item.kichCoSize }}</p>
+                <div class="fw-semibold text-danger" style="font-size: 0.95rem">
+                  {{ formatPrice(item.gia * item.quantity) }}
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- ===================== PHÍ VẬN CHUYỂN ===================== -->
-          <div class="mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center">
-              <span>Phí vận chuyển</span>
-              <small class="text-muted">Tính theo khu vực tỉnh thành</small>
-            </label>
-            <div class="form-control bg-light fw-bold text-dark">
-              {{ formatPrice(phiVanChuyen) }}
+          <!-- TỔNG KẾT TÀI CHÍNH -->
+          <div class="summary-section text-muted small mb-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Tạm tính:</span>
+              <span class="fw-medium text-dark">{{ formatPrice(totalPrice) }}</span>
             </div>
-            <div v-if="totalPrice >= NGUONG_MIEN_PHI_SHIP" class="form-text text-success">
-              🎉 Đơn hàng từ {{ formatPrice(NGUONG_MIEN_PHI_SHIP) }} được miễn phí vận chuyển!
+            <div v-if="appliedVoucher" class="d-flex justify-content-between mb-2 text-success">
+              <span>Giảm giá:</span>
+              <span class="fw-bold">-{{ formatPrice(giamGia) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Phí vận chuyển:</span>
+              <span class="fw-medium text-dark">{{
+                phiVanChuyen > 0 && totalPrice < NGUONG_MIEN_PHI_SHIP
+                  ? formatPrice(phiVanChuyen)
+                  : 'Miễn phí'
+              }}</span>
             </div>
           </div>
 
-          <h5 class="mt-3">Phương thức thanh toán</h5>
-          <select v-model="form.phuongThucThanhToan" class="form-select mb-3">
-            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-            <option value="CHUYEN_KHOAN">Chuyển khoản ngân hàng</option>
-          </select>
+          <hr class="border-secondary opacity-25" />
 
-          <!-- ===================== QR THANH TOÁN (VietQR) ===================== -->
-          <div
-            v-if="form.phuongThucThanhToan === 'CHUYEN_KHOAN'"
-            class="text-center border rounded p-3 mb-3 bg-light"
-          >
-            <p class="text-muted small mb-2">
-              Quét mã QR bên dưới bằng app ngân hàng để chuyển khoản trước khi đơn được xử lý
-            </p>
-            <img
-              :src="vietQrUrl"
-              alt="Mã QR chuyển khoản"
-              class="img-fluid border rounded bg-white"
-              style="max-width: 240px"
-            />
-            <p class="fw-bold fs-5 mt-2 mb-0 text-primary">{{ formatPrice(finalPrice) }}</p>
-            <p class="small text-muted mb-0">Nội dung CK: {{ noiDungChuyenKhoan }}</p>
+          <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+            <span class="fw-bold fs-5">Tổng thanh toán:</span>
+            <span class="fw-bold fs-4 text-danger">{{ formatPrice(finalPrice) }}</span>
           </div>
 
-          <div class="input-group mb-3">
-            <input v-model="voucherCode" class="form-control" placeholder="Nhập mã giảm giá" />
-            <button @click="apDungVoucher" class="btn btn-outline-secondary" type="button">
-              Áp dụng
-            </button>
-          </div>
-
-          <div v-if="appliedVoucher" class="d-flex justify-content-between text-success">
-            <span>Giảm giá ({{ appliedVoucher.ma || appliedVoucher.ten }}) :</span>
-            <span>-{{ formatPrice(giamGia) }}</span>
-          </div>
-
-          <div class="d-flex justify-content-between">
-            <span>Phí vận chuyển:</span>
-            <span>{{ phiVanChuyen > 0 ? formatPrice(phiVanChuyen) : 'Miễn phí' }}</span>
-          </div>
-
-          <div class="d-flex justify-content-between fw-bold h5">
-            <span>Tổng thanh toán:</span>
-            <span class="text-danger">{{ formatPrice(finalPrice) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-5">
-        <div class="card p-4 shadow-sm bg-light border-0">
-          <h5 class="mb-3">Đơn hàng của bạn (Sản phẩm đã chọn)</h5>
-
-          <div v-if="cart.length === 0" class="text-muted small mb-3">
-            Chưa có sản phẩm nào được chọn thanh toán.
-            <router-link to="/cart">Quay lại giỏ hàng</router-link>
-          </div>
-
-          <div
-            v-for="(item, index) in cart"
-            :key="index"
-            class="d-flex justify-content-between mb-2 small"
-          >
-            <span>{{ item.ten }} (x{{ item.quantity }})</span>
-            <span>{{ formatPrice(item.gia * item.quantity) }}</span>
-          </div>
-          <hr />
-
-          <div class="d-flex justify-content-between small text-muted">
-            <span>Tạm tính:</span>
-            <span>{{ formatPrice(totalPrice) }}</span>
-          </div>
-          <div v-if="appliedVoucher" class="d-flex justify-content-between small text-success">
-            <span>Giảm giá:</span>
-            <span>-{{ formatPrice(giamGia) }}</span>
-          </div>
-          <div class="d-flex justify-content-between small text-muted mb-2">
-            <span>Phí vận chuyển:</span>
-            <span>{{ phiVanChuyen > 0 ? formatPrice(phiVanChuyen) : 'Miễn phí' }}</span>
-          </div>
-
-          <div class="d-flex justify-content-between fw-bold h5">
-            <span>Tổng thanh toán:</span>
-            <span class="text-danger">{{ formatPrice(finalPrice) }}</span>
-          </div>
           <button
             @click="confirmOrder"
-            class="btn btn-dark w-100 mt-3 py-3"
+            class="btn btn-primary w-100 py-3 fw-bold fs-6 rounded-3"
+            style="background-color: #6366f1; border: none"
             :disabled="cart.length === 0"
           >
             XÁC NHẬN ĐẶT HÀNG
@@ -206,7 +242,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -222,19 +258,12 @@ const form = ref({
   phuongThucThanhToan: 'COD',
 })
 const danhSachDiaChi = ref([])
-
 const danhSachTinhThanh = ref([])
-const danhSachXaPhuong = ref([])
-const loadingXa = ref(false)
 
-// Biến cho tính năng tìm kiếm (combobox)
+// Biến cho tính năng tìm kiếm (combobox) Tỉnh/Thành phố
 const tinhThanhSearch = ref('')
 const openTinhThanhDropdown = ref(false)
 const tinhThanhWrapRef = ref(null)
-
-const xaPhuongSearch = ref('')
-const openXaPhuongDropdown = ref(false)
-const xaPhuongWrapRef = ref(null)
 
 const boDauTiengViet = (str) => {
   return (str || '')
@@ -248,13 +277,6 @@ const tinhThanhGoiY = computed(() => {
   const keyword = boDauTiengViet(tinhThanhSearch.value)
   if (!keyword) return danhSachTinhThanh.value
   return danhSachTinhThanh.value.filter((t) => boDauTiengViet(t.name).includes(keyword))
-})
-
-// Lọc xã phường theo từ khóa tìm kiếm
-const xaPhuongGoiY = computed(() => {
-  const keyword = boDauTiengViet(xaPhuongSearch.value)
-  if (!keyword) return danhSachXaPhuong.value
-  return danhSachXaPhuong.value.filter((x) => boDauTiengViet(x.name).includes(keyword))
 })
 
 const totalPrice = computed(() => cart.value.reduce((sum, i) => sum + i.gia * i.quantity, 0))
@@ -272,43 +294,12 @@ const loadTinhThanh = async () => {
 }
 
 // Chọn tỉnh
-const chonTinhThanh = async (tinh) => {
+const chonTinhThanh = (tinh) => {
   form.value.tinhThanh = tinh.name
   tinhThanhSearch.value = tinh.name
   openTinhThanhDropdown.value = false
-
-  form.value.xaPhuong = ''
-  xaPhuongSearch.value = ''
-  danhSachXaPhuong.value = []
-
-  loadingXa.value = true
-  try {
-    const resTinh = await axios.get(`https://provinces.open-api.vn/api/p/${tinh.code}?depth=2`)
-    const districts = resTinh.data?.districts || []
-    let allWards = []
-    for (const dist of districts) {
-      try {
-        const resHuyen = await axios.get(`https://provinces.open-api.vn/api/d/${dist.code}?depth=2`)
-        if (resHuyen.data && resHuyen.data.wards) {
-          allWards = allWards.concat(resHuyen.data.wards)
-        }
-      } catch (e) {}
-    }
-    allWards.sort((a, b) => a.name.localeCompare(b.name))
-    danhSachXaPhuong.value = allWards
-  } catch (err) {
-    console.error('Không thể tải danh sách xã phường:', err)
-  } finally {
-    loadingXa.value = false
-  }
-
+  form.value.xaPhuong = '' // Xóa dữ liệu quận/huyện cũ khi chọn tỉnh mới
   tinhThanhGoiYPhiShip(tinh.name)
-}
-
-const chonXaPhuong = (xa) => {
-  form.value.xaPhuong = xa.name
-  xaPhuongSearch.value = xa.name
-  openXaPhuongDropdown.value = false
 }
 
 function onTinhThanhBlur() {
@@ -316,15 +307,6 @@ function onTinhThanhBlur() {
     openTinhThanhDropdown.value = false
     if (tinhThanhSearch.value !== form.value.tinhThanh) {
       tinhThanhSearch.value = form.value.tinhThanh || ''
-    }
-  }, 200)
-}
-
-function onXaPhuongBlur() {
-  setTimeout(() => {
-    openXaPhuongDropdown.value = false
-    if (xaPhuongSearch.value !== form.value.xaPhuong) {
-      xaPhuongSearch.value = form.value.xaPhuong || ''
     }
   }, 200)
 }
@@ -341,9 +323,7 @@ function tinhThanhGoiYPhiShip(tenTinhThanh) {
 
   const tinh = (tenTinhThanh || '').toLowerCase()
 
-  // 1. Nội thành / Vùng trọng điểm kinh tế (Thấp nhất)
-  const nhomTrongDiem = ['hà nội', 'hồ chí minh', 'đà nẵng']
-  // 2. Các tỉnh lân cận / Miền Bắc gần
+  const nhomTrongDiem = ['hà nội', 'h hồ chí minh', 'đà nẵng']
   const nhomMienBacGan = [
     'hải phòng',
     'bắc ninh',
@@ -358,7 +338,6 @@ function tinhThanhGoiYPhiShip(tenTinhThanh) {
     'phú thọ',
     'thái nguyên',
   ]
-  // 3. Các tỉnh miền Trung / Tây Nguyên
   const nhomMienTrungTayNguyen = [
     'thừa thiên huế',
     'quảng nam',
@@ -379,7 +358,6 @@ function tinhThanhGoiYPhiShip(tenTinhThanh) {
     'quảng trị',
     'phú yên',
   ]
-  // 4. Các tỉnh miền Nam gần
   const nhomMienNamGan = [
     'bình dương',
     'đồng nai',
@@ -399,7 +377,6 @@ function tinhThanhGoiYPhiShip(tenTinhThanh) {
   } else if (nhomMienTrungTayNguyen.some((t) => tinh.includes(t))) {
     phiVanChuyen.value = 35000
   } else {
-    // Các tỉnh vùng sâu, vùng xa, miền núi phía Bắc / Tây Nam Bộ xa
     phiVanChuyen.value = 45000
   }
 }
@@ -429,42 +406,14 @@ const fetchUserAddresses = async () => {
   }
 }
 
-async function chonDiaChiCoSan(dc) {
+function chonDiaChiCoSan(dc) {
   form.value.hoTen = dc.tenNguoiNhan
   form.value.sdt = dc.soDienThoai
   form.value.soNhaDuong = dc.chiTiet || dc.duong || ''
   form.value.tinhThanh = dc.tinhThanh || ''
   tinhThanhSearch.value = dc.tinhThanh || ''
-  tinhThanhGoiYPhiShip(form.value.tinhThanh)
-
-  if (form.value.tinhThanh) {
-    const selectedTinh = danhSachTinhThanh.value.find((t) => t.name === form.value.tinhThanh)
-    if (selectedTinh) {
-      try {
-        const resTinh = await axios.get(
-          `https://provinces.open-api.vn/api/p/${selectedTinh.code}?depth=2`,
-        )
-        const districts = resTinh.data?.districts || []
-        let allWards = []
-        for (const dist of districts) {
-          try {
-            const resHuyen = await axios.get(
-              `https://provinces.open-api.vn/api/d/${dist.code}?depth=2`,
-            )
-            if (resHuyen.data && resHuyen.data.wards) {
-              allWards = allWards.concat(resHuyen.data.wards)
-            }
-          } catch (e) {}
-        }
-        allWards.sort((a, b) => a.name.localeCompare(b.name))
-        danhSachXaPhuong.value = allWards
-      } catch (e) {
-        console.error(e)
-      }
-    }
-  }
   form.value.xaPhuong = dc.xaPhuong || ''
-  xaPhuongSearch.value = dc.xaPhuong || ''
+  tinhThanhGoiYPhiShip(form.value.tinhThanh)
 }
 
 onMounted(() => {
@@ -482,9 +431,13 @@ const giamGia = computed(() => {
   return v.giaTriGiam
 })
 
-const finalPrice = computed(
-  () => totalPrice.value - giamGia.value + Number(phiVanChuyen.value || 0),
-)
+const finalPrice = computed(() => {
+  let phi = phiVanChuyen.value
+  if (totalPrice.value >= NGUONG_MIEN_PHI_SHIP) {
+    phi = 0
+  }
+  return totalPrice.value - giamGia.value + Number(phi)
+})
 
 const BANK_CODE = 'MB'
 const BANK_ACCOUNT_NO = '0563663591'
@@ -525,7 +478,7 @@ const confirmOrder = async () => {
     return alert('Vui lòng điền đủ họ tên, SĐT và số nhà/tên đường!')
   }
   if (!form.value.tinhThanh || !form.value.xaPhuong) {
-    return alert('Vui lòng chọn đầy đủ Tỉnh/Thành phố và Xã/Phường nhận hàng!')
+    return alert('Vui lòng chọn đầy đủ Tỉnh/Thành phố và Xã/Phường/Quận/Huyện nhận hàng!')
   }
   if (cart.value.length === 0) {
     return alert('Không có sản phẩm nào để thanh toán!')
@@ -537,6 +490,11 @@ const confirmOrder = async () => {
 
   const fullAddress = `${form.value.soNhaDuong}, ${form.value.xaPhuong}, ${form.value.tinhThanh}`
 
+  let phiFinal = phiVanChuyen.value
+  if (totalPrice.value >= NGUONG_MIEN_PHI_SHIP) {
+    phiFinal = 0
+  }
+
   const payload = {
     hoTen: form.value.hoTen,
     sdt: form.value.sdt,
@@ -545,7 +503,7 @@ const confirmOrder = async () => {
     xaPhuong: form.value.xaPhuong,
     phuongThucThanhToan: form.value.phuongThucThanhToan,
     tongTienHang: totalPrice.value,
-    phiVanChuyen: Number(phiVanChuyen.value || 0),
+    phiVanChuyen: Number(phiFinal || 0),
     tongThanhToan: finalPrice.value,
     tienGiam: giamGia.value,
     voucherId: appliedVoucher.value ? appliedVoucher.value.id : null,
@@ -591,6 +549,32 @@ const confirmOrder = async () => {
 </script>
 
 <style scoped>
+.sticky-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+.order-items-wrap {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.order-items-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+.order-items-wrap::-webkit-scrollbar-thumb {
+  background-color: #dee2e6;
+  border-radius: 4px;
+}
+
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .combobox-wrap {
   position: relative;
 }
