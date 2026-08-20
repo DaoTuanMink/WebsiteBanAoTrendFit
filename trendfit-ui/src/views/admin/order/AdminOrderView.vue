@@ -135,7 +135,8 @@
                 </ul>
               </td>
               <td class="text-end">
-                <div class="text-danger fw-bold">{{ formatPrice(item.donHang.tongThanhToan) }}</div>
+                <!-- Tự động hiển thị Tổng tiền đã tính lại -->
+                <div class="text-danger fw-bold">{{ formatPrice(getTongThanhToan(item)) }}</div>
                 <small class="text-muted">Ship: {{ formatPrice(item.donHang.phiVanChuyen) }}</small>
               </td>
               <td>
@@ -163,7 +164,7 @@
                   <em>Cố định</em>
                 </div>
               </td>
-              <!-- Cột Thao tác với màu sắc nút hài hòa, dễ nhìn -->
+              <!-- Cột Thao tác -->
               <td class="text-center">
                 <div class="d-flex flex-column gap-1 align-items-center">
                   <button
@@ -286,7 +287,10 @@
                   formatPrice(activeDetailItem?.donHang?.phiVanChuyen)
                 }}</strong>
               </div>
-              <div class="d-flex justify-content-between small mb-3 pb-2 border-bottom">
+              <div
+                class="d-flex justify-content-between small mb-3 pb-2 border-bottom"
+                v-if="getTienGiam(activeDetailItem) > 0"
+              >
                 <span class="text-secondary">Giảm giá:</span>
                 <strong class="text-danger"
                   >- {{ formatPrice(getTienGiam(activeDetailItem)) }}</strong
@@ -296,7 +300,7 @@
               <div class="d-flex justify-content-between mb-4">
                 <span class="fw-bold text-dark">Tổng thanh toán:</span>
                 <strong class="text-danger fs-5">{{
-                  formatPrice(activeDetailItem?.donHang?.tongThanhToan)
+                  formatPrice(getTongThanhToan(activeDetailItem))
                 }}</strong>
               </div>
 
@@ -682,6 +686,7 @@ const getVoucherCode = (item) => {
   return null
 }
 
+// Logic Tự động tính toán lại để hiển thị đúng ngay cả khi Backend lưu thiếu
 const getTamTinh = (item) => {
   const details = item?.chiTietDonHangs || []
   const order = item?.donHang || {}
@@ -689,20 +694,22 @@ const getTamTinh = (item) => {
     (sum, d) => sum + Number(d.soLuong || 0) * Number(d.donGia || 0),
     0,
   )
-  return Number(order.tongTienHang || 0) || sumItems
+  return sumItems > 0 ? sumItems : Number(order.tongTienHang || 0)
 }
 
 const getTienGiam = (item) => {
   const order = item?.donHang || {}
-  let tienGiam = Number(order.tienGiam || 0)
-  if (tienGiam <= 0) {
-    const tamTinh = getTamTinh(item)
-    const phiShip = Number(order.phiVanChuyen || 0)
-    const tongThanhToan = Number(order.tongThanhToan || 0)
-    const inferred = tamTinh + phiShip - tongThanhToan
-    if (inferred > 0.5) tienGiam = inferred
-  }
-  return tienGiam
+  return Number(order.tienGiam || 0)
+}
+
+const getTongThanhToan = (item) => {
+  const tamTinh = getTamTinh(item)
+  const phiShip = Number(item?.donHang?.phiVanChuyen || 0)
+  const tienGiam = getTienGiam(item)
+
+  // Ép Frontend tự tính lại để luôn hiển thị đúng, bỏ qua tongThanhToan bị lỗi từ Backend
+  const calculated = tamTinh + phiShip - tienGiam
+  return calculated > 0 ? calculated : 0
 }
 
 const printInvoice = (item) => {
@@ -727,8 +734,8 @@ const printInvoice = (item) => {
   const maGiamGia = getVoucherCode(item)
   const phiShip = Number(order.phiVanChuyen || 0)
   const tamTinh = getTamTinh(item)
-  const tongThanhToan = Number(order.tongThanhToan || 0)
   const tienGiam = getTienGiam(item)
+  const tongThanhToan = getTongThanhToan(item)
 
   const printContent = `
     <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto;">

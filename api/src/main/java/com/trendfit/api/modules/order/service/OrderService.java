@@ -50,33 +50,15 @@ public class OrderService {
     @Transactional
     public void taoDonHang(OrderRequestDTO dto) {
         DonHang dh = new DonHang();
-
-        // 0. BẮT BUỘC: Sinh mã đơn hàng duy nhất để tránh lỗi null cột mã đơn
         dh.setMaDonHang("HD-" + System.currentTimeMillis());
 
         // 1. Gán người dùng
         if (dto.getUserId() != null) {
-            NguoiDung user = nguoiDungRepository.findById(dto.getUserId()).orElse(null);
-            dh.setNguoiDung(user);
+            dh.setNguoiDung(nguoiDungRepository.findById(dto.getUserId()).orElse(null));
         } else if (dto.getCreatorId() != null) {
-            NguoiDung creator = nguoiDungRepository.findById(dto.getCreatorId()).orElse(null);
-            dh.setNguoiDung(creator);
+            dh.setNguoiDung(nguoiDungRepository.findById(dto.getCreatorId()).orElse(null));
         }
 
-        // ============================================================================
-        // TÍNH LẠI TOÀN BỘ SỐ TIỀN Ở SERVER - KHÔNG TIN BẤT KỲ CON SỐ NÀO TỪ CLIENT.
-        //
-        // TRƯỚC ĐÂY: code này lưu thẳng dto.getTongTienHang(), dto.getTienGiam(),
-        // dto.getPhiVanChuyen(), dto.getTongThanhToan() do FRONTEND tự tính rồi
-        // gửi lên - nghĩa là 1 khách hàng mở DevTools (F12) sửa trực tiếp request,
-        // hoặc gọi thẳng API bỏ qua giao diện, có thể tự đặt "Tổng thanh toán"
-        // xuống còn 1đ, hoặc tự sửa phí ship về 0, mà hệ thống vẫn chấp nhận.
-        //
-        // GIỜ: server tự lấy GIÁ THẬT của từng sản phẩm từ DB, tự xác thực lại
-        // voucher, và tự tính phí ship theo đúng quy tắc hệ thống - hoàn toàn
-        // không phụ thuộc vào những gì client gửi lên (trừ phi các con số đó
-        // do server tự tính ra và gửi lại cho FE hiển thị, như QR thanh toán).
-        // ============================================================================
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new RuntimeException("Giỏ hàng trống, không thể đặt hàng!");
         }
@@ -94,8 +76,7 @@ public class OrderService {
                 throw new RuntimeException("Số lượng mua không hợp lệ");
             }
 
-            // Giá THẬT lấy từ DB (ưu tiên giá sale nếu có), KHÔNG dùng item.getGia()
-            // do client gửi lên - tránh trường hợp bị sửa giá qua DevTools.
+            // Lấy giá chuẩn từ Database
             BigDecimal giaThat = (bt.getGiaSale() != null && bt.getGiaSale().compareTo(BigDecimal.ZERO) > 0)
                     ? bt.getGiaSale()
                     : bt.getGia();
@@ -103,30 +84,35 @@ public class OrderService {
             tongTienHangThat = tongTienHangThat.add(giaThat.multiply(BigDecimal.valueOf(soLuongMua)));
         }
 
-        // Xác thực lại voucher dựa trên tongTienHangThat (không tin dto.getTienGiam()).
-        // Nếu mã không còn hợp lệ tại đúng thời điểm đặt hàng (vừa hết hạn/hết lượt
-        // trong lúc khách điền form) thì bỏ qua giảm giá, KHÔNG chặn đơn hàng.
+        // =========================================================
+        // SỬA LỖI Ở ĐÂY: Dùng voucherId do Frontend gửi lên để xử lý
+        // =========================================================
         BigDecimal tienGiamThat = BigDecimal.ZERO;
-        if (dto.getMaVoucher() != null && !dto.getMaVoucher().isBlank()) {
+        MaGiamGia voucherToUse = null;
+
+        if (dto.getVoucherId() != null) {
+            voucherToUse = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
+        }
+
+        if (voucherToUse != null) {
             try {
-                MaGiamGia voucher = maGiamGiaService.kiemTraVoucher(dto.getMaVoucher(), tongTienHangThat);
-                tienGiamThat = maGiamGiaService.tinhSoTienGiam(voucher, tongTienHangThat);
+                // Xác thực lại voucher xem còn hợp lệ lúc nhấn nút đặt hàng không
+                voucherToUse = maGiamGiaService.kiemTraVoucher(voucherToUse.getMa(), tongTienHangThat);
+                tienGiamThat = maGiamGiaService.tinhSoTienGiam(voucherToUse, tongTienHangThat);
             } catch (RuntimeException ignored) {
                 tienGiamThat = BigDecimal.ZERO;
+                voucherToUse = null; // Huỷ bỏ mã nếu hết hạn hoặc hết lượt
             }
         }
 
-        // Phí vận chuyển do server tự tính theo VÙNG MIỀN khách chọn + giá
-        // trị đơn hàng (xem tinhPhiShipGoiY) - không dùng dto.getPhiVanChuyen()
-        // để tránh bị khách tự sửa xuống 0 hoặc số bất kỳ qua DevTools.
         BigDecimal phiShipThat = tinhPhiShipGoiY(dto.getTinhThanh(), tongTienHangThat);
-
         BigDecimal tongThanhToanThat = tongTienHangThat.subtract(tienGiamThat).add(phiShipThat);
+        
         if (tongThanhToanThat.compareTo(BigDecimal.ZERO) < 0) {
             tongThanhToanThat = BigDecimal.ZERO;
         }
 
-        // 2. Lưu thông tin đơn hàng - dùng số liệu SERVER TỰ TÍNH, không dùng dto
+        // 2. Lưu thông tin đơn hàng 
         dh.setTenNguoiNhan(dto.getHoTen());
         dh.setSoDienThoaiGiao(dto.getSdt());
         dh.setDiaChiGiao(dto.getDiaChi());
@@ -137,14 +123,11 @@ public class OrderService {
         dh.setTrangThai("CHO_XAC_NHAN");
         dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
 
-        // 3. Gán Voucher
-        if (dto.getVoucherId() != null) {
-            MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
-            if (voucher != null) {
-                dh.setMaGiamGia(voucher);
-                voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
-                maGiamGiaRepository.save(voucher);
-            }
+        // 3. Gán Voucher & CỘNG LƯỢT SỬ DỤNG
+        if (voucherToUse != null) {
+            dh.setMaGiamGia(voucherToUse);
+            voucherToUse.setSoLanDaDung((voucherToUse.getSoLanDaDung() != null ? voucherToUse.getSoLanDaDung() : 0) + 1);
+            maGiamGiaRepository.save(voucherToUse);
         }
 
         donHangRepository.save(dh);
@@ -169,12 +152,6 @@ public class OrderService {
 
             chiTietDonHangRepository.save(ct);
 
-            // --- TRỪ TỒN KHO NGUYÊN TỬ (chống race condition) ---
-            // TRƯỚC ĐÂY: đọc soLuongTon ra rồi kiểm tra bằng Java, sau đó
-            // mới ghi lại - 2 bước tách rời này có thể bị "lách" nếu 2
-            // request chạy đúng lúc cùng nhau (xem chú thích chi tiết ở
-            // BienTheSanPhamRepository.truTonKhoNguyenTu). Giờ gộp thành
-            // 1 câu lệnh SQL duy nhất, MySQL tự khóa dòng khi ghi.
             int soDongBiAnhHuong = bienTheRepository.truTonKhoNguyenTu(bt.getId(), soLuongMua);
             if (soDongBiAnhHuong == 0) {
                 throw new RuntimeException("Sản phẩm " + (bt.getMaSku() != null ? bt.getMaSku() : item.getTen()) + " không đủ tồn kho!");
@@ -400,50 +377,70 @@ public class OrderService {
     }
 
    @Transactional
-public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
-    // 1. Tạo đơn
-    DonHang dh = new DonHang();
-    dh.setMaDonHang("POS-" + System.currentTimeMillis());
-    dh.setTenNguoiNhan(dto.getHoTen() != null ? dto.getHoTen() : "Khách lẻ");
-    dh.setSoDienThoaiGiao(dto.getSdt());
-    dh.setTrangThai("DA_THANH_CONG");
-    dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
-    dh.setTongTienHang(dto.getTongTienHang());
-    dh.setTongThanhToan(dto.getTongThanhToan());
-    // Bán tại quầy (offline): khách nhận hàng trực tiếp ngay tại cửa hàng,
-    // không phát sinh vận chuyển -> LUÔN là 0, không đọc từ dto để tránh
-    // trường hợp FE lỡ gửi nhầm giá trị khác 0.
-    dh.setPhiVanChuyen(BigDecimal.ZERO);
-    
-    DonHang savedOrder = donHangRepository.save(dh);
+    public DonHang taoDonHangTaiQuay(OrderRequestDTO dto) {
+        // 1. Tạo đơn
+        DonHang dh = new DonHang();
+        dh.setMaDonHang("POS-" + System.currentTimeMillis());
+        dh.setTenNguoiNhan(dto.getHoTen() != null ? dto.getHoTen() : "Khách lẻ");
+        dh.setSoDienThoaiGiao(dto.getSdt());
+        dh.setTrangThai("DA_THANH_CONG");
+        dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
+        dh.setTongTienHang(dto.getTongTienHang());
 
-    // 2. Xử lý chi tiết và trừ tồn
-    for (OrderItemDTO item : dto.getItems()) {
-        BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
-            .orElseThrow(() -> new RuntimeException("Biến thể không tồn tại"));
+        // Bổ sung: Lưu tiền giảm giá để Frontend hiển thị chuẩn xác
+        dh.setTienGiam(dto.getTienGiam() != null ? dto.getTienGiam() : BigDecimal.ZERO);
+        
+        // Cập nhật lại tổng thanh toán (Tổng tiền hàng - Tiền giảm)
+        BigDecimal tongThanhToanSauGiam = dh.getTongTienHang().subtract(dh.getTienGiam());
+        if(tongThanhToanSauGiam.compareTo(BigDecimal.ZERO) < 0) {
+            tongThanhToanSauGiam = BigDecimal.ZERO;
+        }
+        dh.setTongThanhToan(tongThanhToanSauGiam);
+        
+        // Tiền khách đưa và tiền thừa
+        dh.setTienKhachDua(dto.getTienKhachDua() != null ? dto.getTienKhachDua() : BigDecimal.ZERO);
+        dh.setTienThua(dto.getTienThua() != null ? dto.getTienThua() : BigDecimal.ZERO);
 
-        // Trừ tồn kho NGUYÊN TỬ (chống race condition) VÀ cộng số lượng đã
-        // bán trong CÙNG 1 câu lệnh SQL - xem chú thích chi tiết ở
-        // BienTheSanPhamRepository.truTonKhoNguyenTu(). Trả về 0 nếu tại
-        // đúng thời điểm ghi, kho không đủ (kể cả bị người khác vừa mua hết).
-        int soDongBiAnhHuong = bienTheRepository.truTonKhoNguyenTu(bt.getId(), item.getQuantity());
-        if (soDongBiAnhHuong == 0) {
-            throw new RuntimeException("Hết hàng: " + bt.getMaSku());
+        // Bán tại quầy (offline): khách nhận hàng trực tiếp ngay tại cửa hàng,
+        // không phát sinh vận chuyển -> LUÔN là 0.
+        dh.setPhiVanChuyen(BigDecimal.ZERO);
+
+        // Bổ sung: Gán Voucher và cập nhật số lượt sử dụng
+        if (dto.getVoucherId() != null) {
+            MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
+            if (voucher != null) {
+                dh.setMaGiamGia(voucher);
+                voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
+                maGiamGiaRepository.save(voucher);
+            }
         }
 
-        // Lưu chi tiết
-        ChiTietDonHang ct = new ChiTietDonHang();
-        ct.setDonHang(savedOrder);
-        ct.setBienTheSanPham(bt);
-        ct.setSoLuong(item.getQuantity());
-        ct.setDonGia(item.getGia());
-        ct.setTenSanPham(item.getTen());
-        ct.setKichCoSize(bt.getKichCo().getTenKichCo());
-        ct.setMauSac(bt.getMauSac().getTenMau());
-        chiTietDonHangRepository.save(ct);
+        DonHang savedOrder = donHangRepository.save(dh);
+
+        // 2. Xử lý chi tiết và trừ tồn
+        for (OrderItemDTO item : dto.getItems()) {
+            BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
+                .orElseThrow(() -> new RuntimeException("Biến thể không tồn tại"));
+
+            // Trừ tồn kho NGUYÊN TỬ (chống race condition) 
+            int soDongBiAnhHuong = bienTheRepository.truTonKhoNguyenTu(bt.getId(), item.getQuantity());
+            if (soDongBiAnhHuong == 0) {
+                throw new RuntimeException("Hết hàng: " + bt.getMaSku());
+            }
+
+            // Lưu chi tiết
+            ChiTietDonHang ct = new ChiTietDonHang();
+            ct.setDonHang(savedOrder);
+            ct.setBienTheSanPham(bt);
+            ct.setSoLuong(item.getQuantity());
+            ct.setDonGia(item.getGia());
+            ct.setTenSanPham(item.getTen());
+            ct.setKichCoSize(bt.getKichCo().getTenKichCo());
+            ct.setMauSac(bt.getMauSac().getTenMau());
+            chiTietDonHangRepository.save(ct);
+        }
+        return savedOrder;
     }
-    return savedOrder;
-}
 
 @Transactional
 public void yeuCauTraHang(Integer orderId, String lyDo, String anhMinhChung) {
