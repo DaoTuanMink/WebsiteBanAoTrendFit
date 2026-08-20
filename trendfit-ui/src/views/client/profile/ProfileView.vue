@@ -230,21 +230,22 @@
             />
           </div>
 
-          <div class="form-check mb-3">
-            <input
-              type="checkbox"
-              v-model="addressForm.laMacDinh"
-              class="form-check-input"
-              id="defaultCheck"
-            />
-            <label class="form-check-label small" for="defaultCheck"
-              >Đặt làm địa chỉ mặc định</label
+          <!-- NÚT BẤM CHỌN ĐỊA CHỈ MẶC ĐỊNH RÕ RÀNG -->
+          <div class="mb-4 mt-2">
+            <button
+              type="button"
+              class="btn btn-sm w-100 py-2 d-flex justify-content-center align-items-center fw-semibold transition-all"
+              :class="addressForm.laMacDinh ? 'btn-success' : 'btn-outline-secondary'"
+              @click="addressForm.laMacDinh = !addressForm.laMacDinh"
             >
+              <span v-if="addressForm.laMacDinh">✔ Đã đặt làm địa chỉ mặc định</span>
+              <span v-else>🔳 Đặt làm địa chỉ mặc định</span>
+            </button>
           </div>
 
           <div class="d-flex justify-content-end gap-2">
-            <button @click="showModal = false" class="btn btn-secondary btn-sm px-3">Hủy</button>
-            <button @click="saveAddress" class="btn btn-primary btn-sm px-3">Lưu địa chỉ</button>
+            <button @click="showModal = false" class="btn btn-secondary px-4">Hủy</button>
+            <button @click="saveAddress" class="btn btn-primary px-4 fw-bold">Lưu địa chỉ</button>
           </div>
         </div>
       </div>
@@ -255,6 +256,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
+import LayoutHeader from '@/components/LayoutHeader.vue'
 
 const CLOUD_NAME = 'dqciew3rk'
 const UPLOAD_PRESET = 'trendfit_preset'
@@ -546,6 +548,10 @@ onMounted(() => {
 <style scoped>
 .modal {
   display: block;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
 }
 
 .combobox-wrap {

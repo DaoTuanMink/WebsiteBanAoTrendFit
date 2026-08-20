@@ -1,4 +1,5 @@
 <template>
+  <layout-header />
   <div class="checkout-view container py-5">
     <h2 class="fw-bold mb-4">THANH TOÁN ĐƠN HÀNG</h2>
     <div class="row g-4">
@@ -245,6 +246,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import LayoutHeader from '@/components/LayoutHeader.vue'
 
 const router = useRouter()
 

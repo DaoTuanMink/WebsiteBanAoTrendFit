@@ -278,11 +278,11 @@
               </div>
             </div>
 
-            <!-- ẢNH SẢN PHẨM & Ô TÍCH CHỌN ẢNH CHÍNH -->
+            <!-- ẢNH SẢN PHẨM & NÚT CHỌN ẢNH CHÍNH -->
             <div class="mt-4 pt-3 border-top">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="fw-bold m-0 small text-uppercase text-secondary">
-                  Ảnh sản phẩm (Tích chọn 1 ảnh chính)
+                  Ảnh sản phẩm (Chọn 1 ảnh chính)
                 </h6>
                 <button type="button" class="btn btn-outline-dark btn-sm" @click="themAnhMoi">
                   + Thêm dòng ảnh
@@ -301,9 +301,24 @@
                 :key="idx"
                 class="input-group input-group-sm mb-2 align-items-center gap-2"
               >
+                <!-- Ảnh thu nhỏ (Click để xem phóng to) -->
+                <div
+                  v-if="img.urlAnh"
+                  class="flex-shrink-0 cursor-pointer"
+                  @click="openPreview(img.urlAnh)"
+                  title="Nhấn để phóng to ảnh"
+                >
+                  <img
+                    :src="img.urlAnh"
+                    class="rounded border object-fit-cover shadow-sm thumb-preview"
+                    style="width: 38px; height: 38px; object-fit: cover"
+                    alt="Thumb"
+                  />
+                </div>
+
                 <input
                   v-model="img.urlAnh"
-                  class="form-control"
+                  class="form-control flex-grow-1"
                   placeholder="Dán link ảnh hoặc upload..."
                 />
                 <label :for="'upload-' + idx" class="btn btn-outline-primary mb-0 text-nowrap"
@@ -317,27 +332,21 @@
                   @change="handleImageUpload($event, idx)"
                 />
 
-                <!-- Ô tích chọn ảnh chính rõ ràng -->
-                <div class="form-check m-0 d-flex align-items-center">
-                  <input
-                    type="checkbox"
-                    :checked="img.laAnhChinh"
-                    @change="chonAnhChinh(idx)"
-                    class="form-check-input custom-main-checkbox"
-                    :id="'main-img-' + idx"
-                  />
-                  <label
-                    class="form-check-label small ms-2 fw-semibold text-nowrap"
-                    :for="'main-img-' + idx"
-                    style="cursor: pointer"
-                  >
-                    Ảnh chính
-                  </label>
-                </div>
+                <!-- Nút bấm chọn ảnh chính rõ ràng thay thế checkbox -->
+                <button
+                  type="button"
+                  class="btn btn-sm text-nowrap fw-semibold transition-all flex-shrink-0"
+                  style="min-width: 120px"
+                  :class="img.laAnhChinh ? 'btn-success text-white' : 'btn-outline-secondary'"
+                  @click="chonAnhChinh(idx)"
+                >
+                  <span v-if="img.laAnhChinh">✔ Ảnh chính</span>
+                  <span v-else>🔳 Đặt ảnh chính</span>
+                </button>
 
                 <button
                   type="button"
-                  class="btn btn-outline-danger btn-sm"
+                  class="btn btn-outline-danger btn-sm flex-shrink-0"
                   @click="formData.anhSanPhams.splice(idx, 1)"
                 >
                   X
@@ -379,12 +388,40 @@
     </button>
   </div>
 
-  <!-- MODAL CẮT ẢNH SẢN PHẨM (KHẮC PHỤC HOÀN TOÀN LỖI MÀN HÌNH ĐEN) -->
+  <!-- MODAL XEM ẢNH PHÓNG TO -->
+  <div
+    v-if="showPreviewModal"
+    class="modal show d-block"
+    tabindex="-1"
+    style="background: rgba(0, 0, 0, 0.85); z-index: 9999"
+    @click="showPreviewModal = false"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-transparent border-0">
+        <div class="modal-body text-center position-relative p-0">
+          <button
+            type="button"
+            class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+            @click.stop="showPreviewModal = false"
+            style="z-index: 10"
+          ></button>
+          <img
+            :src="previewImageUrl"
+            class="img-fluid rounded shadow-lg"
+            style="max-height: 85vh; object-fit: contain"
+            alt="Preview"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CẮT ẢNH SẢN PHẨM -->
   <div
     v-if="showProductCropModal"
     class="modal show d-block"
     tabindex="-1"
-    style="background: rgba(0, 0, 0, 0.75)"
+    style="background: rgba(0, 0, 0, 0.75); z-index: 1050"
   >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content p-4 text-center">
@@ -464,6 +501,16 @@ const dangSua = ref(false)
 const sortBy = ref('default')
 const showScrollTopBtn = ref(false)
 
+// Trạng thái cho tính năng xem ảnh phóng to
+const showPreviewModal = ref(false)
+const previewImageUrl = ref('')
+
+const openPreview = (url) => {
+  if (!url) return
+  previewImageUrl.value = url
+  showPreviewModal.value = true
+}
+
 const formData = ref({
   sanPham: {},
   bienTheSanPhams: [],
@@ -512,7 +559,7 @@ const loadData = async () => {
   }
 }
 
-// Logic chọn ảnh chính độc lập (Tích chọn ảnh này thì các ảnh khác tự động bỏ tích)
+// Logic chọn ảnh chính độc lập
 const chonAnhChinh = (index) => {
   formData.value.anhSanPhams.forEach((img, idx) => {
     img.laAnhChinh = idx === index
@@ -760,25 +807,19 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-/* Tùy chỉnh ô tích chọn (Checkbox) dạng bo góc xanh hiện đại */
-.form-check-input.custom-main-checkbox {
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 6px;
-  border: 2px solid #cbd5e1;
+.cursor-pointer {
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  background-color: #fff;
 }
 
-.form-check-input.custom-main-checkbox:checked {
-  background-color: #2563eb;
-  border-color: #2563eb;
+/* Hiệu ứng di chuột cho ảnh thu nhỏ */
+.thumb-preview {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
-
-.form-check-input.custom-main-checkbox:focus {
-  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
-  border-color: #2563eb;
+.thumb-preview:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Ghim cố định form bên phải */
