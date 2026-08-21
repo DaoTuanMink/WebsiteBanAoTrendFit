@@ -85,7 +85,7 @@ public class OrderService {
         }
 
         // =========================================================
-        // SỬA LỖI Ở ĐÂY: Dùng voucherId do Frontend gửi lên để xử lý
+        // Dùng voucherId để tra cứu mã giảm giá, tự tính lại tiền giảm 
         // =========================================================
         BigDecimal tienGiamThat = BigDecimal.ZERO;
         MaGiamGia voucherToUse = null;
@@ -99,9 +99,15 @@ public class OrderService {
                 // Xác thực lại voucher xem còn hợp lệ lúc nhấn nút đặt hàng không
                 voucherToUse = maGiamGiaService.kiemTraVoucher(voucherToUse.getMa(), tongTienHangThat);
                 tienGiamThat = maGiamGiaService.tinhSoTienGiam(voucherToUse, tongTienHangThat);
+                
+                // Gán mã cho đơn hàng 
+                dh.setMaGiamGia(voucherToUse);
+
+                // GỌI HÀM SQL TRỰC TIẾP ĐỂ ÉP DATABASE TĂNG LƯỢT DÙNG (Tránh lỗi cache)
+                maGiamGiaRepository.tangSoLanDaDung(voucherToUse.getId());
+
             } catch (RuntimeException ignored) {
-                tienGiamThat = BigDecimal.ZERO;
-                voucherToUse = null; // Huỷ bỏ mã nếu hết hạn hoặc hết lượt
+                tienGiamThat = BigDecimal.ZERO; // Huỷ bỏ mã nếu hết hạn hoặc hết lượt
             }
         }
 
@@ -122,13 +128,6 @@ public class OrderService {
         dh.setTongThanhToan(tongThanhToanThat);
         dh.setTrangThai("CHO_XAC_NHAN");
         dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
-
-        // 3. Gán Voucher & CỘNG LƯỢT SỬ DỤNG
-        if (voucherToUse != null) {
-            dh.setMaGiamGia(voucherToUse);
-            voucherToUse.setSoLanDaDung((voucherToUse.getSoLanDaDung() != null ? voucherToUse.getSoLanDaDung() : 0) + 1);
-            maGiamGiaRepository.save(voucherToUse);
-        }
 
         donHangRepository.save(dh);
 
@@ -387,33 +386,42 @@ public class OrderService {
         dh.setPhuongThucThanhToan(dto.getPhuongThucThanhToan());
         dh.setTongTienHang(dto.getTongTienHang());
 
-        // Bổ sung: Lưu tiền giảm giá để Frontend hiển thị chuẩn xác
-        dh.setTienGiam(dto.getTienGiam() != null ? dto.getTienGiam() : BigDecimal.ZERO);
+        // Xử lý mã giảm giá tương tự đơn online
+        BigDecimal tienGiamThat = BigDecimal.ZERO;
+        MaGiamGia voucherToUse = null;
+
+        if (dto.getVoucherId() != null) {
+            voucherToUse = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
+        }
+
+        if (voucherToUse != null) {
+            try {
+                voucherToUse = maGiamGiaService.kiemTraVoucher(voucherToUse.getMa(), dto.getTongTienHang());
+                tienGiamThat = maGiamGiaService.tinhSoTienGiam(voucherToUse, dto.getTongTienHang());
+                
+                // Gán vào đơn 
+                dh.setMaGiamGia(voucherToUse);
+
+                // GỌI HÀM SQL TRỰC TIẾP ĐỂ ÉP DATABASE TĂNG LƯỢT DÙNG (Tránh lỗi cache)
+                maGiamGiaRepository.tangSoLanDaDung(voucherToUse.getId());
+
+            } catch (RuntimeException ignored) {
+                tienGiamThat = BigDecimal.ZERO;
+            }
+        }
+
+        dh.setTienGiam(tienGiamThat);
         
-        // Cập nhật lại tổng thanh toán (Tổng tiền hàng - Tiền giảm)
-        BigDecimal tongThanhToanSauGiam = dh.getTongTienHang().subtract(dh.getTienGiam());
+        // Tính tổng thanh toán cuối cùng
+        BigDecimal tongThanhToanSauGiam = dh.getTongTienHang().subtract(tienGiamThat);
         if(tongThanhToanSauGiam.compareTo(BigDecimal.ZERO) < 0) {
             tongThanhToanSauGiam = BigDecimal.ZERO;
         }
         dh.setTongThanhToan(tongThanhToanSauGiam);
         
-        // Tiền khách đưa và tiền thừa
         dh.setTienKhachDua(dto.getTienKhachDua() != null ? dto.getTienKhachDua() : BigDecimal.ZERO);
         dh.setTienThua(dto.getTienThua() != null ? dto.getTienThua() : BigDecimal.ZERO);
-
-        // Bán tại quầy (offline): khách nhận hàng trực tiếp ngay tại cửa hàng,
-        // không phát sinh vận chuyển -> LUÔN là 0.
         dh.setPhiVanChuyen(BigDecimal.ZERO);
-
-        // Bổ sung: Gán Voucher và cập nhật số lượt sử dụng
-        if (dto.getVoucherId() != null) {
-            MaGiamGia voucher = maGiamGiaRepository.findById(dto.getVoucherId()).orElse(null);
-            if (voucher != null) {
-                dh.setMaGiamGia(voucher);
-                voucher.setSoLanDaDung(voucher.getSoLanDaDung() + 1);
-                maGiamGiaRepository.save(voucher);
-            }
-        }
 
         DonHang savedOrder = donHangRepository.save(dh);
 
@@ -422,13 +430,11 @@ public class OrderService {
             BienTheSanPham bt = bienTheRepository.findById(item.getBienTheId())
                 .orElseThrow(() -> new RuntimeException("Biến thể không tồn tại"));
 
-            // Trừ tồn kho NGUYÊN TỬ (chống race condition) 
             int soDongBiAnhHuong = bienTheRepository.truTonKhoNguyenTu(bt.getId(), item.getQuantity());
             if (soDongBiAnhHuong == 0) {
                 throw new RuntimeException("Hết hàng: " + bt.getMaSku());
             }
 
-            // Lưu chi tiết
             ChiTietDonHang ct = new ChiTietDonHang();
             ct.setDonHang(savedOrder);
             ct.setBienTheSanPham(bt);
