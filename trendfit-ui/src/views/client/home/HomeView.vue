@@ -36,6 +36,7 @@
               <router-link
                 to="/ao"
                 class="btn btn-primary btn-lg tf-btn-gradient border-0 px-4 fw-bold"
+                @click="scrollToTop"
               >
                 Mua ngay <i class="ri-arrow-right-line ms-1"></i>
               </router-link>
@@ -62,6 +63,7 @@
             <router-link
               :to="cat.link"
               class="card text-white border-0 overflow-hidden tf-hover-card rounded-4"
+              @click="scrollToTop"
             >
               <img
                 :src="cat.img"
@@ -123,14 +125,17 @@
 
         <div v-else class="row g-4">
           <div
-            v-for="item in sanPhams"
+            v-for="item in displayedProducts"
             :key="item.sanPham.id"
             class="col-6 col-lg-3 tf-reveal-item"
           >
             <div class="card h-100 border-0 shadow-sm tf-hover-card rounded-4">
-              <div
-                class="position-relative overflow-hidden bg-light rounded-top-4"
+              <!-- Cho phép click vào ảnh để vào trang chi tiết -->
+              <router-link
+                :to="'/product/' + item.sanPham.id"
+                class="position-relative overflow-hidden bg-light rounded-top-4 d-block"
                 style="aspect-ratio: 3/4"
+                @click="scrollToTop"
               >
                 <img
                   :src="getAnhChinh(item.anhSanPhams)"
@@ -138,7 +143,7 @@
                   :alt="item.sanPham.ten"
                 />
                 <span class="badge bg-dark position-absolute top-0 start-0 m-3 px-2 py-1">NEW</span>
-              </div>
+              </router-link>
               <div class="card-body p-3 p-lg-4">
                 <small class="text-uppercase text-muted fw-bold" style="font-size: 11px">
                   {{ item.sanPham.chatLieu || 'Premium Cotton' }} ·
@@ -148,6 +153,7 @@
                   :to="'/product/' + item.sanPham.id"
                   class="d-block text-dark text-decoration-none fw-bold mt-1 mb-2 text-truncate-2"
                   style="font-size: 15px; min-height: 2.8em"
+                  @click="scrollToTop"
                 >
                   {{ item.sanPham.ten }}
                 </router-link>
@@ -163,7 +169,7 @@
         </div>
 
         <div
-          v-if="!loading && sanPhams.length === 0"
+          v-if="!loading && displayedProducts.length === 0"
           class="text-center py-5 text-secondary fw-semibold"
         >
           Chưa có sản phẩm phù hợp. Hãy quay lại sau!
@@ -173,6 +179,7 @@
           <router-link
             to="/ao"
             class="btn btn-outline-primary fw-bold px-4 py-2 rounded-3 border-2"
+            @click="scrollToTop"
           >
             Xem tất cả sản phẩm <i class="ri-arrow-right-line align-middle"></i>
           </router-link>
@@ -214,6 +221,7 @@
                 <router-link
                   to="/ao"
                   class="btn btn-primary tf-btn-gradient border-0 px-4 py-2 align-self-start fw-bold rounded-3"
+                  @click="scrollToTop"
                   >Mua ngay</router-link
                 >
               </div>
@@ -419,7 +427,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import axios from 'axios'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import LayoutFooter from '@/components/LayoutFooter.vue'
@@ -496,6 +504,19 @@ const reviews = [
     text: 'TrendFit đang làm rất tốt phần trải nghiệm mua sắm. Design hiện đại, sản phẩm chất.',
   },
 ]
+
+// Computed property để giới hạn hiển thị tối đa 8 sản phẩm
+const displayedProducts = computed(() => {
+  return sanPhams.value.slice(0, 8)
+})
+
+// Hàm cuộn trang lên trên cùng
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
 
 const getAnhChinh = (anhList) => {
   if (anhList && anhList.length > 0) {

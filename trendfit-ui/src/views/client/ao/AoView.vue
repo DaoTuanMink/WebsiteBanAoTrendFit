@@ -138,9 +138,9 @@
           <div
             class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded border-0"
           >
-            <span class="text-muted small"
-              >Hiển thị <b class="text-dark">{{ filteredProducts.length }}</b> sản phẩm</span
-            >
+            <span class="text-muted small">
+              Tìm thấy <b class="text-dark">{{ filteredProducts.length }}</b> sản phẩm
+            </span>
 
             <div class="d-flex align-items-center gap-2">
               <label class="small text-muted text-nowrap">Sắp xếp:</label>
@@ -165,66 +165,114 @@
             <button @click="resetFilters" class="btn btn-dark btn-sm">Xem tất cả</button>
           </div>
 
-          <div v-else class="row row-cols-2 row-cols-md-3 g-4">
-            <div class="col" v-for="item in filteredProducts" :key="item.sanPham?.id">
-              <div
-                class="trendfit-product-card h-100 border rounded-3 p-2 bg-white position-relative"
-              >
-                <!-- Cập nhật aspect-ratio chuẩn khớp khung cắt ảnh -->
+          <div v-else>
+            <!-- Lưới Sản Phẩm (Sử dụng mảng đã phân trang: paginatedProducts) -->
+            <div class="row row-cols-2 row-cols-md-3 g-4">
+              <div class="col" v-for="item in paginatedProducts" :key="item.sanPham?.id">
                 <div
-                  class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light rounded-2"
+                  class="trendfit-product-card h-100 border rounded-3 p-2 bg-white position-relative"
                 >
-                  <img
-                    :src="getAnhChinh(item.anhSanPhams)"
-                    class="w-100 img-product-dynamic"
-                    style="aspect-ratio: 300 / 350; object-fit: cover; object-position: center"
-                    alt="product"
-                  />
-                  <router-link
-                    :to="'/product/' + item.sanPham?.id"
-                    class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-white text-decoration-none text-uppercase fw-bold text-center"
-                  >
-                    Xem chi tiết
-                  </router-link>
-                </div>
-
-                <div class="trendfit-info px-1">
+                  <!-- Cập nhật aspect-ratio chuẩn khớp khung cắt ảnh -->
                   <div
-                    class="d-flex justify-content-between font-size-10 text-uppercase text-muted mb-1"
+                    class="trendfit-img-container overflow-hidden position-relative mb-3 bg-light rounded-2"
                   >
-                    <span>{{ item.sanPham?.danhMuc?.ten || 'Chưa phân loại' }}</span>
-                    <span class="fw-bold text-dark">{{
-                      item.sanPham?.thuongHieu?.ten || 'No Brand'
-                    }}</span>
+                    <!-- Link bọc cả ảnh để click vào ảnh cũng chuyển trang -->
+                    <router-link
+                      :to="'/product/' + item.sanPham?.id"
+                      class="d-block"
+                      @click="scrollToTop"
+                    >
+                      <img
+                        :src="getAnhChinh(item.anhSanPhams)"
+                        class="w-100 img-product-dynamic"
+                        style="aspect-ratio: 300 / 350; object-fit: cover; object-position: center"
+                        alt="product"
+                      />
+                    </router-link>
+
+                    <router-link
+                      :to="'/product/' + item.sanPham?.id"
+                      class="trendfit-quick-add position-absolute bottom-0 start-0 end-0 btn btn-dark rounded-0 py-2 text-white text-decoration-none text-uppercase fw-bold text-center"
+                      @click="scrollToTop"
+                    >
+                      Xem chi tiết
+                    </router-link>
                   </div>
 
-                  <div class="d-flex gap-1 mb-2">
-                    <span
-                      v-for="(colorInfo, idx) in getUniqueColorsWithHex(item.bienTheSanPhams)"
-                      :key="idx"
-                      :style="{ backgroundColor: colorInfo.maMau || '#ccc' }"
-                      class="rounded-circle border"
-                      style="width: 14px; height: 14px"
-                      :title="colorInfo.tenMau"
-                    ></span>
+                  <div class="trendfit-info px-1">
+                    <div
+                      class="d-flex justify-content-between font-size-10 text-uppercase text-muted mb-1"
+                    >
+                      <span>{{ item.sanPham?.danhMuc?.ten || 'Chưa phân loại' }}</span>
+                      <span class="fw-bold text-dark">{{
+                        item.sanPham?.thuongHieu?.ten || 'No Brand'
+                      }}</span>
+                    </div>
+
+                    <div class="d-flex gap-1 mb-2">
+                      <span
+                        v-for="(colorInfo, idx) in getUniqueColorsWithHex(item.bienTheSanPhams)"
+                        :key="idx"
+                        :style="{ backgroundColor: colorInfo.maMau || '#ccc' }"
+                        class="rounded-circle border"
+                        style="width: 14px; height: 14px"
+                        :title="colorInfo.tenMau"
+                      ></span>
+                    </div>
+
+                    <span class="text-muted text-uppercase font-size-10 d-block mb-1">
+                      {{ item.sanPham?.chatLieu || 'Premium Cotton' }}
+                    </span>
+
+                    <router-link
+                      :to="'/product/' + item.sanPham?.id"
+                      class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
+                      @click="scrollToTop"
+                    >
+                      {{ item.sanPham?.ten }}
+                    </router-link>
+
+                    <p class="trendfit-price fw-bold text-danger m-0">
+                      {{ formatPrice(getMinPrice(item.bienTheSanPhams)) }}
+                    </p>
                   </div>
-
-                  <span class="text-muted text-uppercase font-size-10 d-block mb-1">
-                    {{ item.sanPham?.chatLieu || 'Premium Cotton' }}
-                  </span>
-
-                  <router-link
-                    :to="'/product/' + item.sanPham?.id"
-                    class="trendfit-title d-block mb-1 text-decoration-none text-dark fw-semibold"
-                  >
-                    {{ item.sanPham?.ten }}
-                  </router-link>
-
-                  <p class="trendfit-price fw-bold text-danger m-0">
-                    {{ formatPrice(getMinPrice(item.bienTheSanPhams)) }}
-                  </p>
                 </div>
               </div>
+            </div>
+
+            <!-- Điều Hướng Phân Trang -->
+            <div
+              v-if="totalPages > 1"
+              class="d-flex justify-content-center align-items-center gap-2 mt-5"
+            >
+              <button
+                class="btn btn-outline-dark btn-sm px-3 fw-semibold"
+                :disabled="currentPage === 1"
+                @click="prevPage"
+              >
+                &laquo; Trước
+              </button>
+
+              <div class="d-flex gap-1">
+                <button
+                  v-for="page in totalPages"
+                  :key="page"
+                  class="btn btn-sm fw-semibold"
+                  style="width: 34px"
+                  :class="currentPage === page ? 'btn-dark' : 'btn-outline-dark'"
+                  @click="goToPage(page)"
+                >
+                  {{ page }}
+                </button>
+              </div>
+
+              <button
+                class="btn btn-outline-dark btn-sm px-3 fw-semibold"
+                :disabled="currentPage === totalPages"
+                @click="nextPage"
+              >
+                Sau &raquo;
+              </button>
             </div>
           </div>
         </div>
@@ -236,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import LayoutFooter from '@/components/LayoutFooter.vue'
@@ -245,6 +293,10 @@ const sanPhams = ref([])
 const categories = ref([])
 const brands = ref([])
 const loading = ref(true)
+
+// Phân trang
+const currentPage = ref(1)
+const itemsPerPage = 20
 
 const sections = ref({
   all: true,
@@ -279,6 +331,15 @@ const selectedBrands = ref([])
 const selectedColors = ref([])
 const selectedSizes = ref([])
 const sortBy = ref('default')
+
+// Lắng nghe sự thay đổi của bộ lọc/sắp xếp để tự động quay về trang 1
+watch(
+  [selectedCategories, selectedBrands, selectedColors, selectedSizes, sortBy],
+  () => {
+    currentPage.value = 1
+  },
+  { deep: true },
+)
 
 const availableColors = computed(() => {
   const colorMap = new Map()
@@ -337,6 +398,7 @@ const resetFilters = () => {
   selectedColors.value = []
   selectedSizes.value = []
   sortBy.value = 'default'
+  currentPage.value = 1
 }
 
 const filteredProducts = computed(() => {
@@ -384,6 +446,41 @@ const filteredProducts = computed(() => {
 
   return result
 })
+
+// === LOGIC PHÂN TRANG ===
+const totalPages = computed(() => {
+  return Math.ceil(filteredProducts.value.length / itemsPerPage)
+})
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredProducts.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  currentPage.value = page
+  scrollToTop()
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    scrollToTop()
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+    scrollToTop()
+  }
+}
+
+// Cuộn mượt lên trên cùng
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const getUniqueColorsWithHex = (variants) => {
   if (!variants || !Array.isArray(variants)) return []
