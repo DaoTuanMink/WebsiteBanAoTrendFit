@@ -37,8 +37,8 @@
       </div>
 
       <nav class="admin-nav" aria-label="Điều hướng quản trị">
+        <!-- NHÓM 1: TỔNG QUAN & HOẠT ĐỘNG -->
         <p class="admin-nav-label">TỔNG QUAN</p>
-
         <router-link
           v-for="item in overviewItems"
           :key="item.to"
@@ -50,10 +50,23 @@
           <span>{{ item.label }}</span>
         </router-link>
 
-        <p class="admin-nav-label mt-3">QUẢN LÝ CỬA HÀNG</p>
-
+        <!-- NHÓM 2: QUẢN LÝ SẢN PHẨM (CATALOG) -->
+        <p class="admin-nav-label mt-4">QUẢN LÝ SẢN PHẨM</p>
         <router-link
-          v-for="item in visibleManagementItems"
+          v-for="item in visibleProductItems"
+          :key="item.to"
+          :to="item.to"
+          class="admin-nav-link"
+          @click="sidebarOpen = false"
+        >
+          <span class="admin-nav-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </router-link>
+
+        <!-- NHÓM 3: VẬN HÀNH & KINH DOANH -->
+        <p class="admin-nav-label mt-4">VẬN HÀNH & KINH DOANH</p>
+        <router-link
+          v-for="item in visibleOperationItems"
           :key="item.to"
           :to="item.to"
           class="admin-nav-link"
@@ -124,27 +137,42 @@ const userRole = computed(() => localStorage.getItem('user_role') || 'EMPLOYEE')
 const roleLabel = computed(() => (userRole.value === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên'))
 const userInitial = computed(() => username.value.trim().charAt(0).toUpperCase() || 'T')
 
+// Nhóm 1: Thống kê & Bán hàng
 const overviewItems = [
   { to: '/admin/dashboard', label: 'Thống kê doanh số', icon: '▦' },
   { to: '/admin/ban-hang-tai-quay', label: 'Bán hàng tại quầy', icon: '◈' },
 ]
 
-const managementItems = [
-  { to: '/admin/products', label: 'Sản phẩm', icon: '◆' },
-  // Đã xóa Danh mục ở đây, đổi Thương hiệu thành Thương hiệu & Danh mục
+// Nhóm 2: Chuyên về Sản phẩm và thuộc tính
+const productItems = [
+  { to: '/admin/products', label: 'Danh sách Sản phẩm', icon: '◆' },
   { to: '/admin/brands', label: 'Thương hiệu & Danh mục', icon: '◉' },
   { to: '/admin/sizes-colors', label: 'Kích cỡ & màu sắc', icon: '◐' },
-  { to: '/admin/customers', label: 'Khách hàng', icon: '웃' },
-  { to: '/admin/orders', label: 'Đơn hàng', icon: '▧', roles: ['ADMIN'] },
-  { to: '/admin/vouchers', label: 'Phiếu giảm giá', icon: '◇', roles: ['ADMIN'] },
-  { to: '/admin/staff', label: 'Nhân viên', icon: '♙', roles: ['ADMIN'] },
 ]
 
-const visibleManagementItems = computed(() =>
-  managementItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
+// Nhóm 3: Vận hành, Khách hàng, Khuyến mãi & Nhân sự
+const operationItems = [
+  { to: '/admin/orders', label: 'Quản lý Đơn hàng', icon: '▧', roles: ['ADMIN'] },
+  { to: '/admin/customers', label: 'Tệp Khách hàng', icon: '웃' },
+  { to: '/admin/vouchers', label: 'Phiếu giảm giá', icon: '◇', roles: ['ADMIN'] },
+  { to: '/admin/staff', label: 'Nhân viên nội bộ', icon: '♙', roles: ['ADMIN'] },
+]
+
+// Filter theo Role (Phân quyền hiển thị)
+const visibleProductItems = computed(() =>
+  productItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
 )
 
-const allItems = computed(() => [...overviewItems, ...visibleManagementItems.value])
+const visibleOperationItems = computed(() =>
+  operationItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
+)
+
+// Gộp chung tất cả lại để tính tiêu đề trang hiện tại (Breadcrumb)
+const allItems = computed(() => [
+  ...overviewItems,
+  ...visibleProductItems.value,
+  ...visibleOperationItems.value,
+])
 
 const currentPageTitle = computed(() => {
   const currentItem = allItems.value.find((item) => route.path.startsWith(item.to))
