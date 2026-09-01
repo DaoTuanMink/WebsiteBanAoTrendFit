@@ -1,7 +1,10 @@
 <script setup>
-import { ref, nextTick } from "vue";
+import axios from "axios";
+import { nextTick, ref } from "vue";
+import API_BASE from "@/config/api";
 
 const isOpen = ref(false);
+const isSending = ref(false);
 const message = ref("");
 const messages = ref([
   {
@@ -29,7 +32,7 @@ const scrollToBottom = async () => {
 const sendMessage = async (text = null) => {
   const content = (text ?? message.value).trim();
 
-  if (!content) return;
+  if (!content || isSending.value) return;
 
   messages.value.push({
     role: "user",
@@ -37,53 +40,34 @@ const sendMessage = async (text = null) => {
   });
 
   message.value = "";
-
+  isSending.value = true;
   await scrollToBottom();
 
-  setTimeout(async () => {
-    messages.value.push({
-      role: "bot",
-      text: getBotResponse(content)
+  try {
+    const response = await axios.post(`${API_BASE}/api/chat`, {
+      message: content
     });
 
+    messages.value.push({
+      role: "bot",
+      text: response.data.reply
+    });
+  } catch (error) {
+    const apiMessage = error.response?.data?.message;
+
+    messages.value.push({
+      role: "bot",
+      text: apiMessage || "Không thể kết nối tới chatbot. Hãy kiểm tra backend đang chạy ở cổng 8080 rồi thử lại."
+    });
+  } finally {
+    isSending.value = false;
     await scrollToBottom();
-  }, 600);
-};
-
-const getBotResponse = (content) => {
-  const text = content.toLowerCase();
-
-  if (text.includes("bán chạy")) {
-    return "Bạn có thể xem các sản phẩm nổi bật và bán chạy của TrendFit trong danh sách sản phẩm nhé! 🛍️";
   }
-
-  if (
-    text.includes("500") ||
-    text.includes("giá") ||
-    text.includes("rẻ")
-  ) {
-    return "TrendFit có nhiều sản phẩm với nhiều mức giá khác nhau. Bạn có thể sử dụng bộ lọc giá để tìm sản phẩm phù hợp với ngân sách của mình. 💰";
-  }
-
-  if (text.includes("size") || text.includes("kích thước")) {
-    return "Bạn có thể xem bảng size trong thông tin chi tiết sản phẩm. Nếu bạn cho tôi biết chiều cao và cân nặng, tôi có thể hỗ trợ tư vấn size phù hợp hơn. 👕";
-  }
-
-  if (text.includes("màu")) {
-    return "Bạn có thể lọc sản phẩm theo màu sắc hoặc xem các màu hiện có ngay tại trang chi tiết sản phẩm. 🎨";
-  }
-
-  if (text.includes("đơn hàng") || text.includes("đặt hàng")) {
-    return "Bạn có thể kiểm tra trạng thái và lịch sử đơn hàng trong tài khoản của mình. 📦";
-  }
-
-  return "Mình đã nhận được câu hỏi của bạn 😊 Hiện tại chatbot đang ở phiên bản thử nghiệm. Sau khi kết nối AI thật, mình sẽ có thể tư vấn sản phẩm chi tiết hơn cho bạn.";
 };
 </script>
 
 <template>
   <div class="chatbot">
-    <!-- Nút mở chatbot -->
     <button
       v-if="!isOpen"
       class="chat-button"
@@ -93,7 +77,6 @@ const getBotResponse = (content) => {
       💬
     </button>
 
-    <!-- Khung chatbot -->
     <div v-if="isOpen" class="chat-window">
       <div class="chat-header">
         <div>
@@ -101,7 +84,7 @@ const getBotResponse = (content) => {
           <span>● Đang hoạt động</span>
         </div>
 
-        <button class="close-button" @click="isOpen = false">
+        <button class="close-button" @click="isOpen = false" aria-label="Đóng chatbot">
           ×
         </button>
       </div>
@@ -118,10 +101,15 @@ const getBotResponse = (content) => {
           </div>
         </div>
 
+        <div v-if="isSending" class="message-row bot">
+          <div class="message loading-message">AI đang trả lời...</div>
+        </div>
+
         <div v-if="messages.length === 1" class="suggestions">
           <button
             v-for="suggestion in suggestions"
             :key="suggestion"
+            :disabled="isSending"
             @click="sendMessage(suggestion)"
           >
             {{ suggestion }}
@@ -133,10 +121,12 @@ const getBotResponse = (content) => {
         <input
           v-model="message"
           type="text"
+          maxlength="2000"
+          :disabled="isSending"
           placeholder="Nhập câu hỏi..."
         />
 
-        <button type="submit">
+        <button type="submit" :disabled="isSending || !message.trim()" aria-label="Gửi câu hỏi">
           ➤
         </button>
       </form>
@@ -231,6 +221,8 @@ const getBotResponse = (content) => {
   border-radius: 14px;
   font-size: 14px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .message-row.bot .message {
@@ -242,6 +234,11 @@ const getBotResponse = (content) => {
 .message-row.user .message {
   background: #111827;
   color: white;
+}
+
+.loading-message {
+  color: #6b7280 !important;
+  font-style: italic;
 }
 
 .suggestions {
@@ -294,5 +291,24 @@ const getBotResponse = (content) => {
   color: white;
   cursor: pointer;
   font-size: 17px;
+}
+
+.chat-input button:disabled,
+.chat-input input:disabled,
+.suggestions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 480px) {
+  .chatbot {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .chat-window {
+    width: calc(100vw - 24px);
+    height: min(520px, calc(100vh - 24px));
+  }
 }
 </style>
