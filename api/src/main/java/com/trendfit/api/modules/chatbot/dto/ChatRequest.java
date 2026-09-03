@@ -1,4 +1,9 @@
 package com.trendfit.api.modules.chatbot.dto;
 
-public record ChatRequest(String message) {
+import java.util.List;
+
+public record ChatRequest(
+        String message,
+        List<ChatHistoryDTO> history
+) {
 }
