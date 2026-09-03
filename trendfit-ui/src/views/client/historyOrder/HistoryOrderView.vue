@@ -1,4 +1,5 @@
 <template>
+  <LayoutHeader />
   <div class="container-fluid py-5 bg-light min-vh-100">
     <div class="container">
       <div class="d-flex justify-content-between align-items-center mb-4">
@@ -257,6 +258,7 @@
 import axios from 'axios'
 import { onMounted, ref, computed } from 'vue'
 import API_BASE from '@/config/api'
+import LayoutHeader from '@/components/LayoutHeader.vue'
 
 const orders = ref([])
 const summary = ref(null)
