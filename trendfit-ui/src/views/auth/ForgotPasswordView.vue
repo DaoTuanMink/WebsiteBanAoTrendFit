@@ -1,85 +1,15 @@
-<template>
-  <div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-    <div class="card p-4 shadow-sm" style="max-width: 420px; width: 100%">
-      <h4 class="fw-bold text-center mb-3">Quên mật khẩu</h4>
-
-      <!-- Thông báo lỗi / thành công -->
-      <div v-if="errorMsg" class="alert alert-danger py-2">{{ errorMsg }}</div>
-      <div v-if="successMsg" class="alert alert-success py-2">{{ successMsg }}</div>
-
-      <!-- ============ BƯỚC 1: nhập email để nhận mã xác thực ============ -->
-      <form v-if="buoc === 1" @submit.prevent="guiMaXacThuc" class="d-grid gap-3">
-        <p class="text-muted small mb-0">
-          Nhập email đã đăng ký, hệ thống sẽ gửi mã xác thực gồm 6 chữ số về email đó.
-        </p>
-        <input
-          v-model.trim="email"
-          type="email"
-          class="form-control"
-          placeholder="Email đã đăng ký"
-          required
-          :disabled="loading"
-        />
-        <button type="submit" class="btn btn-dark" :disabled="loading">
-          {{ loading ? 'Đang gửi...' : 'Gửi mã xác thực' }}
-        </button>
-      </form>
-
-      <!-- ============ BƯỚC 2: nhập mã + mật khẩu mới ============ -->
-      <form v-else @submit.prevent="datLaiMatKhau" class="d-grid gap-3">
-        <p class="text-muted small mb-0">
-          Mã xác thực đã được gửi tới <strong>{{ email }}</strong
-          >. Vui lòng kiểm tra hộp thư (kể cả mục Spam) và nhập mã bên dưới trong vòng 5 phút.
-        </p>
-        <input
-          v-model.trim="code"
-          maxlength="6"
-          class="form-control text-center fw-bold"
-          style="letter-spacing: 4px; font-size: 1.2rem"
-          placeholder="000000"
-          required
-          :disabled="loading"
-        />
-        <input
-          v-model="matKhauMoi"
-          type="password"
-          class="form-control"
-          placeholder="Mật khẩu mới"
-          required
-          :disabled="loading"
-        />
-        <input
-          v-model="xacNhanMatKhau"
-          type="password"
-          class="form-control"
-          placeholder="Xác nhận mật khẩu mới"
-          required
-          :disabled="loading"
-        />
-        <button type="submit" class="btn btn-dark" :disabled="loading">
-          {{ loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu' }}
-        </button>
-        <button type="button" class="btn btn-link btn-sm" @click="quayLaiBuoc1">
-          ← Nhập lại email / gửi lại mã
-        </button>
-      </form>
-
-      <div class="text-center mt-3">
-        <router-link to="/login" class="small text-muted text-decoration-underline">
-          ← Quay lại đăng nhập
-        </router-link>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
-// Trang "Quên mật khẩu" - luồng 2 bước bằng mã OTP gửi qua email, khớp với
-// PasswordResetController ở backend (POST /api/auth/forgot-password và
-// POST /api/auth/reset-password).
+/**
+ * Trang Quên mật khẩu – luồng 2 bước (OTP 6 số qua email)
+ * Khớp với backend: PasswordResetController
+ *   POST /api/auth/forgot-password  { email }
+ *   POST /api/auth/reset-password   { email, code, matKhauMoi }
+ *
+ * Giao diện đã đồng bộ với LoginView & RegisterView.
+ */
 import { ref } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const API = 'http://localhost:8080/api/auth'
@@ -98,10 +28,15 @@ const guiMaXacThuc = async () => {
   errorMsg.value = ''
   successMsg.value = ''
   loading.value = true
+
   try {
-    const res = await axios.post(`${API}/forgot-password`, { email: email.value })
-    successMsg.value = res.data
-    buoc.value = 2 // Chuyển sang bước nhập mã
+    const res = await axios.post(
+      `${API}/forgot-password`,
+      { email: email.value.trim() },
+      { timeout: 15000 },
+    )
+    successMsg.value = typeof res.data === 'string' ? res.data : 'Đã gửi mã xác thực thành công!'
+    buoc.value = 2
   } catch (err) {
     errorMsg.value = layThongBaoLoi(err, 'Gửi mã xác thực thất bại')
   } finally {
@@ -117,17 +52,24 @@ const datLaiMatKhau = async () => {
     errorMsg.value = 'Mật khẩu xác nhận không khớp!'
     return
   }
+  if (matKhauMoi.value.length < 4) {
+    errorMsg.value = 'Mật khẩu mới phải có ít nhất 4 ký tự!'
+    return
+  }
 
   loading.value = true
   try {
-    const res = await axios.post(`${API}/reset-password`, {
-      email: email.value,
-      code: code.value,
-      matKhauMoi: matKhauMoi.value,
-    })
-    successMsg.value = res.data
-    // Đặt lại thành công -> tự động đưa về trang đăng nhập sau 1.5s
-    setTimeout(() => router.push('/login'), 1500)
+    const res = await axios.post(
+      `${API}/reset-password`,
+      {
+        email: email.value.trim(),
+        code: code.value.trim(),
+        matKhauMoi: matKhauMoi.value,
+      },
+      { timeout: 10000 },
+    )
+    successMsg.value = typeof res.data === 'string' ? res.data : 'Đặt lại mật khẩu thành công!'
+    setTimeout(() => router.push('/login'), 1800)
   } catch (err) {
     errorMsg.value = layThongBaoLoi(err, 'Đặt lại mật khẩu thất bại')
   } finally {
@@ -145,8 +87,287 @@ const quayLaiBuoc1 = () => {
 }
 
 const layThongBaoLoi = (err, macDinh) => {
+  if (err?.code === 'ECONNABORTED') {
+    return 'Hết thời gian chờ. Kiểm tra backend đang chạy chưa (port 8080).'
+  }
   const data = err?.response?.data
   if (typeof data === 'string' && data.trim()) return data
+  if (data && typeof data === 'object') {
+    return data.message || data.error || JSON.stringify(data)
+  }
+  if (err?.request) {
+    return 'Không kết nối được server. Hãy chạy backend Spring Boot (localhost:8080).'
+  }
   return macDinh + (err?.message ? `: ${err.message}` : '')
 }
 </script>
+
+<template>
+  <div class="login-page">
+    <div class="login-card">
+      <!-- Brand giống Login / Register -->
+      <div class="login-brand">
+        <div class="login-logo">TF</div>
+        <h1>TRENDFIT</h1>
+        <p>Shop bán áo · Quên mật khẩu</p>
+      </div>
+
+      <!-- Thông báo -->
+      <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
+      <div v-if="successMsg" class="login-success">{{ successMsg }}</div>
+
+      <!-- ============ BƯỚC 1: Nhập email ============ -->
+      <form v-if="buoc === 1" @submit.prevent="guiMaXacThuc" class="login-form">
+        <p class="form-desc">
+          Nhập email đã đăng ký, hệ thống sẽ gửi mã xác thực gồm 6 chữ số về email đó.
+        </p>
+
+        <label>Email đã đăng ký</label>
+        <input
+          v-model.trim="email"
+          type="email"
+          placeholder="Nhập địa chỉ email"
+          autocomplete="email"
+          required
+          :disabled="loading"
+        />
+
+        <button type="submit" class="login-btn" :disabled="loading">
+          {{ loading ? 'Đang gửi mã...' : 'Gửi mã xác thực' }}
+        </button>
+      </form>
+
+      <!-- ============ BƯỚC 2: Nhập mã + mật khẩu mới ============ -->
+      <form v-else @submit.prevent="datLaiMatKhau" class="login-form">
+        <p class="form-desc">
+          Mã xác thực đã được gửi tới <strong>{{ email }}</strong
+          >. Kiểm tra hộp thư (kể cả Spam) và nhập mã trong vòng <strong>5 phút</strong>.
+        </p>
+
+        <label>Mã xác thực (6 số)</label>
+        <input
+          v-model.trim="code"
+          type="text"
+          maxlength="6"
+          class="code-input"
+          placeholder="000000"
+          required
+          :disabled="loading"
+        />
+
+        <label>Mật khẩu mới</label>
+        <input
+          v-model="matKhauMoi"
+          type="password"
+          placeholder="Nhập mật khẩu mới"
+          autocomplete="new-password"
+          required
+          :disabled="loading"
+        />
+
+        <label>Xác nhận mật khẩu mới</label>
+        <input
+          v-model="xacNhanMatKhau"
+          type="password"
+          placeholder="Nhập lại mật khẩu mới"
+          autocomplete="new-password"
+          required
+          :disabled="loading"
+        />
+
+        <button type="submit" class="login-btn" :disabled="loading">
+          {{ loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu' }}
+        </button>
+
+        <button type="button" class="btn-link" @click="quayLaiBuoc1" :disabled="loading">
+          ← Nhập lại email / Gửi lại mã
+        </button>
+      </form>
+
+      <p class="login-register">
+        <router-link to="/login">← Quay lại đăng nhập</router-link>
+      </p>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* ===== Đồng bộ 100% với LoginView & RegisterView ===== */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.12), transparent 40%), #0f172a;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6 50%, #06b6d4);
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.login-brand h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+
+.login-brand p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.login-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+
+.login-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.login-form label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-top: 8px;
+}
+
+.login-form input {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-form input:focus {
+  border-color: #6366f1;
+}
+
+.code-input {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.25rem !important;
+  letter-spacing: 6px;
+}
+
+.login-btn {
+  margin-top: 16px;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+}
+
+.login-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-link {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  padding: 6px;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: #4f46e5;
+}
+
+.login-register {
+  text-align: center;
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.login-register a {
+  color: #4f46e5;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-register a:hover {
+  text-decoration: underline;
+}
+</style>

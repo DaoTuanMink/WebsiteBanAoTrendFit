@@ -1,4 +1,9 @@
 package com.trendfit.api.modules.chatbot.dto;
 
-public record ChatResponse(String reply) {
+import java.util.List;
+
+public record ChatResponse(
+        String reply,
+        List<ChatProductDTO> products
+) {
 }

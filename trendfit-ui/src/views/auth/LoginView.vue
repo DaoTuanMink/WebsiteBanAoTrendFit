@@ -40,9 +40,12 @@ const xuLyDangNhap = async () => {
     localStorage.setItem('user_role', data.vaiTro)
     localStorage.setItem('username', data.username || username.value.trim())
 
-    if (data.vaiTro === 'ADMIN' || data.vaiTro === 'EMPLOYEE') {
+    if (data.vaiTro === 'ADMIN') {
       alert(`Xin chào ${data.username}! Đang vào trang quản trị...`)
-      router.push('/admin/orders')
+      router.push('/admin/dashboard')
+    } else if (data.vaiTro === 'EMPLOYEE') {
+      alert(`Xin chào ${data.username}! Đang vào giao diện bán hàng tại quầy...`)
+      router.push('/admin/ban-hang-tai-quay')
     } else {
       alert(`Chào mừng quay lại, ${data.username}!`)
       router.push('/')

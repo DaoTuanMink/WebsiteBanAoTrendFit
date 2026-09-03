@@ -10,7 +10,8 @@
 
     <aside class="admin-sidebar" :class="{ 'is-open': sidebarOpen }">
       <div class="admin-brand">
-        <router-link to="/admin/dashboard" class="admin-brand-link" @click="sidebarOpen = false">
+        <!-- Đổi link mặc định: Admin vào dashboard, Nhân viên vào Bán hàng tại quầy -->
+        <router-link :to="defaultAdminLink" class="admin-brand-link" @click="sidebarOpen = false">
           <span class="admin-brand-mark">TF</span>
           <span>
             <strong>TrendFit</strong>
@@ -37,10 +38,10 @@
       </div>
 
       <nav class="admin-nav" aria-label="Điều hướng quản trị">
-        <!-- NHÓM 1: TỔNG QUAN & HOẠT ĐỘNG -->
+        <!-- NHÓM 1: TỔNG QUAN & HOẠT ĐỘNG (Đã lọc theo quyền) -->
         <p class="admin-nav-label">TỔNG QUAN</p>
         <router-link
-          v-for="item in overviewItems"
+          v-for="item in visibleOverviewItems"
           :key="item.to"
           :to="item.to"
           class="admin-nav-link"
@@ -137,9 +138,14 @@ const userRole = computed(() => localStorage.getItem('user_role') || 'EMPLOYEE')
 const roleLabel = computed(() => (userRole.value === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên'))
 const userInitial = computed(() => username.value.trim().charAt(0).toUpperCase() || 'T')
 
-// Nhóm 1: Thống kê & Bán hàng
+// Link điều hướng logo mặc định theo vai trò
+const defaultAdminLink = computed(() =>
+  userRole.value === 'ADMIN' ? '/admin/dashboard' : '/admin/ban-hang-tai-quay',
+)
+
+// Nhóm 1: Thống kê & Bán hàng (Chặn EMPLOYEE xem Dashboard)
 const overviewItems = [
-  { to: '/admin/dashboard', label: 'Thống kê doanh số', icon: '▦' },
+  { to: '/admin/dashboard', label: 'Thống kê doanh số', icon: '▦', roles: ['ADMIN'] },
   { to: '/admin/ban-hang-tai-quay', label: 'Bán hàng tại quầy', icon: '◈' },
 ]
 
@@ -159,6 +165,10 @@ const operationItems = [
 ]
 
 // Filter theo Role (Phân quyền hiển thị)
+const visibleOverviewItems = computed(() =>
+  overviewItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
+)
+
 const visibleProductItems = computed(() =>
   productItems.filter((item) => !item.roles || item.roles.includes(userRole.value)),
 )
@@ -169,7 +179,7 @@ const visibleOperationItems = computed(() =>
 
 // Gộp chung tất cả lại để tính tiêu đề trang hiện tại (Breadcrumb)
 const allItems = computed(() => [
-  ...overviewItems,
+  ...visibleOverviewItems.value,
   ...visibleProductItems.value,
   ...visibleOperationItems.value,
 ])
