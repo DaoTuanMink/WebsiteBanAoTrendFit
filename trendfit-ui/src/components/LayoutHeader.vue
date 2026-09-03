@@ -10,16 +10,21 @@
       <div class="d-none d-xl-flex gap-4 small fw-bold text-uppercase align-items-center">
         <router-link to="/" class="nav-link text-white-50 hover-white">Trang chủ</router-link>
         <router-link to="/ao" class="nav-link text-white fw-bold border-bottom border-danger pb-1"
-          >Áo</router-link
+          >Sản phẩm</router-link
         >
-        <router-link to="#" class="nav-link text-white-50 hover-white"
-          >Online Exclusive</router-link
+
+        <!-- Đổi Online Exclusive thành Lịch sử & Thống kê có router thật -->
+        <router-link
+          :to="username ? '/history-order' : '/login'"
+          class="nav-link text-white-50 hover-white"
         >
+          Lịch sử & Thống kê
+        </router-link>
 
         <span
           v-if="userRole === 'ADMIN' || userRole === 'EMPLOYEE'"
           class="text-warning cursor-pointer"
-          @click="router.push('/admin/products')"
+          @click="router.push('/admin/ban-hang-tai-quay')"
         >
           <i class="bi bi-speedometer2 me-1"></i> Quản trị
         </span>
@@ -68,15 +73,13 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const username = ref('')
 const userRole = ref('')
-const cartCount = ref(0) // Biến lưu số lượng sản phẩm
+const cartCount = ref(0)
 
 const kiemTraTrangThai = () => {
   username.value = localStorage.getItem('username') || ''
   userRole.value = localStorage.getItem('user_role') || ''
 
-  // Lấy giỏ hàng từ localStorage (giả sử bạn lưu key là 'cart')
   const cart = JSON.parse(localStorage.getItem('cart') || '[]')
-  // Tính tổng số lượng (mỗi item có thuộc tính quantity)
   cartCount.value = cart.reduce((total, item) => total + (item.quantity || 1), 0)
 }
 
@@ -87,15 +90,10 @@ const dangXuat = () => {
   }
 }
 
-// Cập nhật giỏ hàng khi trang được tải
 onMounted(() => {
   kiemTraTrangThai()
-
-  // Lắng nghe sự kiện nếu bạn muốn cập nhật số lượng ngay khi người dùng thêm hàng vào giỏ
   window.addEventListener('storage', kiemTraTrangThai)
 })
-
-onMounted(kiemTraTrangThai)
 </script>
 
 <style scoped>
@@ -110,6 +108,9 @@ onMounted(kiemTraTrangThai)
 .hover-white:hover {
   color: #fff !important;
 }
+.cursor-pointer {
+  cursor: pointer;
+}
 .icon-box {
   width: 36px;
   height: 36px;
@@ -119,10 +120,11 @@ onMounted(kiemTraTrangThai)
   border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   transition: 0.2s;
+  text-decoration: none;
 }
 .icon-box:hover {
   background: #fff;
-  color: #000;
+  color: #000 !important;
 }
 .badge-count {
   position: absolute;

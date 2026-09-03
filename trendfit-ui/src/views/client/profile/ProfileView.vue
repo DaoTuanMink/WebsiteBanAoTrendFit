@@ -1,4 +1,5 @@
 <template>
+  <LayoutHeader />
   <div class="container py-5">
     <h2 class="fw-bold mb-4">HỒ SƠ CÁ NHÂN & SỔ ĐỊA CHỈ</h2>
 
